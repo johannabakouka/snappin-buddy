@@ -38,7 +38,7 @@ export default function Navbar({ screen, setScreen }) {
           }}
         >
           <span>{tab.icon}</span>
-          <span style={{fontSize: '10px'}}>{tab.label}</span>
+          <span style={{ fontSize: '10px' }}>{tab.label}</span>
         </button>
       ))}
     </nav>

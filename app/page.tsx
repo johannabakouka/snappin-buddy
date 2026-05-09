@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import Navbar from './components/Navbar';
+import Header from './components/Header';
 import MapScreen from './components/MapScreen';
 import ExploreScreen from './components/ExploreScreen';
 import MatchScreen from './components/MatchScreen';
@@ -53,13 +54,14 @@ export default function Home() {
   );
 
   return (
-    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: '#0A0A0A', color: 'white', position: 'relative', overflow: 'hidden' }}>
-      {screen === 'map' && <MapScreen />}
-      {screen === 'explore' && <ExploreScreen />}
-      {screen === 'match' && <MatchScreen />}
-      {screen === 'messages' && <MessagesScreen />}
+  <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: '#0A0A0A', color: 'white', position: 'relative', overflow: 'hidden' }}>
+    <Header />
+    {screen === 'map' && <MapScreen />}
+    {screen === 'explore' && <ExploreScreen />}
+    {screen === 'match' && <MatchScreen />}
+    {screen === 'messages' && <MessagesScreen />}
     {screen === 'profile' && <ProfileScreen profile={profile} onProfileUpdate={() => window.location.reload()} />}
-      <Navbar screen={screen} setScreen={setScreen} />
-    </div>
-  );
+    <Navbar screen={screen} setScreen={setScreen} />
+  </div>
+);
 }
