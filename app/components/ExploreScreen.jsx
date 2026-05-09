@@ -2,24 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-
-const fakeProfiles = [
-  { id: 1, username: 'Léa Moreau', handle: '@leamorphoto', role: 'Photographe', styles: 'Documentary, Portrait', zone: 'Oberkampf', is_active: true },
-  { id: 2, username: 'Marcus D.', handle: '@marcusdvideo', role: 'Vidéaste', styles: 'Cinéma, Street', zone: 'Belleville', is_active: true },
-  { id: 3, username: 'Sonia K.', handle: '@soniakfilm', role: 'Photographe', styles: 'Analog, Fashion', zone: 'Pigalle', is_active: false },
-];
+import BuddyProfileScreen from './BuddyProfileScreen';
 
 export default function ExploreScreen() {
   const [profiles, setProfiles] = useState([]);
-
+  const [activeBuddy, setActiveBuddy] = useState(null);
 
   useEffect(() => {
     async function loadProfiles() {
-      const { data, error } = await supabase.from('profiles').select('*');
+      const { data } = await supabase.from('profiles').select('*');
       if (data && data.length > 0) setProfiles(data);
     }
     loadProfiles();
   }, []);
+
+  if (activeBuddy) return <BuddyProfileScreen buddy={activeBuddy} onBack={() => setActiveBuddy(null)} />;
 
   return (
     <div style={{ padding: '24px 16px 100px', overflowY: 'auto', height: '100vh' }}>
@@ -41,7 +38,7 @@ export default function ExploreScreen() {
                 ))}
               </div>
             </div>
-            <button style={{ background: 'white', color: 'black', border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Voir</button>
+            <button onClick={() => setActiveBuddy(p)} style={{ background: 'white', color: 'black', border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Voir</button>
           </div>
         ))}
       </div>
