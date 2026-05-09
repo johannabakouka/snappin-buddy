@@ -15,11 +15,12 @@ export default function Navbar({ screen, setScreen }) {
       transform: 'translateX(-50%)',
       width: '100%',
       maxWidth: '390px',
-      background: 'rgba(10,10,10,0.94)',
+      background: 'rgba(10,10,10,0.97)',
       borderTop: '1px solid rgba(255,255,255,0.07)',
       display: 'flex',
       justifyContent: 'space-around',
       padding: '12px 0 24px',
+      zIndex: 9999,
     }}>
       {tabs.map(tab => (
         <button
