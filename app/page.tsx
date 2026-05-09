@@ -53,9 +53,8 @@ export default function Home() {
     </div>
   );
 
-  return (
+return (
   <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: '#0A0A0A', color: 'white', position: 'relative', overflow: 'hidden' }}>
-    <Header />
     {screen === 'map' && <MapScreen />}
     {screen === 'explore' && <ExploreScreen />}
     {screen === 'match' && <MatchScreen />}
