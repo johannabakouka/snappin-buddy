@@ -28,9 +28,9 @@ export default function AuthScreen({ onLogin }) {
 
   return (
     <div style={{ padding: '60px 24px', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '4px' }}>Snappin&apos;Buddy</h1>
-      <p style={{ color: '#666', fontSize: '14px', marginBottom: '40px' }}>La communauté des créatifs visuels</p>
-
+     // APRÈS
+<img src="/logo.jpeg" alt="Snappin'Buddy" style={{ width: '140px', marginBottom: '16px' }} />
+<p style={{ color: '#666', fontSize: '14px', marginBottom: '40px' }}>La communauté des créatifs visuels</p>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
         <button onClick={() => setMode('login')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', background: mode === 'login' ? 'white' : 'transparent', color: mode === 'login' ? 'black' : 'white', fontWeight: '700', cursor: 'pointer' }}>Connexion</button>
         <button onClick={() => setMode('signup')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', background: mode === 'signup' ? 'white' : 'transparent', color: mode === 'signup' ? 'black' : 'white', fontWeight: '700', cursor: 'pointer' }}>Inscription</button>
