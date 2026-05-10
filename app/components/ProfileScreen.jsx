@@ -26,10 +26,9 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from('profiles').update({ status: newStatus }).eq('user_id', user.id);
+      await onProfileUpdate();
     }
   }
-
-  const currentStatut = STATUTS.find(s => s.id === status) || STATUTS[0];
 
   if (editing) return (
     <EditProfileScreen
@@ -43,7 +42,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
 
-      {/* Header avec toggle iOS */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
@@ -77,22 +75,17 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
 
-          {/* Sélecteur de statut */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
             {STATUTS.map(s => (
               <button
                 key={s.id}
                 onClick={() => updateStatus(s.id)}
                 style={{
-                  padding: '5px 12px',
-                  borderRadius: '20px',
+                  padding: '5px 12px', borderRadius: '20px',
                   border: `1.5px solid ${s.color}`,
                   background: status === s.id ? s.color : 'transparent',
                   color: status === s.id ? '#000' : s.color,
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
                 {s.label}
