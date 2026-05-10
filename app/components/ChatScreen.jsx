@@ -103,7 +103,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
       </div>
 
       {/* Input */}
-      <div style={{ padding: '12px 16px 34px', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div style={{ padding: '12px 16px 80px', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
         <input
           value={text}
           onChange={e => setText(e.target.value)}
