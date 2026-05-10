@@ -38,7 +38,10 @@ export default function ExploreScreen({ theme }) {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{p.username}</span>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: p.is_active ? '#3DFF8F' : '#444', display: 'inline-block' }}/>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
+                  <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
+  {p.status === 'dispo' ? 'Disponible' : p.status === 'shoot' ? 'En shoot' : 'Indisponible'}
+</span>
                 </div>
                 <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>{p.handle} · {p.zone}</div>
                 <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>

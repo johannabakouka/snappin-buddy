@@ -16,21 +16,22 @@ export default function MapComponent({ theme }) {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
       }).addTo(map);
+      const { data: profiles } = await supabase.from('profiles').select('*');
+if (profiles) {
+  profiles.forEach(p => {
+    if (p.lat && p.lng) {
+      const statusColor = p.status === 'shoot' ? '#FFD700' : p.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
       const icon = L.divIcon({
         className: '',
-        html: '<div style="width:12px;height:12px;background:#3DFF8F;border-radius:50%;border:2px solid white;"></div>',
+        html: `<div style="width:12px;height:12px;background:${statusColor};border-radius:50%;border:2px solid white;"></div>`,
         iconSize: [12, 12],
       });
-      const { data: profiles } = await supabase.from('profiles').select('*');
-      if (profiles) {
-        profiles.forEach(p => {
-          if (p.lat && p.lng) {
-            L.marker([p.lat, p.lng], { icon })
-              .addTo(map)
-              .bindPopup(`<b>${p.username}</b><br>${p.role}`);
-          }
-        });
-      }
+      L.marker([p.lat, p.lng], { icon })
+        .addTo(map)
+        .bindPopup(`<b>${p.username}</b><br>${p.role}`);
+    }
+  });
+}
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async pos => {
           const { latitude, longitude } = pos.coords;
