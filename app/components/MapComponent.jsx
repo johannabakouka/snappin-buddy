@@ -58,10 +58,9 @@ export default function MapComponent() {
 
   return (
     <div style={{ position: 'relative', height: '100vh' }}>
-      {/* Carte pleine hauteur */}
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
 
-      {/* Header flottant par dessus la carte */}
+      {/* Header flottant */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -71,14 +70,18 @@ export default function MapComponent() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '14px 0 10px',
-        background: 'linear-gradient(to bottom, rgba(10,10,10,0.85) 0%, transparent 100%)',
+        padding: '16px 0 20px',
+        background: 'linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%)',
       }}>
-        <img
-          src="/logo.jpeg"
-          alt="Snappin'Buddy"
-          style={{ height: '28px', objectFit: 'contain', mixBlendMode: 'lighten' }}
-        />
+        <span style={{
+          fontFamily: 'var(--font-nunito)',
+          fontSize: '24px',
+          fontWeight: '900',
+          color: 'white',
+          letterSpacing: '-0.3px',
+        }}>
+          Snappin&apos;Buddy
+        </span>
       </div>
 
       {/* Légende */}
