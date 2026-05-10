@@ -15,11 +15,12 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const subText = darkMode ? '#666' : '#888';
 
   if (editing) return (
-    <EditProfileScreen
-      profile={profile}
-      onBack={() => setEditing(false)}
-      onSave={() => { setEditing(false); onProfileUpdate(); }}
-    />
+ <EditProfileScreen
+  profile={profile}
+  onBack={() => setEditing(false)}
+  onSave={() => { setEditing(false); onProfileUpdate(); }}
+  theme={theme}
+/>
   );
 
   return (
