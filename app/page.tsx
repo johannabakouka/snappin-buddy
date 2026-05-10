@@ -15,7 +15,14 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+ const [darkMode, setDarkMode] = useState(() => {
+  if (typeof window === 'undefined') return true;
+  const saved = localStorage.getItem('darkMode');
+  return saved !== null ? saved === 'true' : true;
+});
+useEffect(() => {
+  localStorage.setItem('darkMode', String(darkMode));
+}, [darkMode]);
 
   const theme = {
     bg: darkMode ? '#0A0A0A' : '#F5F5F5',
