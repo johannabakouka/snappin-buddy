@@ -12,7 +12,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const cardText = darkMode ? 'rgba(255,255,255,0.78)' : 'rgba(0,0,0,0.78)';
   const tagColor = darkMode ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.65)';
   const tagBorder = darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
-  const subText = darkMode ? '#666' : '#999';
+  const subText = darkMode ? '#666' : '#888';
 
   if (editing) return (
     <EditProfileScreen
@@ -24,8 +24,8 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
-      
-      {/* Header avec toggle */}
+
+      {/* Header avec toggle iOS style */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -43,22 +43,47 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
         }}>
           Snappin&apos;Buddy
         </span>
-        <button
+
+        {/* Toggle pill iOS */}
+        <div
           onClick={() => setDarkMode(!darkMode)}
           style={{
             position: 'absolute',
             right: '16px',
-            background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            border: 'none',
-            borderRadius: '20px',
-            padding: '6px 12px',
-            fontSize: '16px',
+            width: '52px',
+            height: '28px',
+            borderRadius: '14px',
+            background: darkMode ? '#333' : '#DDD',
             cursor: 'pointer',
-            color: theme.color,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '3px',
+            transition: 'background 0.3s',
+            boxSizing: 'border-box',
           }}
         >
-          {darkMode ? '☀️' : '🌙'}
-        </button>
+          {/* Icône dans le fond */}
+          <span style={{
+            position: 'absolute',
+            left: darkMode ? '6px' : 'auto',
+            right: darkMode ? 'auto' : '6px',
+            fontSize: '11px',
+            opacity: 0.6,
+          }}>
+            {darkMode ? '🌙' : '☀️'}
+          </span>
+          {/* Bouton rond */}
+          <div style={{
+            width: '22px',
+            height: '22px',
+            borderRadius: '50%',
+            background: 'white',
+            transform: darkMode ? 'translateX(0px)' : 'translateX(24px)',
+            transition: 'transform 0.3s',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            flexShrink: 0,
+          }}/>
+        </div>
       </div>
 
       <div style={{ padding: '24px 16px 100px' }}>
