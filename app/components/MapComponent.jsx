@@ -2,9 +2,10 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 
-export default function MapComponent() {
+export default function MapComponent({ theme }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const darkMode = theme?.dark ?? true;
 
   useEffect(() => {
     if (mapInstance.current) return;
@@ -70,14 +71,21 @@ export default function MapComponent() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px 0 20px',
-        background: 'linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%)',
+        padding: '14px 0 24px',
+        background: darkMode
+          ? 'linear-gradient(to bottom, rgba(10,10,10,0.92) 0%, transparent 100%)'
+          : 'linear-gradient(to bottom, rgba(245,245,245,0.92) 0%, transparent 100%)',
       }}>
+        <img
+          src={darkMode ? '/logo.png' : '/logo-dark.png'}
+          alt="Snappin'Buddy"
+          style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }}
+        />
         <span style={{
           fontFamily: 'var(--font-nunito)',
-          fontSize: '24px',
+          fontSize: '22px',
           fontWeight: '900',
-          color: 'white',
+          color: darkMode ? 'white' : '#111',
           letterSpacing: '-0.3px',
         }}>
           Snappin&apos;Buddy
@@ -87,8 +95,10 @@ export default function MapComponent() {
       {/* Légende */}
       <div style={{
         position: 'absolute', bottom: '90px', left: '16px',
-        background: 'rgba(10,10,10,0.8)', borderRadius: '10px',
-        padding: '8px 12px', fontSize: '12px', color: '#666',
+        background: darkMode ? 'rgba(10,10,10,0.8)' : 'rgba(245,245,245,0.8)',
+        borderRadius: '10px',
+        padding: '8px 12px', fontSize: '12px',
+        color: darkMode ? '#666' : '#999',
         zIndex: 1000,
       }}>
         <span style={{ color: '#3DFF8F' }}>●</span> Créatifs · <span style={{ color: '#FF4D4D' }}>●</span> Toi
