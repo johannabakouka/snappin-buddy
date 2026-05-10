@@ -3,8 +3,15 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 
+const STATUTS = [
+  { id: 'dispo', label: 'Disponible', color: '#3DFF8F' },
+  { id: 'shoot', label: 'En shoot', color: '#FFD700' },
+  { id: 'indispo', label: 'Indisponible', color: '#FF4D4D' },
+];
+
 export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
   const [editing, setEditing] = useState(false);
+  const [status, setStatus] = useState(profile?.status || 'dispo');
   const styles = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (profile?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
 
@@ -14,75 +21,52 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const tagBorder = darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
   const subText = darkMode ? '#666' : '#888';
 
+  async function updateStatus(newStatus) {
+    setStatus(newStatus);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('profiles').update({ status: newStatus }).eq('user_id', user.id);
+    }
+  }
+
+  const currentStatut = STATUTS.find(s => s.id === status) || STATUTS[0];
+
   if (editing) return (
- <EditProfileScreen
-  profile={profile}
-  onBack={() => setEditing(false)}
-  onSave={() => { setEditing(false); onProfileUpdate(); }}
-  theme={theme}
-/>
+    <EditProfileScreen
+      profile={profile}
+      onBack={() => setEditing(false)}
+      onSave={() => { setEditing(false); onProfileUpdate(); }}
+      theme={theme}
+    />
   );
 
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
 
-      {/* Header avec toggle iOS style */}
+      {/* Header avec toggle iOS */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
         borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-        position: 'relative',
-        flexShrink: 0,
+        position: 'relative', flexShrink: 0,
       }}>
-        <span style={{
-          fontFamily: 'var(--font-nunito)',
-          fontSize: '22px',
-          fontWeight: '900',
-          color: theme.color,
-        }}>
+        <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: theme.color }}>
           Snappin&apos;Buddy
         </span>
-
-        {/* Toggle pill iOS */}
-        <div
-          onClick={() => setDarkMode(!darkMode)}
-          style={{
-            position: 'absolute',
-            right: '16px',
-            width: '52px',
-            height: '28px',
-            borderRadius: '14px',
-            background: darkMode ? '#333' : '#DDD',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '3px',
-            transition: 'background 0.3s',
-            boxSizing: 'border-box',
-          }}
-        >
-          {/* Icône dans le fond */}
-          <span style={{
-            position: 'absolute',
-            left: darkMode ? '6px' : 'auto',
-            right: darkMode ? 'auto' : '6px',
-            fontSize: '11px',
-            opacity: 0.6,
-          }}>
+        <div onClick={() => setDarkMode(!darkMode)} style={{
+          position: 'absolute', right: '16px',
+          width: '52px', height: '28px', borderRadius: '14px',
+          background: darkMode ? '#333' : '#DDD',
+          cursor: 'pointer', display: 'flex', alignItems: 'center',
+          padding: '3px', transition: 'background 0.3s', boxSizing: 'border-box',
+        }}>
+          <span style={{ position: 'absolute', left: darkMode ? '6px' : 'auto', right: darkMode ? 'auto' : '6px', fontSize: '11px', opacity: 0.6 }}>
             {darkMode ? '🌙' : '☀️'}
           </span>
-          {/* Bouton rond */}
           <div style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '50%',
-            background: 'white',
+            width: '22px', height: '22px', borderRadius: '50%', background: 'white',
             transform: darkMode ? 'translateX(0px)' : 'translateX(24px)',
-            transition: 'transform 0.3s',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-            flexShrink: 0,
+            transition: 'transform 0.3s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)', flexShrink: 0,
           }}/>
         </div>
       </div>
@@ -92,9 +76,28 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#DDD', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${tagBorder}` }}>◉</div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3DFF8F' }}/>
-            <span style={{ color: '#3DFF8F', fontSize: '12px' }}>Disponible</span>
+
+          {/* Sélecteur de statut */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
+            {STATUTS.map(s => (
+              <button
+                key={s.id}
+                onClick={() => updateStatus(s.id)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  border: `1.5px solid ${s.color}`,
+                  background: status === s.id ? s.color : 'transparent',
+                  color: status === s.id ? '#000' : s.color,
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         </div>
 
