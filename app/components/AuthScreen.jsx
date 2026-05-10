@@ -29,14 +29,26 @@ export default function AuthScreen({ onLogin }) {
     <div style={{ padding: '60px 24px', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#0A0A0A' }}>
       
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px' }}>
-        <img
-          src="/logo.jpeg"
-          alt="Snappin'Buddy"
-          style={{ width: '100px', height: '100px', objectFit: 'contain', mixBlendMode: 'lighten' }}
-        />
-        <p style={{ color: '#555', fontSize: '11px', letterSpacing: '3px', textTransform: 'uppercase', margin: '4px 0 0' }}>
-          match and create
-        </p>
+     <span style={{
+  fontFamily: 'var(--font-nunito)',
+  fontSize: '42px',
+  fontWeight: '900',
+  color: 'white',
+  letterSpacing: '-1px',
+  lineHeight: 1.1,
+  textAlign: 'center',
+}}>
+  Snappin&apos;Buddy
+</span>
+<span style={{
+  color: '#555',
+  fontSize: '12px',
+  letterSpacing: '3px',
+  textTransform: 'uppercase',
+  marginTop: '8px',
+}}>
+  match and create
+</span>
       </div>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
