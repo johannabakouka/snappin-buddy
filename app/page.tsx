@@ -68,7 +68,7 @@ useEffect(() => {
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color, position: 'relative', overflow: 'hidden' }}>
       {screen === 'map' && <MapScreen theme={theme} />}
       {screen === 'explore' && <ExploreScreen theme={theme} />}
-      {screen === 'match' && <MatchScreen theme={theme} />}
+      {screen === 'match' && <MatchScreen theme={theme} setScreen={setScreen} />}
       {screen === 'messages' && <MessagesScreen theme={theme} />}
       {screen === 'profile' && <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={() => window.location.reload()} />}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />

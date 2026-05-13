@@ -1,4 +1,6 @@
 'use client';
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 
 export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const darkMode = theme?.dark ?? true;
@@ -11,20 +13,44 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';
   const avatarBorder = darkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.22)';
 
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [message, setMessage] = useState('');
+  const [showInput, setShowInput] = useState(false);
+
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
+
+  const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
+  const statusLabel = buddy?.status === 'shoot' ? 'En shoot' : buddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
+
+  async function sendCollab() {
+    setSending(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('collabs').insert({
+        sender_id: user.id,
+        receiver_id: buddy.user_id,
+        message,
+        status: 'pending',
+      });
+      setSent(true);
+    }
+    setSending(false);
+  }
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: '24px 16px 100px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: '24px' }}>←</button>
+        
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: avatarBg, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${avatarBorder}` }}>◉</div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{buddy?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{buddy?.handle}</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: buddy?.is_active ? '#3DFF8F' : '#444' }}/>
-            <span style={{ color: buddy?.is_active ? '#3DFF8F' : '#444', fontSize: '12px' }}>{buddy?.is_active ? 'Disponible' : 'Indisponible'}</span>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor }}/>
+            <span style={{ color: statusColor, fontSize: '12px' }}>{statusLabel}</span>
           </div>
         </div>
 
@@ -64,9 +90,28 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         )}
 
-        <button style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-          ⚡ Proposer un collab
-        </button>
+        {/* Bouton collab */}
+        {sent ? (
+          <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#3DFF8F', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
+            ✓ Proposition envoyée !
+          </div>
+        ) : showInput ? (
+          <div style={{ marginTop: '8px' }}>
+            <input
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Décris ton projet en quelques mots..."
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }}
+            />
+            <button onClick={sendCollab} disabled={sending} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+              {sending ? 'Envoi...' : '⚡ Envoyer la proposition'}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setShowInput(true)} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+            ⚡ Proposer un collab
+          </button>
+        )}
       </div>
     </div>
   );
