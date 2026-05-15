@@ -1,23 +1,75 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import ChatScreen from './ChatScreen';
 import Header from './Header';
 
-const conversations = [
-  { id: '1', username: 'Léa Moreau', handle: '@leamorphoto', last: 'Ok top, on se retrouve à Oberkampf !', time: '14:32', unread: 2 },
-  { id: '2', username: 'Marcus D.', handle: '@marcusdvideo', last: "T'as du matos pour shooter en basse lumière ?", time: '11:15', unread: 0 },
-  { id: '3', username: 'Yanis R.', handle: '@yanisreel', last: 'Proposition de collab envoyée ⚡', time: 'Hier', unread: 0 },
-];
-
 export default function MessagesScreen({ theme }) {
   const [activeBuddy, setActiveBuddy] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [user, setUser] = useState(null);
   const darkMode = theme?.dark ?? true;
   const subText = darkMode ? '#666' : '#888';
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser(data.user);
+        loadConversations(data.user.id);
+      }
+    });
+  }, []);
+
+  async function loadConversations(userId) {
+    // Charger tous les messages où je suis impliqué
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: false });
+
+    if (!msgs || msgs.length === 0) return;
+
+    // Trouver les interlocuteurs uniques
+    const buddyIds = [...new Set(msgs.map(m =>
+      m.sender_id === userId ? m.receiver_id : m.sender_id
+    ))];
+
+    // Charger les profils
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, username, handle')
+      .in('user_id', buddyIds);
+
+    // Construire les conversations avec le dernier message
+    const convs = buddyIds.map(buddyId => {
+      const profile = profiles?.find(p => p.user_id === buddyId);
+      const lastMsg = msgs.find(m =>
+        (m.sender_id === userId && m.receiver_id === buddyId) ||
+        (m.sender_id === buddyId && m.receiver_id === userId)
+      );
+      const unread = msgs.filter(m =>
+        m.sender_id === buddyId && m.receiver_id === userId
+      ).length;
+
+      return {
+        id: buddyId,
+        user_id: buddyId,
+        username: profile?.username || 'Créatif',
+        handle: profile?.handle || '',
+        last: lastMsg?.content || '',
+        time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+        unread: 0,
+      };
+    });
+
+    setConversations(convs);
+  }
+
   if (activeBuddy) return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: theme?.bg }}>
-      <ChatScreen buddy={activeBuddy} onBack={() => setActiveBuddy(null)} theme={theme} />
+      <ChatScreen buddy={activeBuddy} onBack={() => { setActiveBuddy(null); if (user) loadConversations(user.id); }} theme={theme} />
     </div>
   );
 
@@ -27,6 +79,13 @@ export default function MessagesScreen({ theme }) {
       <div style={{ padding: '24px 16px 100px' }}>
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Messages</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '20px' }}>Tes conversations</p>
+
+        {conversations.length === 0 && (
+          <p style={{ color: subText, fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
+            Aucune conversation pour l'instant
+          </p>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {conversations.map(c => (
             <div key={c.id} onClick={() => setActiveBuddy(c)} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 12px', borderRadius: '12px', cursor: 'pointer' }}>
