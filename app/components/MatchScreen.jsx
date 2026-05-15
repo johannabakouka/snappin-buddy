@@ -23,20 +23,53 @@ export default function MatchScreen({ theme, setScreen }) {
   }, []);
 
   async function loadCollabs(userId) {
+    // Charger les collabs reçues
     const { data: recv } = await supabase
       .from('collabs')
-      .select('*, sender:sender_id(username, handle, role)')
+      .select('*')
       .eq('receiver_id', userId)
       .order('created_at', { ascending: false });
 
+    // Charger les collabs envoyées
     const { data: snt } = await supabase
       .from('collabs')
-      .select('*, receiver:receiver_id(username, handle, role)')
+      .select('*')
       .eq('sender_id', userId)
       .order('created_at', { ascending: false });
 
-    if (recv) setReceived(recv);
-    if (snt) setSent(snt);
+    if (recv && recv.length > 0) {
+      // Charger les profils des senders
+      const senderIds = recv.map(c => c.sender_id);
+      const { data: senderProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, username, handle, role')
+        .in('user_id', senderIds);
+
+      const recvWithProfiles = recv.map(c => ({
+        ...c,
+        senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id),
+      }));
+      setReceived(recvWithProfiles);
+    } else {
+      setReceived([]);
+    }
+
+    if (snt && snt.length > 0) {
+      // Charger les profils des receivers
+      const receiverIds = snt.map(c => c.receiver_id);
+      const { data: receiverProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, username, handle, role')
+        .in('user_id', receiverIds);
+
+      const sntWithProfiles = snt.map(c => ({
+        ...c,
+        receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id),
+      }));
+      setSent(sntWithProfiles);
+    } else {
+      setSent([]);
+    }
   }
 
   async function respondCollab(id, status) {
@@ -64,10 +97,10 @@ export default function MatchScreen({ theme, setScreen }) {
             {received.map(c => (
               <div key={c.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontWeight: '700', color: theme?.color }}>{c.sender?.username}</span>
+                  <span style={{ fontWeight: '700', color: theme?.color }}>{c.senderProfile?.username || 'Créatif'}</span>
                   <span style={{ fontSize: '11px', color: statusBadge(c.status).color }}>{statusBadge(c.status).label}</span>
                 </div>
-                <p style={{ color: subText, fontSize: '12px', marginBottom: '12px' }}>{c.message || 'Pas de message'}</p>
+                <p style={{ color: subText, fontSize: '12px', marginBottom: c.status === 'pending' ? '12px' : '0' }}>{c.message || 'Pas de message'}</p>
                 {c.status === 'pending' && (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => respondCollab(c.id, 'accepted')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#3DFF8F', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Accepter</button>
@@ -86,7 +119,7 @@ export default function MatchScreen({ theme, setScreen }) {
             {sent.map(c => (
               <div key={c.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontWeight: '700', color: theme?.color }}>{c.receiver?.username}</span>
+                  <span style={{ fontWeight: '700', color: theme?.color }}>{c.receiverProfile?.username || 'Créatif'}</span>
                   <span style={{ fontSize: '11px', color: statusBadge(c.status).color }}>{statusBadge(c.status).label}</span>
                 </div>
                 <p style={{ color: subText, fontSize: '12px' }}>{c.message || 'Pas de message'}</p>
