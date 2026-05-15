@@ -23,14 +23,12 @@ export default function MatchScreen({ theme, setScreen }) {
   }, []);
 
   async function loadCollabs(userId) {
-    // Charger les collabs reçues
     const { data: recv } = await supabase
       .from('collabs')
       .select('*')
       .eq('receiver_id', userId)
       .order('created_at', { ascending: false });
 
-    // Charger les collabs envoyées
     const { data: snt } = await supabase
       .from('collabs')
       .select('*')
@@ -38,42 +36,38 @@ export default function MatchScreen({ theme, setScreen }) {
       .order('created_at', { ascending: false });
 
     if (recv && recv.length > 0) {
-      // Charger les profils des senders
       const senderIds = recv.map(c => c.sender_id);
       const { data: senderProfiles } = await supabase
         .from('profiles')
         .select('user_id, username, handle, role')
         .in('user_id', senderIds);
-
-      const recvWithProfiles = recv.map(c => ({
-        ...c,
-        senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id),
-      }));
-      setReceived(recvWithProfiles);
+      setReceived(recv.map(c => ({ ...c, senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id) })));
     } else {
       setReceived([]);
     }
 
     if (snt && snt.length > 0) {
-      // Charger les profils des receivers
       const receiverIds = snt.map(c => c.receiver_id);
       const { data: receiverProfiles } = await supabase
         .from('profiles')
         .select('user_id, username, handle, role')
         .in('user_id', receiverIds);
-
-      const sntWithProfiles = snt.map(c => ({
-        ...c,
-        receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id),
-      }));
-      setSent(sntWithProfiles);
+      setSent(snt.map(c => ({ ...c, receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id) })));
     } else {
       setSent([]);
     }
   }
 
-  async function respondCollab(id, status) {
+  async function respondCollab(id, status, senderId) {
     await supabase.from('collabs').update({ status }).eq('id', id);
+    if (status === 'accepted' && user && senderId) {
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: senderId,
+        content: '⚡ Collab acceptée ! On se retrouve quand ?',
+      });
+      setScreen('messages');
+    }
     loadCollabs(user.id);
   }
 
@@ -90,7 +84,6 @@ export default function MatchScreen({ theme, setScreen }) {
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Match</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '24px' }}>Tes propositions de collab</p>
 
-        {/* Reçues */}
         {received.length > 0 && (
           <>
             <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>REÇUES</p>
@@ -103,8 +96,8 @@ export default function MatchScreen({ theme, setScreen }) {
                 <p style={{ color: subText, fontSize: '12px', marginBottom: c.status === 'pending' ? '12px' : '0' }}>{c.message || 'Pas de message'}</p>
                 {c.status === 'pending' && (
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => respondCollab(c.id, 'accepted')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#3DFF8F', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Accepter</button>
-                    <button onClick={() => respondCollab(c.id, 'declined')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #FF4D4D', background: 'transparent', color: '#FF4D4D', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Refuser</button>
+                    <button onClick={() => respondCollab(c.id, 'accepted', c.sender_id)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#3DFF8F', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Accepter</button>
+                    <button onClick={() => respondCollab(c.id, 'declined', null)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #FF4D4D', background: 'transparent', color: '#FF4D4D', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Refuser</button>
                   </div>
                 )}
               </div>
@@ -112,7 +105,6 @@ export default function MatchScreen({ theme, setScreen }) {
           </>
         )}
 
-        {/* Envoyées */}
         {sent.length > 0 && (
           <>
             <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px', marginTop: '16px' }}>ENVOYÉES</p>
