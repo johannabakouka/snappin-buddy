@@ -33,7 +33,6 @@ export default function MapComponent({ theme }) {
   const [styleFilter, setStyleFilter] = useState(null);
   const [L, setL] = useState(null);
 
-  // Init carte
   useEffect(() => {
     if (mapInstance.current) return;
     import('leaflet').then(async (LeafletModule) => {
@@ -78,11 +77,9 @@ export default function MapComponent({ theme }) {
     };
   }, []);
 
-  // Mise à jour des markers selon les filtres
   useEffect(() => {
     if (!L || !mapInstance.current || profiles.length === 0) return;
 
-    // Supprimer les anciens markers
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
@@ -104,7 +101,9 @@ export default function MapComponent({ theme }) {
         const meIcon = L.divIcon({
           className: '',
           html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);">MOI</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;">
+              ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : 'MOI'}
+            </div>
             <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">Vous</span>
           </div>`,
           iconSize: [44, 60], iconAnchor: [22, 22],
@@ -116,7 +115,9 @@ export default function MapComponent({ theme }) {
         const buddyIcon = L.divIcon({
           className: '',
           html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
-            <div style="width:44px;height:44px;border-radius:50%;background:${darkMode ? '#1A1A1A' : '#fff'};border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">◉</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:${darkMode ? '#1A1A1A' : '#fff'};border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);overflow:hidden;">
+              ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : '◉'}
+            </div>
             <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${(p.username || '').toUpperCase()}</span>
           </div>`,
           iconSize: [44, 64], iconAnchor: [22, 22],
@@ -133,8 +134,7 @@ export default function MapComponent({ theme }) {
   const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
   const pillStyle = (active) => ({
-    padding: '6px 14px',
-    borderRadius: '20px',
+    padding: '6px 14px', borderRadius: '20px',
     border: `1px solid ${active ? (darkMode ? 'white' : '#111') : (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)')}`,
     background: active ? (darkMode ? 'white' : '#111') : 'transparent',
     color: active ? (darkMode ? '#000' : '#fff') : (darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'),
@@ -154,7 +154,6 @@ export default function MapComponent({ theme }) {
           : 'linear-gradient(to bottom, rgba(245,245,245,0.95) 0%, transparent 100%)',
         paddingBottom: '16px',
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 10px', pointerEvents: 'none' }}>
           <img src={darkMode ? '/logo.png' : '/logo-dark.png'} alt="Snappin'Buddy"
             style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
@@ -163,7 +162,6 @@ export default function MapComponent({ theme }) {
           </span>
         </div>
 
-        {/* Filtres statut */}
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none' }}>
           {STATUS_FILTERS.map(f => (
             <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
@@ -201,22 +199,36 @@ export default function MapComponent({ theme }) {
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
         }}>
-          <button onClick={() => setPopupBuddy(null)} style={{
-            position: 'absolute', top: '12px', right: '12px',
-            background: 'none', border: 'none',
-            color: darkMode ? '#555' : '#999',
-            fontSize: '16px', cursor: 'pointer', lineHeight: 1,
-          }}>✕</button>
-
-          <div style={{ fontFamily: 'var(--font-nunito)', fontWeight: '900', fontSize: '17px', color: darkMode ? 'white' : '#111', marginBottom: '2px' }}>
-            {popupBuddy.username}
-          </div>
-
-          {popupStyles.length > 0 && (
-            <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', marginBottom: '8px', fontWeight: '600' }}>
-              {popupStyles.join(' · ')}
+          {/* Avatar dans le popup */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '50%',
+              background: darkMode ? '#2C2C2C' : '#DDD',
+              overflow: 'hidden', flexShrink: 0,
+              border: `2px solid ${statusColor}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+            }}>
+              {popupBuddy.avatar_url
+                ? <img src={popupBuddy.avatar_url} alt={popupBuddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : '◉'
+              }
             </div>
-          )}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: 'var(--font-nunito)', fontWeight: '900', fontSize: '17px', color: darkMode ? 'white' : '#111' }}>
+                {popupBuddy.username}
+              </div>
+              {popupStyles.length > 0 && (
+                <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontWeight: '600' }}>
+                  {popupStyles.join(' · ')}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setPopupBuddy(null)} style={{
+              background: 'none', border: 'none',
+              color: darkMode ? '#555' : '#999',
+              fontSize: '16px', cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            }}>✕</button>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusColor }} />
