@@ -13,69 +13,49 @@ function fuzzPosition(lat, lng) {
   };
 }
 
+const STATUS_FILTERS = [
+  { id: 'all', label: 'Tous' },
+  { id: 'dispo', label: '🟢 Dispo' },
+  { id: 'shoot', label: '🟡 En shoot' },
+];
+
+const STYLE_FILTERS = ['doc', 'portrait', 'mode', 'street', 'vidéo', 'analog'];
+
 export default function MapComponent({ theme }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const markersRef = useRef([]);
   const darkMode = theme?.dark ?? true;
   const [selectedBuddy, setSelectedBuddy] = useState(null);
   const [popupBuddy, setPopupBuddy] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [styleFilter, setStyleFilter] = useState(null);
+  const [L, setL] = useState(null);
 
+  // Init carte
   useEffect(() => {
     if (mapInstance.current) return;
-    import('leaflet').then(async L => {
+    import('leaflet').then(async (LeafletModule) => {
       import('leaflet/dist/leaflet.css');
-      const map = L.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], 13);
+      const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], 13);
       mapInstance.current = map;
 
-      L.tileLayer(
+      LeafletModule.tileLayer(
         darkMode
           ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
           : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-        {
-          attribution: '© Stadia Maps, © OpenMapTiles, © OpenStreetMap',
-          maxZoom: 20,
-        }
+        { attribution: '© Stadia Maps, © OpenMapTiles, © OpenStreetMap', maxZoom: 20 }
       ).addTo(map);
 
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      LeafletModule.control.zoom({ position: 'bottomright' }).addTo(map);
+      setL(LeafletModule);
 
-      const { data: profiles } = await supabase.from('profiles').select('*');
+      const { data: profileData } = await supabase.from('profiles').select('*');
       const { data: { user } } = await supabase.auth.getUser();
 
-      if (profiles) {
-        profiles.forEach(p => {
-          if (p.lat && p.lng) {
-            const isMe = user && p.user_id === user.id;
-            const statusColor = p.status === 'shoot' ? '#FFD700' : p.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
-
-            if (isMe) {
-              const meIcon = L.divIcon({
-                className: '',
-                html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                  <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);">MOI</div>
-                  <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">Vous</span>
-                </div>`,
-                iconSize: [44, 60],
-                iconAnchor: [22, 22],
-              });
-              L.marker([p.lat, p.lng], { icon: meIcon }).addTo(map);
-            } else {
-              const fuzzed = fuzzPosition(p.lat, p.lng);
-              const buddyIcon = L.divIcon({
-                className: '',
-                html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
-                  <div style="width:44px;height:44px;border-radius:50%;background:${darkMode ? '#1A1A1A' : '#fff'};border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">◉</div>
-                  <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${(p.username || '').toUpperCase()}</span>
-                </div>`,
-                iconSize: [44, 64],
-                iconAnchor: [22, 22],
-              });
-
-              const marker = L.marker([fuzzed.lat, fuzzed.lng], { icon: buddyIcon }).addTo(map);
-              marker.on('click', () => setPopupBuddy(p));
-            }
-          }
-        });
+      if (profileData) {
+        setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
       }
 
       if (navigator.geolocation) {
@@ -98,9 +78,69 @@ export default function MapComponent({ theme }) {
     };
   }, []);
 
+  // Mise à jour des markers selon les filtres
+  useEffect(() => {
+    if (!L || !mapInstance.current || profiles.length === 0) return;
+
+    // Supprimer les anciens markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    const filtered = profiles.filter(p => {
+      if (!p.lat || !p.lng) return false;
+      if (p._isMe) return true;
+      if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+      if (styleFilter) {
+        const styles = (p.styles || '').toLowerCase();
+        if (!styles.includes(styleFilter.toLowerCase())) return false;
+      }
+      return true;
+    });
+
+    filtered.forEach(p => {
+      const statusColor = p.status === 'shoot' ? '#FFD700' : p.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
+
+      if (p._isMe) {
+        const meIcon = L.divIcon({
+          className: '',
+          html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);">MOI</div>
+            <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">Vous</span>
+          </div>`,
+          iconSize: [44, 60], iconAnchor: [22, 22],
+        });
+        const m = L.marker([p.lat, p.lng], { icon: meIcon }).addTo(mapInstance.current);
+        markersRef.current.push(m);
+      } else {
+        const fuzzed = fuzzPosition(p.lat, p.lng);
+        const buddyIcon = L.divIcon({
+          className: '',
+          html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
+            <div style="width:44px;height:44px;border-radius:50%;background:${darkMode ? '#1A1A1A' : '#fff'};border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">◉</div>
+            <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${(p.username || '').toUpperCase()}</span>
+          </div>`,
+          iconSize: [44, 64], iconAnchor: [22, 22],
+        });
+        const m = L.marker([fuzzed.lat, fuzzed.lng], { icon: buddyIcon }).addTo(mapInstance.current);
+        m.on('click', () => setPopupBuddy(p));
+        markersRef.current.push(m);
+      }
+    });
+  }, [L, profiles, statusFilter, styleFilter]);
+
   const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
   const statusLabel = popupBuddy?.status === 'shoot' ? 'En shoot' : popupBuddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
   const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
+
+  const pillStyle = (active) => ({
+    padding: '6px 14px',
+    borderRadius: '20px',
+    border: `1px solid ${active ? (darkMode ? 'white' : '#111') : (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)')}`,
+    background: active ? (darkMode ? 'white' : '#111') : 'transparent',
+    color: active ? (darkMode ? '#000' : '#fff') : (darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'),
+    fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+    whiteSpace: 'nowrap', flexShrink: 0,
+  });
 
   return (
     <div style={{ position: 'relative', height: '100vh' }}>
@@ -109,21 +149,34 @@ export default function MapComponent({ theme }) {
       {/* Header flottant */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '14px 0 20px',
         background: darkMode
-          ? 'linear-gradient(to bottom, rgba(10,10,10,0.92) 0%, transparent 100%)'
-          : 'linear-gradient(to bottom, rgba(245,245,245,0.92) 0%, transparent 100%)',
-        pointerEvents: 'none',
+          ? 'linear-gradient(to bottom, rgba(10,10,10,0.95) 0%, transparent 100%)'
+          : 'linear-gradient(to bottom, rgba(245,245,245,0.95) 0%, transparent 100%)',
+        paddingBottom: '16px',
       }}>
-        <img src={darkMode ? '/logo.png' : '/logo-dark.png'} alt="Snappin'Buddy"
-          style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
-        <span style={{
-          fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900',
-          color: darkMode ? 'white' : '#111', letterSpacing: '-0.3px',
-        }}>
-          Snappin&apos;Buddy
-        </span>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 10px', pointerEvents: 'none' }}>
+          <img src={darkMode ? '/logo.png' : '/logo-dark.png'} alt="Snappin'Buddy"
+            style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
+          <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: darkMode ? 'white' : '#111', letterSpacing: '-0.3px' }}>
+            Snappin&apos;Buddy
+          </span>
+        </div>
+
+        {/* Filtres statut */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none' }}>
+          {STATUS_FILTERS.map(f => (
+            <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
+              {f.label}
+            </button>
+          ))}
+          <div style={{ width: '1px', background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
+          {STYLE_FILTERS.map(s => (
+            <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Légende */}
@@ -141,12 +194,10 @@ export default function MapComponent({ theme }) {
       {/* Popup buddy */}
       {popupBuddy && (
         <div style={{
-          position: 'absolute',
-          bottom: '100px', left: '16px', right: '16px',
+          position: 'absolute', bottom: '100px', left: '16px', right: '16px',
           zIndex: 2000,
           background: darkMode ? '#1A1A1A' : '#FFFFFF',
-          borderRadius: '18px',
-          padding: '16px',
+          borderRadius: '18px', padding: '16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
         }}>
@@ -175,8 +226,8 @@ export default function MapComponent({ theme }) {
           {popupBuddy.bio && (
             <p style={{
               color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
-              fontSize: '12px', fontStyle: 'italic',
-              lineHeight: 1.5, borderLeft: '2.5px solid rgba(128,128,128,0.3)',
+              fontSize: '12px', fontStyle: 'italic', lineHeight: 1.5,
+              borderLeft: '2.5px solid rgba(128,128,128,0.3)',
               paddingLeft: '8px', marginBottom: '14px',
             }}>
               « {popupBuddy.bio} »
@@ -186,8 +237,7 @@ export default function MapComponent({ theme }) {
           <button
             onClick={() => { setSelectedBuddy(popupBuddy); setPopupBuddy(null); }}
             style={{
-              width: '100%', padding: '11px', borderRadius: '24px',
-              border: 'none',
+              width: '100%', padding: '11px', borderRadius: '24px', border: 'none',
               background: darkMode ? 'white' : '#111',
               color: darkMode ? 'black' : 'white',
               fontSize: '13px', fontWeight: '700', cursor: 'pointer',
