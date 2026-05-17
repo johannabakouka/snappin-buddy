@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../supabase';
 
 export default function BuddyProfileScreen({ buddy, onBack, theme }) {
@@ -20,7 +20,6 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
-
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
   const statusLabel = buddy?.status === 'shoot' ? 'En shoot' : buddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
 
@@ -43,9 +42,21 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: '24px 16px 100px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: '24px' }}>←</button>
-        
+
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: avatarBg, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${avatarBorder}` }}>◉</div>
+          {/* Avatar */}
+          <div style={{
+            width: '88px', height: '88px', borderRadius: '50%',
+            background: avatarBg, margin: '0 auto 12px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '32px', border: `2px solid ${avatarBorder}`,
+            overflow: 'hidden',
+          }}>
+            {buddy?.avatar_url
+              ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : '◉'
+            }
+          </div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{buddy?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{buddy?.handle}</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
@@ -90,7 +101,6 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         )}
 
-        {/* Bouton collab */}
         {sent ? (
           <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#3DFF8F', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
             ✓ Proposition envoyée !

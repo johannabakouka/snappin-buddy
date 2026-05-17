@@ -15,7 +15,7 @@ export default function ExploreScreen({ theme }) {
   const [profiles, setProfiles] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
-  const [filter, setFilter] = useState('match'); // 'match' | 'dispo' | 'all'
+  const [filter, setFilter] = useState('match');
   const darkMode = theme?.dark ?? true;
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardBorder = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
@@ -39,19 +39,13 @@ export default function ExploreScreen({ theme }) {
 
   if (activeBuddy) return <BuddyProfileScreen buddy={activeBuddy} onBack={() => setActiveBuddy(null)} theme={theme} />;
 
-  // Filtre + tri
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
-
-  if (filter === 'dispo') {
-    displayed = displayed.filter(p => p.status === 'dispo');
-  }
-
+  if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
   if (filter === 'match') {
     displayed = [...displayed].sort((a, b) => {
       const scoreB = getMatchScore(myProfile?.styles, b.styles);
       const scoreA = getMatchScore(myProfile?.styles, a.styles);
       if (scoreB !== scoreA) return scoreB - scoreA;
-      // Dispo en premier à égalité
       if (a.status === 'dispo' && b.status !== 'dispo') return -1;
       if (b.status === 'dispo' && a.status !== 'dispo') return 1;
       return 0;
@@ -59,13 +53,11 @@ export default function ExploreScreen({ theme }) {
   }
 
   const pillStyle = (active) => ({
-    padding: '7px 16px',
-    borderRadius: '20px',
+    padding: '7px 16px', borderRadius: '20px',
     border: `1px solid ${active ? (darkMode ? 'white' : '#111') : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
     background: active ? (darkMode ? 'white' : '#111') : 'transparent',
     color: active ? (darkMode ? '#000' : '#fff') : (darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'),
-    fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-    whiteSpace: 'nowrap',
+    fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap',
   });
 
   return (
@@ -75,14 +67,12 @@ export default function ExploreScreen({ theme }) {
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Explorer</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>Créatifs autour de toi</p>
 
-        {/* Filtres */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
           <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 Dispo</button>
           <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>Tous</button>
         </div>
 
-        {/* Compteur */}
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
           {displayed.length} CRÉATIF{displayed.length > 1 ? 'S' : ''}
           {filter === 'match' && myProfile?.styles ? ' · TRIÉS PAR COMPATIBILITÉ' : ''}
@@ -92,22 +82,25 @@ export default function ExploreScreen({ theme }) {
           {displayed.map(p => {
             const score = getMatchScore(myProfile?.styles, p.styles);
             const matchStyles = myProfile?.styles
-              ? p.styles?.split(',').map(s => s.trim()).filter(s => myProfile.styles.toLowerCase().includes(s.toLowerCase()))
+              ? (p.styles || '').split(',').map(s => s.trim()).filter(s => myProfile.styles.toLowerCase().includes(s.toLowerCase()))
               : [];
 
             return (
               <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>◉</div>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
+                    {p.avatar_url
+                      ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : '◉'
+                    }
+                  </div>
                   {score > 0 && (
                     <div style={{
                       position: 'absolute', top: '-4px', right: '-4px',
                       background: '#3DFF8F', color: '#000',
                       borderRadius: '10px', padding: '1px 5px',
                       fontSize: '9px', fontWeight: '900',
-                    }}>
-                      {score}✓
-                    </div>
+                    }}>{score}✓</div>
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
