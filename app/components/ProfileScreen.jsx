@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 
@@ -12,9 +12,12 @@ const STATUTS = [
 export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(profile?.status || 'dispo');
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
+  const fileInputRef = useRef(null);
+
   const styles = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (profile?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
-
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardText = darkMode ? 'rgba(255,255,255,0.78)' : 'rgba(0,0,0,0.78)';
   const tagColor = darkMode ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.65)';
@@ -30,9 +33,27 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     }
   }
 
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/avatar.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+    if (!uploadError) {
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const url = data.publicUrl + '?t=' + Date.now();
+      await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+      setAvatarUrl(url);
+      await onProfileUpdate();
+    }
+    setUploading(false);
+  }
+
   if (editing) return (
     <EditProfileScreen
-      profile={profile}
+      profile={{ ...profile, avatar_url: avatarUrl }}
       onBack={() => setEditing(false)}
       onSave={() => { setEditing(false); onProfileUpdate(); }}
       theme={theme}
@@ -42,6 +63,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
 
+      {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
@@ -71,23 +93,55 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
       <div style={{ padding: '24px 16px 100px' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#DDD', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${tagBorder}` }}>◉</div>
+
+          {/* Avatar cliquable */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              width: '88px', height: '88px', borderRadius: '50%',
+              background: darkMode ? '#2C2C2C' : '#DDD',
+              margin: '0 auto 12px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '32px',
+              border: `2px solid ${tagBorder}`,
+              cursor: 'pointer', overflow: 'hidden', position: 'relative',
+            }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              uploading ? '⏳' : '◉'
+            )}
+            {/* Overlay édition */}
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              background: 'rgba(0,0,0,0.5)', padding: '4px 0',
+              fontSize: '10px', color: 'white', fontWeight: '700',
+            }}>
+              {uploading ? '...' : '✏️'}
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleAvatarUpload}
+          />
+
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
 
+          {/* Statuts */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
             {STATUTS.map(s => (
-              <button
-                key={s.id}
-                onClick={() => updateStatus(s.id)}
-                style={{
-                  padding: '5px 12px', borderRadius: '20px',
-                  border: `1.5px solid ${s.color}`,
-                  background: status === s.id ? s.color : 'transparent',
-                  color: status === s.id ? '#000' : s.color,
-                  fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
-                }}
-              >
+              <button key={s.id} onClick={() => updateStatus(s.id)} style={{
+                padding: '5px 12px', borderRadius: '20px',
+                border: `1.5px solid ${s.color}`,
+                background: status === s.id ? s.color : 'transparent',
+                color: status === s.id ? '#000' : s.color,
+                fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
+              }}>
                 {s.label}
               </button>
             ))}
