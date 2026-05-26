@@ -12,17 +12,18 @@ import OnboardingScreen from './components/OnboardingScreen';
 
 export default function Home() {
   const [screen, setScreen] = useState('map');
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
- const [darkMode, setDarkMode] = useState(() => {
-  if (typeof window === 'undefined') return true;
-  const saved = localStorage.getItem('darkMode');
-  return saved !== null ? saved === 'true' : true;
-});
-useEffect(() => {
-  localStorage.setItem('darkMode', String(darkMode));
-}, [darkMode]);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('darkMode');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', String(darkMode));
+  }, [darkMode]);
 
   const theme = {
     bg: darkMode ? '#0A0A0A' : '#F5F5F5',
@@ -32,7 +33,7 @@ useEffect(() => {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
-      const u = data.session?.user ?? null;
+      const u: any = data.session?.user ?? null;
       setUser(u);
       if (u) {
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
@@ -41,7 +42,7 @@ useEffect(() => {
       setLoading(false);
     });
     supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
+      const u: any = session?.user ?? null;
       setUser(u);
       if (u) {
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
