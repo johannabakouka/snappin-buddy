@@ -42,9 +42,9 @@ export default function MapComponent({ theme }) {
 
       LeafletModule.tileLayer(
         darkMode
-          ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-          : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-        { attribution: '© Stadia Maps, © OpenMapTiles, © OpenStreetMap', maxZoom: 20 }
+          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        { attribution: '© OpenStreetMap, © CARTO', maxZoom: 20 }
       ).addTo(map);
 
       LeafletModule.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -146,7 +146,6 @@ export default function MapComponent({ theme }) {
     <div style={{ position: 'relative', height: '100vh' }}>
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
 
-      {/* Header flottant */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
         background: darkMode
@@ -177,7 +176,6 @@ export default function MapComponent({ theme }) {
         </div>
       </div>
 
-      {/* Légende */}
       <div style={{
         position: 'absolute', bottom: '90px', left: '16px',
         background: darkMode ? 'rgba(10,10,10,0.85)' : 'rgba(245,245,245,0.85)',
@@ -189,7 +187,6 @@ export default function MapComponent({ theme }) {
         <span style={{ color: '#FF4D4D' }}>●</span> Indispo
       </div>
 
-      {/* Popup buddy */}
       {popupBuddy && (
         <div style={{
           position: 'absolute', bottom: '100px', left: '16px', right: '16px',
@@ -199,7 +196,6 @@ export default function MapComponent({ theme }) {
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
         }}>
-          {/* Avatar dans le popup */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
             <div style={{
               width: '44px', height: '44px', borderRadius: '50%',
