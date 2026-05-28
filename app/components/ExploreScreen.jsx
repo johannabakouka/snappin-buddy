@@ -91,14 +91,12 @@ export default function ExploreScreen({ theme }) {
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Explorer</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>Créatifs autour de toi</p>
 
-        {/* Filtres statut */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
           <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 Dispo</button>
           <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>Tous</button>
         </div>
 
-        {/* Filtres rôle */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {ROLE_FILTERS.map(r => (
             <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
@@ -107,7 +105,6 @@ export default function ExploreScreen({ theme }) {
           ))}
         </div>
 
-        {/* Filtres style */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {STYLE_FILTERS.map(s => (
             <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
@@ -130,47 +127,63 @@ export default function ExploreScreen({ theme }) {
               ? (p.styles || '').split(',').map(s => s.trim()).filter(s => myProfile.styles.toLowerCase().includes(s.toLowerCase()))
               : [];
             const roleIcon = ROLE_ICONS[p.role?.toLowerCase()] || '✨';
+            const portfolio = p.portfolio_urls || [];
 
             return (
-              <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
-                    {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+              <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', overflow: 'hidden' }}>
+                {/* Infos principales */}
+                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
+                      {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                    </div>
+                    {score > 0 && (
+                      <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#3DFF8F', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
+                    )}
                   </div>
-                  {score > 0 && (
-                    <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#3DFF8F', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
-                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{p.username}</span>
+                      <span style={{ fontSize: '13px' }}>{roleIcon}</span>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
+                      <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
+                        {p.status === 'dispo' ? 'Dispo' : p.status === 'shoot' ? 'En shoot' : 'Indispo'}
+                      </span>
+                    </div>
+                    <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
+                      {p.role && <span style={{ marginRight: '6px' }}>{p.role}</span>}
+                      {p.zone && <span>· {p.zone}</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                      {(p.styles || '').split(',').map(s => {
+                        const isMatch = matchStyles.includes(s.trim());
+                        return (
+                          <span key={s} style={{
+                            fontSize: '11px',
+                            color: isMatch ? (darkMode ? 'white' : '#111') : tagColor,
+                            border: `1px solid ${isMatch ? (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)') : tagBorder}`,
+                            borderRadius: '20px', padding: '2px 10px',
+                            background: isMatch ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
+                            fontWeight: isMatch ? '700' : '400',
+                          }}>{s.trim()}</span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>Voir</button>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{p.username}</span>
-                    <span style={{ fontSize: '13px' }}>{roleIcon}</span>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
-                    <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
-                      {p.status === 'dispo' ? 'Dispo' : p.status === 'shoot' ? 'En shoot' : 'Indispo'}
-                    </span>
+
+                {/* Mini carrousel portfolio */}
+                {portfolio.length > 0 && (
+                  <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', scrollbarWidth: 'none', padding: '0 16px 12px' }}>
+                    {portfolio.map((url, i) => (
+                      <img key={i} src={url} alt={`portfolio-${i}`}
+                        style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                        onClick={() => setActiveBuddy(p)}
+                      />
+                    ))}
                   </div>
-                  <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
-                    {p.role && <span style={{ marginRight: '6px' }}>{p.role}</span>}
-                    {p.zone && <span>· {p.zone}</span>}
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                    {(p.styles || '').split(',').map(s => {
-                      const isMatch = matchStyles.includes(s.trim());
-                      return (
-                        <span key={s} style={{
-                          fontSize: '11px',
-                          color: isMatch ? (darkMode ? 'white' : '#111') : tagColor,
-                          border: `1px solid ${isMatch ? (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)') : tagBorder}`,
-                          borderRadius: '20px', padding: '2px 10px',
-                          background: isMatch ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
-                          fontWeight: isMatch ? '700' : '400',
-                        }}>{s.trim()}</span>
-                      );
-                    })}
-                  </div>
-                </div>
-                <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Voir</button>
+                )}
               </div>
             );
           })}
