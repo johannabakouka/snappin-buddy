@@ -1,4 +1,4 @@
-export default function Header({ theme }) {
+export default function Header({ theme, onLogoClick }) {
   const darkMode = theme?.dark ?? true;
   return (
     <header style={{
@@ -10,13 +10,17 @@ export default function Header({ theme }) {
       flexShrink: 0,
       background: theme?.bg ?? '#0A0A0A',
     }}>
-      <span style={{
-        fontFamily: 'var(--font-nunito)',
-        fontSize: '22px',
-        fontWeight: '900',
-        color: theme?.color ?? 'white',
-        letterSpacing: '-0.3px',
-      }}>
+      <span
+        onClick={onLogoClick}
+        style={{
+          fontFamily: 'var(--font-nunito)',
+          fontSize: '22px',
+          fontWeight: '900',
+          color: theme?.color ?? 'white',
+          letterSpacing: '-0.3px',
+          cursor: onLogoClick ? 'pointer' : 'default',
+        }}
+      >
         Snappin&apos;Buddy
       </span>
     </header>

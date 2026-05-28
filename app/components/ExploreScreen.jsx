@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
@@ -12,15 +12,9 @@ function getMatchScore(myStyles, theirStyles) {
 }
 
 const ROLE_ICONS = {
-  'photographe': '📷',
-  'vidéaste': '🎬',
-  'directeur artistique': '🎨',
-  'styliste': '👗',
-  'maquilleur': '💄',
-  'modèle': '🧍',
-  'directeur casting': '🎭',
-  'brand owner': '🏷️',
-  'autre': '✨',
+  'photographe': '📷', 'vidéaste': '🎬', 'directeur artistique': '🎨',
+  'styliste': '👗', 'maquilleur': '💄', 'modèle': '🧍',
+  'directeur casting': '🎭', 'brand owner': '🏷️', 'autre': '✨',
 };
 
 const ROLE_FILTERS = [
@@ -33,12 +27,16 @@ const ROLE_FILTERS = [
   { id: 'brand owner', label: 'Brand', icon: '🏷️' },
 ];
 
+const STYLE_FILTERS = ['doc', 'portrait', 'street', 'mode', 'analog', 'vidéo', 'studio'];
+
 export default function ExploreScreen({ theme }) {
   const [profiles, setProfiles] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
   const [filter, setFilter] = useState('match');
   const [roleFilter, setRoleFilter] = useState(null);
+  const [styleFilter, setStyleFilter] = useState(null);
+  const scrollRef = useRef(null);
   const darkMode = theme?.dark ?? true;
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardBorder = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
@@ -63,9 +61,9 @@ export default function ExploreScreen({ theme }) {
   if (activeBuddy) return <BuddyProfileScreen buddy={activeBuddy} onBack={() => setActiveBuddy(null)} theme={theme} />;
 
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
-
   if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
   if (roleFilter) displayed = displayed.filter(p => p.role?.toLowerCase() === roleFilter.toLowerCase());
+  if (styleFilter) displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(styleFilter.toLowerCase()));
 
   if (filter === 'match') {
     displayed = [...displayed].sort((a, b) => {
@@ -87,28 +85,33 @@ export default function ExploreScreen({ theme }) {
   });
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
-      <Header theme={theme} />
+    <div ref={scrollRef} style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+      <Header theme={theme} onLogoClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
       <div style={{ padding: '24px 16px 100px' }}>
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Explorer</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>Créatifs autour de toi</p>
 
         {/* Filtres statut */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
           <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 Dispo</button>
           <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>Tous</button>
         </div>
 
         {/* Filtres rôle */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {ROLE_FILTERS.map(r => (
-            <button
-              key={r.id}
-              onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)}
-              style={pillStyle(roleFilter === r.id)}
-            >
+            <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
               {r.icon} {r.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filtres style */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {STYLE_FILTERS.map(s => (
+            <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
+              {s}
             </button>
           ))}
         </div>
@@ -117,6 +120,7 @@ export default function ExploreScreen({ theme }) {
           {displayed.length} CRÉATIF{displayed.length > 1 ? 'S' : ''}
           {filter === 'match' && myProfile?.styles ? ' · TRIÉS PAR COMPATIBILITÉ' : ''}
           {roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
+          {styleFilter ? ` · ${styleFilter.toUpperCase()}` : ''}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -131,18 +135,10 @@ export default function ExploreScreen({ theme }) {
               <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
-                    {p.avatar_url
-                      ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : '◉'
-                    }
+                    {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                   </div>
                   {score > 0 && (
-                    <div style={{
-                      position: 'absolute', top: '-4px', right: '-4px',
-                      background: '#3DFF8F', color: '#000',
-                      borderRadius: '10px', padding: '1px 5px',
-                      fontSize: '9px', fontWeight: '900',
-                    }}>{score}✓</div>
+                    <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#3DFF8F', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
