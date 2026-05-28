@@ -2,13 +2,29 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
 
+const ROLES = [
+  { id: 'photographe', label: 'Photographe', icon: '📷' },
+  { id: 'vidéaste', label: 'Vidéaste', icon: '🎬' },
+  { id: 'directeur artistique', label: 'Dir. Artistique', icon: '🎨' },
+  { id: 'styliste', label: 'Styliste', icon: '👗' },
+  { id: 'maquilleur', label: 'Maquilleur·se', icon: '💄' },
+  { id: 'modèle', label: 'Modèle', icon: '🧍' },
+  { id: 'directeur casting', label: 'Dir. Casting', icon: '🎭' },
+  { id: 'brand owner', label: 'Brand Owner', icon: '🏷️' },
+  { id: 'autre', label: 'Autre', icon: '✨' },
+];
+
+const STYLE_OPTIONS = ['doc', 'portrait', 'street', 'mode', 'analog', 'vidéo', 'studio', 'architecture', 'nature'];
+
 export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [username, setUsername] = useState(profile?.username || '');
   const [handle, setHandle] = useState(profile?.handle || '');
-  const [role, setRole] = useState(profile?.role || '');
+  const [selectedRole, setSelectedRole] = useState(profile?.role || null);
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
-  const [styles, setStyles] = useState(profile?.styles || '');
+  const [selectedStyles, setSelectedStyles] = useState(
+    profile?.styles ? profile.styles.split(',').map(s => s.trim()).filter(Boolean) : []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,68 +36,91 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const subText = darkMode ? '#888' : '#999';
   const card = darkMode ? '#1A1A1A' : '#F0F0F0';
 
+  function toggleStyle(s) {
+    setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  }
+
   async function handleSave() {
-    if (!username || !handle || !role) { setError('Champs obligatoires manquants'); return; }
+    if (!username || !handle || !selectedRole) { setError('Champs obligatoires manquants'); return; }
     setLoading(true);
-    const { error } = await supabase.from('profiles').update({ username, handle, role, bio, zone, styles }).eq('user_id', profile.user_id);
+    const { error } = await supabase.from('profiles').update({
+      username, handle, role: selectedRole,
+      bio, zone, styles: selectedStyles.join(', '),
+    }).eq('user_id', profile.user_id);
     if (error) setError(error.message);
     else onSave();
     setLoading(false);
   }
 
-  const fields = [
-    { label: 'Nom', value: username, set: setUsername, placeholder: 'Ton prénom ou pseudo' },
-    { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle' },
-    { label: 'Rôle', value: role, set: setRole, placeholder: 'Photographe, vidéaste...' },
-    { label: 'Pitch', value: bio, set: setBio, placeholder: 'Ton projet en cours...' },
-    { label: 'Zone', value: zone, set: setZone, placeholder: 'Belleville, Oberkampf...' },
-    { label: 'Styles', value: styles, set: setStyles, placeholder: 'doc, portrait, street...' },
-  ];
-
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto', padding: '24px 16px 40px' }}>
 
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>Modifier le profil</h2>
       </div>
 
-      {/* Avatar */}
       {profile?.avatar_url && (
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
           <img src={profile.avatar_url} alt="avatar" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'}` }} />
         </div>
       )}
 
-      {/* Aide styles */}
-      <div style={{ background: card, borderRadius: '12px', padding: '12px 14px', marginBottom: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` }}>
-        <p style={{ color: subText, fontSize: '11px', marginBottom: '6px', fontWeight: '700', letterSpacing: '0.5px' }}>STYLES DISPONIBLES</p>
-        <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5 }}>doc · portrait · street · mode · analog · vidéo · studio · architecture · nature</p>
-        <p style={{ color: subText, fontSize: '11px', marginTop: '6px' }}>Sépare-les par des virgules</p>
-      </div>
-
-      {fields.map(({ label, value, set, placeholder }) => (
+      {/* Nom et handle */}
+      {[
+        { label: 'Nom', value: username, set: setUsername, placeholder: 'Ton prénom ou pseudo' },
+        { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle' },
+        { label: 'Pitch', value: bio, set: setBio, placeholder: 'Ton projet en cours...' },
+        { label: 'Zone', value: zone, set: setZone, placeholder: 'Belleville, Oberkampf...' },
+      ].map(({ label, value, set, placeholder }) => (
         <div key={label} style={{ marginBottom: '16px' }}>
           <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>{label}</p>
-          <input
-            value={value}
-            onChange={e => set(e.target.value)}
-            placeholder={placeholder}
-            style={{
-              width: '100%', padding: '13px 14px', borderRadius: '12px',
-              border: `1px solid ${inputBorder}`,
-              background: inputBg, color, fontSize: '14px',
-              boxSizing: 'border-box',
-              outline: 'none',
-            }}
-          />
+          <input value={value} onChange={e => set(e.target.value)} placeholder={placeholder}
+            style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }} />
         </div>
       ))}
 
+      {/* Rôle */}
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>RÔLE *</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+        {ROLES.map(r => {
+          const active = selectedRole === r.id;
+          return (
+            <button key={r.id} onClick={() => setSelectedRole(r.id)} style={{
+              padding: '12px 8px', borderRadius: '12px',
+              border: `1.5px solid ${active ? color : (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)')}`,
+              background: active ? color : inputBg,
+              color: active ? bg : (darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'),
+              cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+              transition: 'all 0.2s',
+            }}>
+              <span style={{ fontSize: '20px' }}>{r.icon}</span>
+              <span style={{ fontSize: '10px', fontWeight: '700', textAlign: 'center', lineHeight: 1.2 }}>{r.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Styles */}
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>STYLES</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
+        {STYLE_OPTIONS.map(s => {
+          const active = selectedStyles.includes(s);
+          return (
+            <button key={s} onClick={() => toggleStyle(s)} style={{
+              padding: '7px 14px', borderRadius: '20px',
+              border: `1.5px solid ${active ? color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
+              background: active ? color : 'transparent',
+              color: active ? bg : (darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'),
+              fontSize: '12px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
+            }}>{s}</button>
+          );
+        })}
+      </div>
+
       {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
-      <button onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+      <button onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
         {loading ? 'Sauvegarde...' : 'Enregistrer'}
       </button>
     </div>
