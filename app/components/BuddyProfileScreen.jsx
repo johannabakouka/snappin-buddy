@@ -20,6 +20,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
+  const portfolio = buddy?.portfolio_urls || [];
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
   const statusLabel = buddy?.status === 'shoot' ? 'En shoot' : buddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
 
@@ -44,18 +45,8 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: '24px' }}>←</button>
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          {/* Avatar */}
-          <div style={{
-            width: '88px', height: '88px', borderRadius: '50%',
-            background: avatarBg, margin: '0 auto 12px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '32px', border: `2px solid ${avatarBorder}`,
-            overflow: 'hidden',
-          }}>
-            {buddy?.avatar_url
-              ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : '◉'
-            }
+          <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: avatarBg, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${avatarBorder}`, overflow: 'hidden' }}>
+            {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{buddy?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{buddy?.handle}</p>
@@ -64,6 +55,18 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
             <span style={{ color: statusColor, fontSize: '12px' }}>{statusLabel}</span>
           </div>
         </div>
+
+        {/* Portfolio carrousel */}
+        {portfolio.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>PORTFOLIO</p>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
+              {portfolio.map((url, i) => (
+                <img key={i} src={url} alt={`portfolio-${i}`} style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {buddy?.bio && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
@@ -107,12 +110,8 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
-            <input
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              placeholder="Décris ton projet en quelques mots..."
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }}
-            />
+            <input value={message} onChange={e => setMessage(e.target.value)} placeholder="Décris ton projet en quelques mots..."
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
             <button onClick={sendCollab} disabled={sending} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
               {sending ? 'Envoi...' : '⚡ Envoyer la proposition'}
             </button>

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 
 const ROLES = [
@@ -25,8 +25,11 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [selectedStyles, setSelectedStyles] = useState(
     profile?.styles ? profile.styles.split(',').map(s => s.trim()).filter(Boolean) : []
   );
+  const [portfolioUrls, setPortfolioUrls] = useState(profile?.portfolio_urls || []);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const portfolioInputRef = useRef(null);
 
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
@@ -34,10 +37,36 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const inputBg = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const inputBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
   const subText = darkMode ? '#888' : '#999';
-  const card = darkMode ? '#1A1A1A' : '#F0F0F0';
 
   function toggleStyle(s) {
     setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  }
+
+  async function handlePortfolioUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (portfolioUrls.length + files.length > 5) {
+      setError('Maximum 5 photos de portfolio');
+      return;
+    }
+    setUploadingPortfolio(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const newUrls = [...portfolioUrls];
+    for (const file of files) {
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('portfolio').upload(path, file);
+      if (!uploadError) {
+        const { data } = supabase.storage.from('portfolio').getPublicUrl(path);
+        newUrls.push(data.publicUrl);
+      }
+    }
+    setPortfolioUrls(newUrls);
+    setUploadingPortfolio(false);
+  }
+
+  async function removePortfolioPhoto(url) {
+    setPortfolioUrls(prev => prev.filter(u => u !== url));
   }
 
   async function handleSave() {
@@ -46,6 +75,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
     const { error } = await supabase.from('profiles').update({
       username, handle, role: selectedRole,
       bio, zone, styles: selectedStyles.join(', '),
+      portfolio_urls: portfolioUrls,
     }).eq('user_id', profile.user_id);
     if (error) setError(error.message);
     else onSave();
@@ -66,7 +96,6 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         </div>
       )}
 
-      {/* Nom et handle */}
       {[
         { label: 'Nom', value: username, set: setUsername, placeholder: 'Ton prénom ou pseudo' },
         { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle' },
@@ -117,6 +146,29 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
           );
         })}
       </div>
+
+      {/* Portfolio */}
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>PORTFOLIO <span style={{ color: subText, fontWeight: '400' }}>(max 5 photos)</span></p>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {portfolioUrls.map((url, i) => (
+          <div key={i} style={{ position: 'relative', width: '80px', height: '80px' }}>
+            <img src={url} style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' }} />
+            <button
+              onClick={() => removePortfolioPhoto(url)}
+              style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#FF4D4D', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >✕</button>
+          </div>
+        ))}
+        {portfolioUrls.length < 5 && (
+          <button
+            onClick={() => portfolioInputRef.current?.click()}
+            style={{ width: '80px', height: '80px', borderRadius: '10px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: subText, fontSize: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {uploadingPortfolio ? '⏳' : '+'}
+          </button>
+        )}
+      </div>
+      <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
 
       {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
