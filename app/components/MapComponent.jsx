@@ -154,6 +154,8 @@ export default function MapComponent({ theme }) {
     whiteSpace: 'nowrap', flexShrink: 0,
   });
 
+  const sep = <div style={{ width: '1.5px', background: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)', margin: '0 4px', flexShrink: 0, borderRadius: '2px' }} />;
+
   return (
     <div style={{ position: 'relative', height: '100vh' }}>
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
@@ -174,26 +176,23 @@ export default function MapComponent({ theme }) {
           </span>
         </div>
 
-        {/* Filtres statut + style */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 6px', scrollbarWidth: 'none' }}>
+        {/* Une seule rangée scrollable : statut | rôles | styles */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none', alignItems: 'center' }}>
           {STATUS_FILTERS.map(f => (
             <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
               {f.label}
             </button>
           ))}
-          <div style={{ width: '1px', background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 2px', flexShrink: 0 }} />
-          {STYLE_FILTERS.map(s => (
-            <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
-              {s}
-            </button>
-          ))}
-        </div>
-
-        {/* Filtres rôle */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 4px', scrollbarWidth: 'none' }}>
+          {sep}
           {ROLE_FILTERS.map(r => (
             <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
               {r.label}
+            </button>
+          ))}
+          {sep}
+          {STYLE_FILTERS.map(s => (
+            <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
+              {s}
             </button>
           ))}
         </div>
