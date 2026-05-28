@@ -6,10 +6,10 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [user, setUser] = useState(null);
+  const [showQRReminder, setShowQRReminder] = useState(false);
   const bottomRef = useRef(null);
   const darkMode = theme?.dark ?? true;
 
-  // Le vrai ID du buddy (user_id Supabase ou id selon la source)
   const buddyUserId = buddy?.user_id || buddy?.id;
 
   useEffect(() => {
@@ -28,7 +28,13 @@ export default function ChatScreen({ buddy, onBack, theme }) {
       .select('*')
       .or(`and(sender_id.eq.${myId},receiver_id.eq.${buddyId}),and(sender_id.eq.${buddyId},receiver_id.eq.${myId})`)
       .order('created_at', { ascending: true });
-    if (data) setMessages(data);
+    if (data) {
+      setMessages(data);
+      // Affiche le reminder QR si la collab vient d'être acceptée (premier message = message auto)
+      if (data.length === 1 && data[0].content.includes('Collab acceptée')) {
+        setShowQRReminder(true);
+      }
+    }
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   }
 
@@ -52,12 +58,11 @@ export default function ChatScreen({ buddy, onBack, theme }) {
     if (!text.trim() || !user || !buddyUserId) return;
     const content = text;
     setText('');
-    const { data, error } = await supabase.from('messages').insert({
+    const { data } = await supabase.from('messages').insert({
       sender_id: user.id,
       receiver_id: buddyUserId,
       content,
     }).select().single();
-    // Ajoute le message localement immédiatement
     if (data) {
       setMessages(prev => [...prev, data]);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -92,17 +97,44 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+        {/* Reminder QR */}
+        {showQRReminder && (
+          <div style={{
+            background: darkMode ? 'rgba(255,154,61,0.08)' : 'rgba(255,154,61,0.1)',
+            border: '1px solid rgba(255,154,61,0.3)',
+            borderRadius: '14px', padding: '12px 14px',
+            marginBottom: '8px', position: 'relative',
+          }}>
+            <button
+              onClick={() => setShowQRReminder(false)}
+              style={{ position: 'absolute', top: '8px', right: '10px', background: 'none', border: 'none', color: subText, fontSize: '14px', cursor: 'pointer' }}
+            >✕</button>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,154,61,0.9)', marginBottom: '4px' }}>🔒 Avant de vous retrouver</p>
+            <p style={{ fontSize: '12px', color: subText, lineHeight: 1.5 }}>
+              Pensez à générer et scanner vos QR codes respectifs dans l&apos;onglet <strong style={{ color }}>Match → 🤝</strong> pour confirmer vos identités !
+            </p>
+          </div>
+        )}
+
         {messages.length === 0 && (
           <p style={{ color: subText, textAlign: 'center', marginTop: '40px' }}>Commence la conversation !</p>
         )}
+
         {messages.map(m => {
           const isMe = m.sender_id === user?.id;
+          const isSystem = m.content.includes('Collab acceptée');
+          if (isSystem) return (
+            <div key={m.id} style={{ textAlign: 'center', margin: '8px 0' }}>
+              <span style={{ fontSize: '12px', color: '#3DFF8F', background: darkMode ? 'rgba(61,255,143,0.08)' : 'rgba(61,255,143,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(61,255,143,0.2)' }}>
+                {m.content}
+              </span>
+            </div>
+          );
           return (
             <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
               <div style={{
-                maxWidth: '75%',
-                padding: '10px 14px',
-                borderRadius: '18px',
+                maxWidth: '75%', padding: '10px 14px', borderRadius: '18px',
                 background: isMe ? (darkMode ? 'white' : '#111') : (darkMode ? '#1A1A1A' : '#E0E0E0'),
                 color: isMe ? (darkMode ? 'black' : 'white') : color,
                 fontSize: '14px',
