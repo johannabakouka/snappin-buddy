@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 
-export default function QRScreen({ collab, user, theme, onBack }) {
+export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const darkMode = theme?.dark ?? true;
   const bg = darkMode ? '#0A0A0A' : '#F5F5F5';
   const color = darkMode ? 'white' : '#111';
@@ -10,8 +10,6 @@ export default function QRScreen({ collab, user, theme, onBack }) {
   const subText = darkMode ? '#666' : '#888';
 
   const [sessionId, setSessionId] = useState(null);
-  const [showShareCard, setShowShareCard] = useState(false);
-  const shareCardRef = useRef(null);
 
   useEffect(() => {
     createSession();
@@ -33,84 +31,88 @@ export default function QRScreen({ collab, user, theme, onBack }) {
     : null;
 
   const buddyName = collab.senderProfile?.username || collab.receiverProfile?.username || 'Buddy';
-  const myName = user?.email?.split('@')[0] || 'Moi';
+  const myHandle = myProfile?.handle || myProfile?.username || user?.email?.split('@')[0] || 'moi';
   const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   async function downloadShareCard() {
-    // Génère une image via canvas
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1920;
     const ctx = canvas.getContext('2d');
 
-    // Fond dégradé sombre
     const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
     gradient.addColorStop(0, '#0A0A0A');
-    gradient.addColorStop(1, '#1A1A1A');
+    gradient.addColorStop(1, '#141414');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1080, 1920);
 
-    // Grain effect
-    ctx.fillStyle = 'rgba(255,255,255,0.02)';
-    for (let i = 0; i < 5000; i++) {
+    ctx.fillStyle = 'rgba(255,255,255,0.015)';
+    for (let i = 0; i < 8000; i++) {
       ctx.fillRect(Math.random() * 1080, Math.random() * 1920, 1, 1);
     }
 
-    // Logo texte
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 64px Arial';
+    ctx.beginPath();
+    ctx.arc(540, 200, 300, 0, Math.PI * 2);
+    const radial = ctx.createRadialGradient(540, 200, 0, 540, 200, 300);
+    radial.addColorStop(0, 'rgba(61,255,143,0.06)');
+    radial.addColorStop(1, 'rgba(61,255,143,0)');
+    ctx.fillStyle = radial;
+    ctx.fill();
+
+    ctx.font = '52px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText("Snappin'Buddy", 540, 300);
+    ctx.fillStyle = 'white';
+    ctx.fillText('🗺 📸', 540, 280);
 
-    // Sous-titre
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '32px Arial';
-    ctx.fillText('match and create', 540, 370);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 72px Arial';
+    ctx.fillText("Snappin'Buddy", 540, 380);
 
-    // Ligne séparatrice
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '28px Arial';
+    ctx.fillText('MATCH AND CREATE', 540, 440);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(200, 450);
-    ctx.lineTo(880, 450);
+    ctx.moveTo(160, 520);
+    ctx.lineTo(920, 520);
     ctx.stroke();
 
-    // "Collab réalisée"
     ctx.fillStyle = '#3DFF8F';
-    ctx.font = 'bold 36px Arial';
-    ctx.fillText('✓ Collab réalisée', 540, 600);
-
-    // Usernames
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 80px Arial';
-    ctx.fillText(`@${myName}`, 540, 780);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '48px Arial';
-    ctx.fillText('×', 540, 900);
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('✓ Collab réalisée', 540, 630);
 
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 80px Arial';
-    ctx.fillText(`@${buddyName}`, 540, 1020);
+    ctx.font = 'bold 76px Arial';
+    ctx.fillText(`@${myHandle}`, 540, 820);
 
-    // Ligne séparatrice
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '44px Arial';
+    ctx.fillText('×', 540, 930);
+
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 76px Arial';
+    ctx.fillText(`@${buddyName}`, 540, 1040);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.moveTo(200, 1120);
-    ctx.lineTo(880, 1120);
+    ctx.moveTo(160, 1120);
+    ctx.lineTo(920, 1120);
     ctx.stroke();
 
-    // Date
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '36px Arial';
-    ctx.fillText(today, 540, 1220);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '34px Arial';
+    ctx.fillText(today, 540, 1200);
 
-    // URL
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.font = '28px Arial';
-    ctx.fillText('snappin-buddy.vercel.app', 540, 1700);
+    ctx.fillText('#snappinbuddy', 540, 1700);
 
-    // Télécharger
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '24px Arial';
+    ctx.fillText('snappin-buddy.vercel.app', 540, 1760);
+
     const link = document.createElement('a');
     link.download = `snappin-buddy-collab-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -121,19 +123,16 @@ export default function QRScreen({ collab, user, theme, onBack }) {
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: '24px 16px 100px' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>QR de session</h2>
         </div>
 
-        {/* Infos session */}
         <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '24px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}` }}>
           <p style={{ color: subText, fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>SESSION AVEC</p>
           <p style={{ color, fontWeight: '800', fontSize: '18px' }}>{buddyName}</p>
         </div>
 
-        {/* QR Code */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{
             background: darkMode ? '#1A1A1A' : '#FFFFFF',
@@ -154,55 +153,55 @@ export default function QRScreen({ collab, user, theme, onBack }) {
           </p>
         </div>
 
-        {/* Consignes de sécurité */}
         <div style={{ background: 'rgba(255,154,61,0.08)', border: '1px solid rgba(255,154,61,0.2)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
           <p style={{ color: 'rgba(255,154,61,0.9)', fontWeight: '700', fontSize: '13px', marginBottom: '12px' }}>⚠️ Consignes de sécurité</p>
           {[
             '📍 Retrouvez-vous dans un lieu public',
             '📱 Partagez votre itinéraire à un proche',
             '🚗 Évitez les parkings isolés',
-            '✅ Scannez le QR de l\'autre avant de commencer',
+            "✅ Scannez le QR de l'autre avant de commencer",
           ].map((rule, i) => (
             <p key={i} style={{ color: subText, fontSize: '12px', marginBottom: i < 3 ? '8px' : '0', lineHeight: 1.4 }}>{rule}</p>
           ))}
         </div>
 
-        {/* Expiration */}
         <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginBottom: '24px' }}>
           Ce QR expire dans 30 minutes
         </p>
 
-        {/* Carte à partager */}
         <div style={{ background: card, borderRadius: '16px', padding: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}` }}>
           <p style={{ color, fontWeight: '800', fontSize: '15px', marginBottom: '4px' }}>📸 Partagez votre collab !</p>
           <p style={{ color: subText, fontSize: '12px', marginBottom: '16px', lineHeight: 1.5 }}>
-            Télécharge une carte de ta collab avec {buddyName} et poste-la en story Instagram !
+            Télécharge ta carte et poste-la en story avec <strong style={{ color }}>@snappinbuddy</strong> — les plus belles collabs seront repostées sur notre page ! 🗺 📸
           </p>
 
-          {/* Aperçu de la carte */}
           <div style={{
-            background: 'linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%)',
+            background: 'linear-gradient(135deg, #0A0A0A 0%, #141414 100%)',
             borderRadius: '12px', padding: '20px',
             textAlign: 'center', marginBottom: '14px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.08)',
           }}>
+            <p style={{ fontSize: '18px', marginBottom: '4px' }}>🗺 📸</p>
             <p style={{ color: 'white', fontWeight: '900', fontSize: '16px', marginBottom: '2px' }}>Snappin&apos;Buddy</p>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', marginBottom: '12px', letterSpacing: '2px' }}>MATCH AND CREATE</p>
-            <p style={{ color: '#3DFF8F', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>✓ Collab réalisée</p>
-            <p style={{ color: 'white', fontWeight: '800', fontSize: '14px' }}>@{myName} × @{buddyName}</p>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', marginTop: '8px' }}>{today}</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', marginBottom: '10px', letterSpacing: '3px' }}>MATCH AND CREATE</p>
+            <p style={{ color: '#3DFF8F', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>✓ Collab réalisée</p>
+            <p style={{ color: 'white', fontWeight: '800', fontSize: '13px' }}>@{myHandle} × @{buddyName}</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', marginTop: '8px' }}>{today}</p>
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px', marginTop: '4px' }}>#snappinbuddy</p>
           </div>
 
-          <button
-            onClick={downloadShareCard}
-            style={{
-              width: '100%', padding: '12px', borderRadius: '24px', border: 'none',
-              background: 'linear-gradient(135deg, #3DFF8F, #00C864)',
-              color: '#000', fontSize: '14px', fontWeight: '800', cursor: 'pointer',
-            }}
-          >
+          <button onClick={downloadShareCard} style={{
+            width: '100%', padding: '13px', borderRadius: '24px', border: 'none',
+            background: 'linear-gradient(135deg, #3DFF8F, #00C864)',
+            color: '#000', fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+            marginBottom: '10px',
+          }}>
             ⬇️ Télécharger la carte
           </button>
+
+          <p style={{ color: subText, fontSize: '11px', textAlign: 'center', lineHeight: 1.5 }}>
+            Poste en story · Tague <strong style={{ color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}>@snappinbuddy</strong> · Utilise <strong style={{ color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}>#snappinbuddy</strong>
+          </p>
         </div>
 
       </div>

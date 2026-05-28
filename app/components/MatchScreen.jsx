@@ -145,7 +145,7 @@ export default function MatchScreen({ theme, setScreen }) {
     );
   }
 
-  if (qrCollab) return <QRScreen collab={qrCollab} user={user} theme={theme} onBack={() => setQrCollab(null)} />;
+  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
 
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
