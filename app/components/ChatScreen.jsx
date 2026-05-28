@@ -9,12 +9,15 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const bottomRef = useRef(null);
   const darkMode = theme?.dark ?? true;
 
+  // Le vrai ID du buddy (user_id Supabase ou id selon la source)
+  const buddyUserId = buddy?.user_id || buddy?.id;
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      if (data.user && buddy?.id) {
-        loadMessages(data.user.id, buddy.id);
-        subscribeToMessages(data.user.id, buddy.id);
+      if (data.user && buddyUserId) {
+        loadMessages(data.user.id, buddyUserId);
+        subscribeToMessages(data.user.id, buddyUserId);
       }
     });
   }, [buddy]);
@@ -46,14 +49,19 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   }
 
   async function sendMessage() {
-    if (!text.trim() || !user || !buddy?.id) return;
+    if (!text.trim() || !user || !buddyUserId) return;
     const content = text;
     setText('');
-    await supabase.from('messages').insert({
+    const { data, error } = await supabase.from('messages').insert({
       sender_id: user.id,
-      receiver_id: buddy.id,
+      receiver_id: buddyUserId,
       content,
-    });
+    }).select().single();
+    // Ajoute le message localement immédiatement
+    if (data) {
+      setMessages(prev => [...prev, data]);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
   }
 
   const bg = darkMode ? '#0A0A0A' : '#F5F5F5';
@@ -66,11 +74,16 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: bg, color }}>
-      
+
       {/* Header */}
       <div style={{ padding: '16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>◉</div>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+          {buddy?.avatar_url
+            ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : '◉'
+          }
+        </div>
         <div>
           <div style={{ fontWeight: '700', fontSize: '15px', color }}>{buddy?.username}</div>
           <div style={{ color: subText, fontSize: '12px' }}>{buddy?.handle}</div>
