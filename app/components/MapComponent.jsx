@@ -19,6 +19,16 @@ const STATUS_FILTERS = [
   { id: 'shoot', label: '🟡 En shoot' },
 ];
 
+const ROLE_FILTERS = [
+  { id: 'photographe', label: '📷' },
+  { id: 'vidéaste', label: '🎬' },
+  { id: 'directeur artistique', label: '🎨' },
+  { id: 'styliste', label: '👗' },
+  { id: 'maquilleur', label: '💄' },
+  { id: 'modèle', label: '🧍' },
+  { id: 'brand owner', label: '🏷️' },
+];
+
 const STYLE_FILTERS = ['doc', 'portrait', 'mode', 'street', 'vidéo', 'analog'];
 
 export default function MapComponent({ theme }) {
@@ -31,6 +41,7 @@ export default function MapComponent({ theme }) {
   const [profiles, setProfiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [styleFilter, setStyleFilter] = useState(null);
+  const [roleFilter, setRoleFilter] = useState(null);
   const [L, setL] = useState(null);
 
   useEffect(() => {
@@ -91,6 +102,7 @@ export default function MapComponent({ theme }) {
         const styles = (p.styles || '').toLowerCase();
         if (!styles.includes(styleFilter.toLowerCase())) return false;
       }
+      if (roleFilter && p.role?.toLowerCase() !== roleFilter.toLowerCase()) return false;
       return true;
     });
 
@@ -127,14 +139,14 @@ export default function MapComponent({ theme }) {
         markersRef.current.push(m);
       }
     });
-  }, [L, profiles, statusFilter, styleFilter]);
+  }, [L, profiles, statusFilter, styleFilter, roleFilter]);
 
   const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
   const statusLabel = popupBuddy?.status === 'shoot' ? 'En shoot' : popupBuddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
   const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
   const pillStyle = (active) => ({
-    padding: '6px 14px', borderRadius: '20px',
+    padding: '6px 12px', borderRadius: '20px',
     border: `1px solid ${active ? (darkMode ? 'white' : '#111') : (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)')}`,
     background: active ? (darkMode ? 'white' : '#111') : 'transparent',
     color: active ? (darkMode ? '#000' : '#fff') : (darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'),
@@ -149,11 +161,12 @@ export default function MapComponent({ theme }) {
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
         background: darkMode
-          ? 'linear-gradient(to bottom, rgba(10,10,10,0.95) 0%, transparent 100%)'
-          : 'linear-gradient(to bottom, rgba(245,245,245,0.95) 0%, transparent 100%)',
-        paddingBottom: '16px',
+          ? 'linear-gradient(to bottom, rgba(10,10,10,0.98) 0%, rgba(10,10,10,0.0) 100%)'
+          : 'linear-gradient(to bottom, rgba(245,245,245,0.98) 0%, rgba(245,245,245,0.0) 100%)',
+        paddingBottom: '12px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 10px', pointerEvents: 'none' }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 8px', pointerEvents: 'none' }}>
           <img src={darkMode ? '/logo.png' : '/logo-dark.png'} alt="Snappin'Buddy"
             style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
           <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: darkMode ? 'white' : '#111', letterSpacing: '-0.3px' }}>
@@ -161,21 +174,32 @@ export default function MapComponent({ theme }) {
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none' }}>
+        {/* Filtres statut + style */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 6px', scrollbarWidth: 'none' }}>
           {STATUS_FILTERS.map(f => (
             <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
               {f.label}
             </button>
           ))}
-          <div style={{ width: '1px', background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
+          <div style={{ width: '1px', background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 2px', flexShrink: 0 }} />
           {STYLE_FILTERS.map(s => (
             <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
               {s}
             </button>
           ))}
         </div>
+
+        {/* Filtres rôle */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 4px', scrollbarWidth: 'none' }}>
+          {ROLE_FILTERS.map(r => (
+            <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Légende */}
       <div style={{
         position: 'absolute', bottom: '90px', left: '16px',
         background: darkMode ? 'rgba(10,10,10,0.85)' : 'rgba(245,245,245,0.85)',
@@ -187,6 +211,7 @@ export default function MapComponent({ theme }) {
         <span style={{ color: '#FF4D4D' }}>●</span> Indispo
       </div>
 
+      {/* Popup buddy */}
       {popupBuddy && (
         <div style={{
           position: 'absolute', bottom: '100px', left: '16px', right: '16px',
@@ -213,11 +238,10 @@ export default function MapComponent({ theme }) {
               <div style={{ fontFamily: 'var(--font-nunito)', fontWeight: '900', fontSize: '17px', color: darkMode ? 'white' : '#111' }}>
                 {popupBuddy.username}
               </div>
-              {popupStyles.length > 0 && (
-                <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontWeight: '600' }}>
-                  {popupStyles.join(' · ')}
-                </div>
-              )}
+              <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontWeight: '600' }}>
+                {popupBuddy.role && <span style={{ marginRight: '6px' }}>{popupBuddy.role}</span>}
+                {popupStyles.length > 0 && popupStyles.join(' · ')}
+              </div>
             </div>
             <button onClick={() => setPopupBuddy(null)} style={{
               background: 'none', border: 'none',
