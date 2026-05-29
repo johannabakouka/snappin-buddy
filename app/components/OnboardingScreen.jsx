@@ -31,6 +31,7 @@ export default function OnboardingScreen({ user, onComplete }) {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [suggestion, setSuggestion] = useState('');
   const fileInputRef = useRef(null);
 
   function toggleStyle(s) {
@@ -60,9 +61,29 @@ export default function OnboardingScreen({ user, onComplete }) {
   async function handleFinish() {
     setLoading(true);
     setError('');
+    setSuggestion('');
+
+    const cleanHandle = values.handle.startsWith('@') ? values.handle : `@${values.handle}`;
+
+    // Vérifier si le handle est déjà pris
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('handle')
+      .eq('handle', cleanHandle)
+      .single();
+
+    if (existing) {
+      const base = cleanHandle.replace('@', '');
+      const sugg = `@${base}${Math.floor(Math.random() * 99) + 1}`;
+      setError('Ce handle est déjà pris !');
+      setSuggestion(sugg);
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from('profiles').insert({
       username: values.username,
-      handle: values.handle,
+      handle: cleanHandle,
       role: selectedRole,
       bio: values.bio,
       zone: values.zone,
@@ -82,12 +103,10 @@ export default function OnboardingScreen({ user, onComplete }) {
   return (
     <div style={{ height: '100vh', background: '#0A0A0A', color: 'white', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Barre de progression */}
       <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)' }}>
         <div style={{ height: '100%', background: 'white', width: `${progress}%`, transition: 'width 0.4s ease' }} />
       </div>
 
-      {/* Header */}
       <div style={{ padding: '32px 24px 0', flexShrink: 0 }}>
         {step > 0 && (
           <button onClick={() => setStep(s => s - 1)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '20px', cursor: 'pointer', marginBottom: '16px', padding: 0 }}>←</button>
@@ -99,13 +118,10 @@ export default function OnboardingScreen({ user, onComplete }) {
         <p style={{ color: '#666', fontSize: '14px', marginBottom: '32px' }}>{current.subtitle}</p>
       </div>
 
-      {/* Contenu */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
 
-        {/* Étape 1 — Identité + Avatar */}
         {step === 0 && (
           <>
-            {/* Avatar upload */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -114,7 +130,7 @@ export default function OnboardingScreen({ user, onComplete }) {
                   background: 'rgba(255,255,255,0.06)',
                   border: '2px dashed rgba(255,255,255,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', overflow: 'hidden', position: 'relative',
+                  cursor: 'pointer', overflow: 'hidden',
                 }}
               >
                 {avatarUrl ? (
@@ -137,21 +153,38 @@ export default function OnboardingScreen({ user, onComplete }) {
                 <p style={{ color: '#888', fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>{field.label}</p>
                 <input
                   value={values[field.key]}
-                  onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
+                  onChange={e => { setValues(v => ({ ...v, [field.key]: e.target.value })); setError(''); setSuggestion(''); }}
                   placeholder={field.placeholder}
                   style={{
                     width: '100%', padding: '14px 16px', borderRadius: '14px',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: `1px solid ${error && field.key === 'handle' ? 'rgba(255,77,77,0.5)' : 'rgba(255,255,255,0.1)'}`,
                     background: 'rgba(255,255,255,0.06)', color: 'white',
                     fontSize: '14px', boxSizing: 'border-box', outline: 'none',
                   }}
                 />
               </div>
             ))}
+
+            {error && (
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '8px' }}>{error}</p>
+                {suggestion && (
+                  <button
+                    onClick={() => { setValues(v => ({ ...v, handle: suggestion })); setError(''); setSuggestion(''); }}
+                    style={{
+                      background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '20px', padding: '8px 16px', color: 'white',
+                      fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+                    }}
+                  >
+                    Utiliser {suggestion} →
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
 
-        {/* Étape 2 — Rôle */}
         {step === 1 && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {ROLES.map(r => {
@@ -173,7 +206,6 @@ export default function OnboardingScreen({ user, onComplete }) {
           </div>
         )}
 
-        {/* Étape 3 — Univers */}
         {step === 2 && (
           <>
             {[
@@ -216,17 +248,16 @@ export default function OnboardingScreen({ user, onComplete }) {
                 {selectedStyles.length} style{selectedStyles.length > 1 ? 's' : ''} sélectionné{selectedStyles.length > 1 ? 's' : ''}
               </p>
             )}
+
+            {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginTop: '8px' }}>{error}</p>}
           </>
         )}
-
-        {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
       </div>
 
-      {/* Bouton */}
       <div style={{ padding: '16px 24px 40px', flexShrink: 0 }}>
         {step < STEPS.length - 1 ? (
           <button
-            onClick={() => { setError(''); if (canNext()) setStep(s => s + 1); else setError('Remplis les champs obligatoires !'); }}
+            onClick={() => { setError(''); setSuggestion(''); if (canNext()) setStep(s => s + 1); else setError('Remplis les champs obligatoires !'); }}
             style={{
               width: '100%', padding: '16px', borderRadius: '24px', border: 'none',
               background: canNext() ? 'white' : 'rgba(255,255,255,0.15)',
@@ -242,7 +273,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             background: 'white', color: 'black',
             fontSize: '15px', fontWeight: '700', cursor: 'pointer',
           }}>
-            {loading ? 'Création...' : "🚀 Rejoindre Snappin'Buddy"}
+            {loading ? 'Vérification...' : "🚀 Rejoindre Snappin'Buddy"}
           </button>
         )}
       </div>

@@ -18,7 +18,7 @@ Ateliers 777 regroupe :
 · Super 8 Memories — photo & vidéo mariage
 · Snappin'Buddy — mise en contact des créatifs visuels
 
-Contact : contact@ateliers777.com`,
+Contact : ateliers777.contact@gmail.com`,
     },
     {
       title: '📍 Données collectées',
@@ -63,7 +63,7 @@ L'utilisation du QR code de session est fortement conseillée pour confirmer l'i
       title: '🗑 Suppression du compte',
       content: `Tu peux demander la suppression de ton compte et de toutes tes données à tout moment en contactant :
 
-contact@ateliers777.com
+ateliers777.contact@gmail.com
 
 La suppression est effective sous 30 jours.`,
     },
