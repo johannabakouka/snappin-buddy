@@ -3,17 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
-
-const ROLE_OPTIONS = [
-  { id: 'photographe', label: 'Photographe', icon: '📷' },
-  { id: 'vidéaste', label: 'Vidéaste', icon: '🎬' },
-  { id: 'directeur artistique', label: 'Dir. Artistique', icon: '🎨' },
-  { id: 'styliste', label: 'Styliste', icon: '👗' },
-  { id: 'maquilleur', label: 'Maquilleur·se', icon: '💄' },
-  { id: 'modèle', label: 'Modèle', icon: '🧍' },
-  { id: 'directeur casting', label: 'Dir. Casting', icon: '🎭' },
-  { id: 'brand owner', label: 'Brand Owner', icon: '🏷️' },
-];
+import { ROLES } from '../constants';
 
 export default function MatchScreen({ theme, setScreen }) {
   const darkMode = theme?.dark ?? true;
@@ -109,7 +99,6 @@ export default function MatchScreen({ theme, setScreen }) {
     transition: 'all 0.2s',
   });
 
-  // Composant mini profil pour les collabs
   function MiniProfile({ profile }) {
     if (!profile) return null;
     const portfolio = profile.portfolio_urls || [];
@@ -171,7 +160,7 @@ export default function MatchScreen({ theme, setScreen }) {
                 <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder="Description du projet..." rows={3} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box', resize: 'none' }} />
                 <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>RÔLE RECHERCHÉ *</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-                  {ROLE_OPTIONS.map(r => (
+                  {ROLES.map(r => (
                     <button key={r.id} onClick={() => setOfferRole(offerRole === r.id ? '' : r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${offerRole === r.id ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: offerRole === r.id ? theme?.color : 'transparent', color: offerRole === r.id ? theme?.bg : subText }}>{r.icon} {r.label}</button>
                   ))}
                 </div>
@@ -193,7 +182,7 @@ export default function MatchScreen({ theme, setScreen }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: '800', color: theme?.color, marginBottom: '4px' }}>{o.title}</p>
-                        {o.role_needed && <span style={{ fontSize: '11px', color: subText }}>{ROLE_OPTIONS.find(r => r.id === o.role_needed)?.icon} {o.role_needed}</span>}
+                        {o.role_needed && <span style={{ fontSize: '11px', color: subText }}>{ROLES.find(r => r.id === o.role_needed)?.icon} {o.role_needed}</span>}
                         {o.zone && <span style={{ fontSize: '11px', color: subText }}> · {o.zone}</span>}
                         {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
                       </div>
@@ -222,7 +211,7 @@ export default function MatchScreen({ theme, setScreen }) {
                     <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color, marginBottom: '6px' }}>{o.title}</p>
                     {o.description && <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', marginBottom: '10px', lineHeight: 1.4 }}>{o.description}</p>}
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      {o.role_needed && <span style={{ fontSize: '11px', color: theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700' }}>{ROLE_OPTIONS.find(r => r.id === o.role_needed)?.icon} {o.role_needed}</span>}
+                      {o.role_needed && <span style={{ fontSize: '11px', color: theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700' }}>{ROLES.find(r => r.id === o.role_needed)?.icon} {o.role_needed}</span>}
                       {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
                       {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
                     </div>

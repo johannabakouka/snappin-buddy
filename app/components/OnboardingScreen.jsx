@@ -1,32 +1,19 @@
 'use client';
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
-
-const ROLES = [
-  { id: 'photographe', label: 'Photographe', icon: '📷' },
-  { id: 'vidéaste', label: 'Vidéaste', icon: '🎬' },
-  { id: 'directeur artistique', label: 'Dir. Artistique', icon: '🎨' },
-  { id: 'styliste', label: 'Styliste', icon: '👗' },
-  { id: 'maquilleur', label: 'Maquilleur·se', icon: '💄' },
-  { id: 'modèle', label: 'Modèle', icon: '🧍' },
-  { id: 'directeur casting', label: 'Dir. Casting', icon: '🎭' },
-  { id: 'brand owner', label: 'Brand Owner', icon: '🏷️' },
-  { id: 'autre', label: 'Autre', icon: '✨' },
-];
-
-const STYLE_OPTIONS = ['doc', 'portrait', 'street', 'mode', 'analog', 'vidéo', 'studio', 'architecture', 'nature'];
+import { ROLES, UNIVERS } from '../constants';
 
 const STEPS = [
   { id: 'identity', title: 'Qui es-tu ?', subtitle: 'Commence par te présenter' },
   { id: 'role', title: 'Ton rôle', subtitle: 'Comment tu contribues à un projet ?' },
-  { id: 'style', title: 'Ton univers', subtitle: 'Ce qui te définit en tant que créatif' },
+  { id: 'univers', title: 'Ton univers', subtitle: 'Dans quels domaines tu crées ?' },
 ];
 
 export default function OnboardingScreen({ user, onComplete }) {
   const [step, setStep] = useState(0);
   const [values, setValues] = useState({ username: '', handle: '', bio: '', zone: '' });
   const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedStyles, setSelectedStyles] = useState([]);
+  const [selectedUnivers, setSelectedUnivers] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,8 +21,8 @@ export default function OnboardingScreen({ user, onComplete }) {
   const [suggestion, setSuggestion] = useState('');
   const fileInputRef = useRef(null);
 
-  function toggleStyle(s) {
-    setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  function toggleUnivers(s) {
+    setSelectedUnivers(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   }
 
   function canNext() {
@@ -65,7 +52,6 @@ export default function OnboardingScreen({ user, onComplete }) {
 
     const cleanHandle = values.handle.startsWith('@') ? values.handle : `@${values.handle}`;
 
-    // Vérifier si le handle est déjà pris
     const { data: existing } = await supabase
       .from('profiles')
       .select('handle')
@@ -87,7 +73,7 @@ export default function OnboardingScreen({ user, onComplete }) {
       role: selectedRole,
       bio: values.bio,
       zone: values.zone,
-      styles: selectedStyles.join(', '),
+      styles: selectedUnivers.join(', '),
       avatar_url: avatarUrl,
       is_active: true,
       user_id: user.id,
@@ -120,6 +106,7 @@ export default function OnboardingScreen({ user, onComplete }) {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
 
+        {/* Étape 1 — Identité */}
         {step === 0 && (
           <>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
@@ -185,6 +172,7 @@ export default function OnboardingScreen({ user, onComplete }) {
           </>
         )}
 
+        {/* Étape 2 — Rôle */}
         {step === 1 && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {ROLES.map(r => {
@@ -206,6 +194,7 @@ export default function OnboardingScreen({ user, onComplete }) {
           </div>
         )}
 
+        {/* Étape 3 — Univers */}
         {step === 2 && (
           <>
             {[
@@ -228,12 +217,12 @@ export default function OnboardingScreen({ user, onComplete }) {
               </div>
             ))}
 
-            <p style={{ color: '#888', fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>TES STYLES</p>
+            <p style={{ color: '#888', fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>TON UNIVERS</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-              {STYLE_OPTIONS.map(s => {
-                const active = selectedStyles.includes(s);
+              {UNIVERS.map(s => {
+                const active = selectedUnivers.includes(s);
                 return (
-                  <button key={s} onClick={() => toggleStyle(s)} style={{
+                  <button key={s} onClick={() => toggleUnivers(s)} style={{
                     padding: '8px 16px', borderRadius: '20px',
                     border: `1.5px solid ${active ? 'white' : 'rgba(255,255,255,0.15)'}`,
                     background: active ? 'white' : 'transparent',
@@ -243,12 +232,11 @@ export default function OnboardingScreen({ user, onComplete }) {
                 );
               })}
             </div>
-            {selectedStyles.length > 0 && (
+            {selectedUnivers.length > 0 && (
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '8px' }}>
-                {selectedStyles.length} style{selectedStyles.length > 1 ? 's' : ''} sélectionné{selectedStyles.length > 1 ? 's' : ''}
+                {selectedUnivers.length} univers sélectionné{selectedUnivers.length > 1 ? 's' : ''}
               </p>
             )}
-
             {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginTop: '8px' }}>{error}</p>}
           </>
         )}

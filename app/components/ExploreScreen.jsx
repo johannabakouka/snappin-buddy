@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
+import { ROLE_ICONS, ROLE_FILTERS, UNIVERS } from '../constants';
 
 function getMatchScore(myStyles, theirStyles) {
   if (!myStyles || !theirStyles) return 0;
@@ -11,31 +12,13 @@ function getMatchScore(myStyles, theirStyles) {
   return mine.filter(s => theirs.includes(s)).length;
 }
 
-const ROLE_ICONS = {
-  'photographe': '📷', 'vidéaste': '🎬', 'directeur artistique': '🎨',
-  'styliste': '👗', 'maquilleur': '💄', 'modèle': '🧍',
-  'directeur casting': '🎭', 'brand owner': '🏷️', 'autre': '✨',
-};
-
-const ROLE_FILTERS = [
-  { id: 'photographe', label: 'Photo', icon: '📷' },
-  { id: 'vidéaste', label: 'Vidéo', icon: '🎬' },
-  { id: 'directeur artistique', label: 'DA', icon: '🎨' },
-  { id: 'styliste', label: 'Style', icon: '👗' },
-  { id: 'maquilleur', label: 'Makeup', icon: '💄' },
-  { id: 'modèle', label: 'Modèle', icon: '🧍' },
-  { id: 'brand owner', label: 'Brand', icon: '🏷️' },
-];
-
-const STYLE_FILTERS = ['doc', 'portrait', 'street', 'mode', 'analog', 'vidéo', 'studio'];
-
 export default function ExploreScreen({ theme }) {
   const [profiles, setProfiles] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
   const [filter, setFilter] = useState('match');
   const [roleFilter, setRoleFilter] = useState(null);
-  const [styleFilter, setStyleFilter] = useState(null);
+  const [universFilter, setUniversFilter] = useState(null);
   const scrollRef = useRef(null);
   const darkMode = theme?.dark ?? true;
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
@@ -63,7 +46,7 @@ export default function ExploreScreen({ theme }) {
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
   if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
   if (roleFilter) displayed = displayed.filter(p => p.role?.toLowerCase() === roleFilter.toLowerCase());
-  if (styleFilter) displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(styleFilter.toLowerCase()));
+  if (universFilter) displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(universFilter.toLowerCase()));
 
   if (filter === 'match') {
     displayed = [...displayed].sort((a, b) => {
@@ -91,12 +74,14 @@ export default function ExploreScreen({ theme }) {
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Explorer</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>Créatifs autour de toi</p>
 
+        {/* Filtres statut */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
           <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 Dispo</button>
           <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>Tous</button>
         </div>
 
+        {/* Filtres rôle */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {ROLE_FILTERS.map(r => (
             <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
@@ -105,9 +90,10 @@ export default function ExploreScreen({ theme }) {
           ))}
         </div>
 
+        {/* Filtres univers */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {STYLE_FILTERS.map(s => (
-            <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
+          {UNIVERS.map(s => (
+            <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
               {s}
             </button>
           ))}
@@ -117,7 +103,7 @@ export default function ExploreScreen({ theme }) {
           {displayed.length} CRÉATIF{displayed.length > 1 ? 'S' : ''}
           {filter === 'match' && myProfile?.styles ? ' · TRIÉS PAR COMPATIBILITÉ' : ''}
           {roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
-          {styleFilter ? ` · ${styleFilter.toUpperCase()}` : ''}
+          {universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -131,7 +117,6 @@ export default function ExploreScreen({ theme }) {
 
             return (
               <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', overflow: 'hidden' }}>
-                {/* Infos principales */}
                 <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
@@ -173,7 +158,6 @@ export default function ExploreScreen({ theme }) {
                   <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>Voir</button>
                 </div>
 
-                {/* Mini carrousel portfolio */}
                 {portfolio.length > 0 && (
                   <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', scrollbarWidth: 'none', padding: '0 16px 12px' }}>
                     {portfolio.map((url, i) => (

@@ -1,20 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
-
-const ROLES = [
-  { id: 'photographe', label: 'Photographe', icon: '📷' },
-  { id: 'vidéaste', label: 'Vidéaste', icon: '🎬' },
-  { id: 'directeur artistique', label: 'Dir. Artistique', icon: '🎨' },
-  { id: 'styliste', label: 'Styliste', icon: '👗' },
-  { id: 'maquilleur', label: 'Maquilleur·se', icon: '💄' },
-  { id: 'modèle', label: 'Modèle', icon: '🧍' },
-  { id: 'directeur casting', label: 'Dir. Casting', icon: '🎭' },
-  { id: 'brand owner', label: 'Brand Owner', icon: '🏷️' },
-  { id: 'autre', label: 'Autre', icon: '✨' },
-];
-
-const STYLE_OPTIONS = ['doc', 'portrait', 'street', 'mode', 'analog', 'vidéo', 'studio', 'architecture', 'nature'];
+import { ROLES, UNIVERS } from '../constants';
 
 export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [username, setUsername] = useState(profile?.username || '');
@@ -22,7 +9,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [selectedRole, setSelectedRole] = useState(profile?.role || null);
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
-  const [selectedStyles, setSelectedStyles] = useState(
+  const [selectedUnivers, setSelectedUnivers] = useState(
     profile?.styles ? profile.styles.split(',').map(s => s.trim()).filter(Boolean) : []
   );
   const [portfolioUrls, setPortfolioUrls] = useState(profile?.portfolio_urls || []);
@@ -38,17 +25,14 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const inputBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
   const subText = darkMode ? '#888' : '#999';
 
-  function toggleStyle(s) {
-    setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  function toggleUnivers(s) {
+    setSelectedUnivers(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   }
 
   async function handlePortfolioUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    if (portfolioUrls.length + files.length > 5) {
-      setError('Maximum 5 photos de portfolio');
-      return;
-    }
+    if (portfolioUrls.length + files.length > 5) { setError('Maximum 5 photos de portfolio'); return; }
     setUploadingPortfolio(true);
     const { data: { user } } = await supabase.auth.getUser();
     const newUrls = [...portfolioUrls];
@@ -65,16 +49,12 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
     setUploadingPortfolio(false);
   }
 
-  async function removePortfolioPhoto(url) {
-    setPortfolioUrls(prev => prev.filter(u => u !== url));
-  }
-
   async function handleSave() {
     if (!username || !handle || !selectedRole) { setError('Champs obligatoires manquants'); return; }
     setLoading(true);
     const { error } = await supabase.from('profiles').update({
       username, handle, role: selectedRole,
-      bio, zone, styles: selectedStyles.join(', '),
+      bio, zone, styles: selectedUnivers.join(', '),
       portfolio_urls: portfolioUrls,
     }).eq('user_id', profile.user_id);
     if (error) setError(error.message);
@@ -130,13 +110,13 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         })}
       </div>
 
-      {/* Styles */}
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>STYLES</p>
+      {/* Univers */}
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>UNIVERS</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
-        {STYLE_OPTIONS.map(s => {
-          const active = selectedStyles.includes(s);
+        {UNIVERS.map(s => {
+          const active = selectedUnivers.includes(s);
           return (
-            <button key={s} onClick={() => toggleStyle(s)} style={{
+            <button key={s} onClick={() => toggleUnivers(s)} style={{
               padding: '7px 14px', borderRadius: '20px',
               border: `1.5px solid ${active ? color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
               background: active ? color : 'transparent',
@@ -148,22 +128,18 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       </div>
 
       {/* Portfolio */}
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>PORTFOLIO <span style={{ color: subText, fontWeight: '400' }}>(max 5 photos)</span></p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>PORTFOLIO <span style={{ fontWeight: '400' }}>(max 5 photos)</span></p>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         {portfolioUrls.map((url, i) => (
           <div key={i} style={{ position: 'relative', width: '80px', height: '80px' }}>
             <img src={url} style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' }} />
-            <button
-              onClick={() => removePortfolioPhoto(url)}
-              style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#FF4D4D', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >✕</button>
+            <button onClick={() => setPortfolioUrls(prev => prev.filter(u => u !== url))}
+              style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#FF4D4D', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
         ))}
         {portfolioUrls.length < 5 && (
-          <button
-            onClick={() => portfolioInputRef.current?.click()}
-            style={{ width: '80px', height: '80px', borderRadius: '10px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: subText, fontSize: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
+          <button onClick={() => portfolioInputRef.current?.click()}
+            style={{ width: '80px', height: '80px', borderRadius: '10px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: subText, fontSize: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {uploadingPortfolio ? '⏳' : '+'}
           </button>
         )}

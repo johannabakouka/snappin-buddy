@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
+import { ROLE_FILTERS, UNIVERS } from '../constants';
 
 function fuzzPosition(lat, lng) {
   const r = 0.004;
@@ -19,17 +20,8 @@ const STATUS_FILTERS = [
   { id: 'shoot', label: '🟡 En shoot' },
 ];
 
-const ROLE_FILTERS = [
-  { id: 'photographe', label: '📷' },
-  { id: 'vidéaste', label: '🎬' },
-  { id: 'directeur artistique', label: '🎨' },
-  { id: 'styliste', label: '👗' },
-  { id: 'maquilleur', label: '💄' },
-  { id: 'modèle', label: '🧍' },
-  { id: 'brand owner', label: '🏷️' },
-];
-
-const STYLE_FILTERS = ['doc', 'portrait', 'mode', 'street', 'vidéo', 'analog'];
+// Rôles avec icône seulement pour la carte
+const MAP_ROLE_FILTERS = ROLE_FILTERS.map(r => ({ id: r.id, label: r.icon }));
 
 export default function MapComponent({ theme }) {
   const mapRef = useRef(null);
@@ -40,7 +32,7 @@ export default function MapComponent({ theme }) {
   const [popupBuddy, setPopupBuddy] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [styleFilter, setStyleFilter] = useState(null);
+  const [universFilter, setUniversFilter] = useState(null);
   const [roleFilter, setRoleFilter] = useState(null);
   const [L, setL] = useState(null);
 
@@ -98,10 +90,7 @@ export default function MapComponent({ theme }) {
       if (!p.lat || !p.lng) return false;
       if (p._isMe) return true;
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-      if (styleFilter) {
-        const styles = (p.styles || '').toLowerCase();
-        if (!styles.includes(styleFilter.toLowerCase())) return false;
-      }
+      if (universFilter && !(p.styles || '').toLowerCase().includes(universFilter.toLowerCase())) return false;
       if (roleFilter && p.role?.toLowerCase() !== roleFilter.toLowerCase()) return false;
       return true;
     });
@@ -139,7 +128,7 @@ export default function MapComponent({ theme }) {
         markersRef.current.push(m);
       }
     });
-  }, [L, profiles, statusFilter, styleFilter, roleFilter]);
+  }, [L, profiles, statusFilter, universFilter, roleFilter]);
 
   const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
   const statusLabel = popupBuddy?.status === 'shoot' ? 'En shoot' : popupBuddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
@@ -167,7 +156,6 @@ export default function MapComponent({ theme }) {
           : 'linear-gradient(to bottom, rgba(245,245,245,0.98) 0%, rgba(245,245,245,0.0) 100%)',
         paddingBottom: '12px',
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 8px', pointerEvents: 'none' }}>
           <img src={darkMode ? '/logo.png' : '/logo-dark.png'} alt="Snappin'Buddy"
             style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
@@ -176,7 +164,6 @@ export default function MapComponent({ theme }) {
           </span>
         </div>
 
-        {/* Une seule rangée scrollable : statut | rôles | styles */}
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none', alignItems: 'center' }}>
           {STATUS_FILTERS.map(f => (
             <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
@@ -184,21 +171,20 @@ export default function MapComponent({ theme }) {
             </button>
           ))}
           {sep}
-          {ROLE_FILTERS.map(r => (
+          {MAP_ROLE_FILTERS.map(r => (
             <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
               {r.label}
             </button>
           ))}
           {sep}
-          {STYLE_FILTERS.map(s => (
-            <button key={s} onClick={() => setStyleFilter(styleFilter === s ? null : s)} style={pillStyle(styleFilter === s)}>
+          {UNIVERS.map(s => (
+            <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
               {s}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Légende */}
       <div style={{
         position: 'absolute', bottom: '90px', left: '16px',
         background: darkMode ? 'rgba(10,10,10,0.85)' : 'rgba(245,245,245,0.85)',
@@ -210,7 +196,6 @@ export default function MapComponent({ theme }) {
         <span style={{ color: '#FF4D4D' }}>●</span> Indispo
       </div>
 
-      {/* Popup buddy */}
       {popupBuddy && (
         <div style={{
           position: 'absolute', bottom: '100px', left: '16px', right: '16px',
