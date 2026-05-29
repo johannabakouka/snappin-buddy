@@ -9,12 +9,14 @@ import MessagesScreen from './components/MessagesScreen';
 import ProfileScreen from './components/ProfileScreen';
 import AuthScreen from './components/AuthScreen';
 import OnboardingScreen from './components/OnboardingScreen';
+import WelcomeScreen from './components/WelcomeScreen';
 
 export default function Home() {
   const [screen, setScreen] = useState('map');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return true;
     const saved = localStorage.getItem('darkMode');
@@ -53,11 +55,18 @@ export default function Home() {
 
   if (loading) return <div style={{ height: '100vh', background: '#0A0A0A' }}/>;
 
-  if (!user) return (
-    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
-      <AuthScreen onLogin={() => {}} theme={theme} />
-    </div>
-  );
+  if (!user) {
+    if (showWelcome) return (
+      <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh' }}>
+        <WelcomeScreen onStart={() => setShowWelcome(false)} />
+      </div>
+    );
+    return (
+      <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
+        <AuthScreen onLogin={() => {}} theme={theme} />
+      </div>
+    );
+  }
 
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
