@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
+import LegalScreen from './LegalScreen';
 
 const STATUTS = [
   { id: 'dispo', label: 'Disponible', color: '#3DFF8F' },
@@ -11,6 +12,7 @@ const STATUTS = [
 
 export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
   const [editing, setEditing] = useState(false);
+  const [showLegal, setShowLegal] = useState(false);
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
@@ -60,6 +62,8 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     />
   );
 
+  if (showLegal) return <LegalScreen theme={theme} onBack={() => setShowLegal(false)} />;
+
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
 
@@ -94,7 +98,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
       <div style={{ padding: '24px 16px 100px' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
 
-          {/* Avatar cliquable */}
+          {/* Avatar */}
           <div
             onClick={() => fileInputRef.current?.click()}
             style={{
@@ -102,8 +106,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
               background: darkMode ? '#2C2C2C' : '#DDD',
               margin: '0 auto 12px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '32px',
-              border: `2px solid ${tagBorder}`,
+              fontSize: '32px', border: `2px solid ${tagBorder}`,
               cursor: 'pointer', overflow: 'hidden', position: 'relative',
             }}
           >
@@ -112,7 +115,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             ) : (
               uploading ? '⏳' : '◉'
             )}
-            {/* Overlay édition */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               background: 'rgba(0,0,0,0.5)', padding: '4px 0',
@@ -121,18 +123,11 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
               {uploading ? '...' : '✏️'}
             </div>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleAvatarUpload}
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
 
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
 
-          {/* Statuts */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
             {STATUTS.map(s => (
               <button key={s.id} onClick={() => updateStatus(s.id)} style={{
@@ -177,7 +172,13 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           </div>
         )}
 
-        <button onClick={() => setEditing(true)} style={{ width: '100%', background: theme.color, color: theme.bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>Modifier le profil</button>
+        <button onClick={() => setEditing(true)} style={{ width: '100%', background: theme.color, color: theme.bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+          Modifier le profil
+        </button>
+
+        <button onClick={() => setShowLegal(true)} style={{ width: '100%', background: 'transparent', color: subText, border: `1px solid ${tagBorder}`, borderRadius: '24px', padding: '14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' }}>
+          CGU & Mentions légales
+        </button>
 
         <button onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }} style={{ width: '100%', background: 'transparent', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
           Se déconnecter
