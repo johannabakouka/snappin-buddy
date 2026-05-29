@@ -126,7 +126,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
           const isSystem = m.content.includes('Collab acceptée');
           if (isSystem) return (
             <div key={m.id} style={{ textAlign: 'center', margin: '8px 0' }}>
-              <span style={{ fontSize: '12px', color: '#3DFF8F', background: darkMode ? 'rgba(61,255,143,0.08)' : 'rgba(61,255,143,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(61,255,143,0.2)' }}>
+              <span style={{ fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(61,255,143,0.08)' : 'rgba(61,255,143,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(61,255,143,0.2)' }}>
                 {m.content}
               </span>
             </div>

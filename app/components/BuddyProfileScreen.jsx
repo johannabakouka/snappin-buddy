@@ -21,7 +21,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
   const portfolio = buddy?.portfolio_urls || [];
-  const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
+  const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = buddy?.status === 'shoot' ? 'En shoot' : buddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
 
   async function sendCollab() {
@@ -105,7 +105,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
         )}
 
         {sent ? (
-          <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#3DFF8F', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
+          <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#2ECC71', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
             ✓ Proposition envoyée !
           </div>
         ) : showInput ? (

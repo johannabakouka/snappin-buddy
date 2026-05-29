@@ -96,7 +96,7 @@ export default function MapComponent({ theme }) {
     });
 
     filtered.forEach(p => {
-      const statusColor = p.status === 'shoot' ? '#FFD700' : p.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
+      const statusColor = p.status === 'shoot' ? '#FFD700' : p.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
 
       if (p._isMe) {
         const meIcon = L.divIcon({
@@ -130,7 +130,7 @@ export default function MapComponent({ theme }) {
     });
   }, [L, profiles, statusFilter, universFilter, roleFilter]);
 
-  const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#3DFF8F';
+  const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = popupBuddy?.status === 'shoot' ? 'En shoot' : popupBuddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
   const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -191,7 +191,7 @@ export default function MapComponent({ theme }) {
         borderRadius: '10px', padding: '8px 12px', fontSize: '12px',
         color: darkMode ? '#666' : '#999', zIndex: 1000,
       }}>
-        <span style={{ color: '#3DFF8F' }}>●</span> Dispo ·{' '}
+        <span style={{ color: '#2ECC71' }}>●</span> Dispo ·{' '}
         <span style={{ color: '#FFD700' }}>●</span> En shoot ·{' '}
         <span style={{ color: '#FF4D4D' }}>●</span> Indispo
       </div>

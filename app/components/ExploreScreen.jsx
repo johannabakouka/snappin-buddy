@@ -123,15 +123,15 @@ export default function ExploreScreen({ theme }) {
                       {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                     </div>
                     {score > 0 && (
-                      <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#3DFF8F', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
+                      <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#2ECC71', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{p.username}</span>
                       <span style={{ fontSize: '13px' }}>{roleIcon}</span>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
-                      <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#3DFF8F' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
+                      <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
                         {p.status === 'dispo' ? 'Dispo' : p.status === 'shoot' ? 'En shoot' : 'Indispo'}
                       </span>
                     </div>

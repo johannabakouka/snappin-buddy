@@ -5,7 +5,7 @@ import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 
 const STATUTS = [
-  { id: 'dispo', label: 'Disponible', color: '#3DFF8F' },
+  { id: 'dispo', label: 'Disponible', color: '#2ECC71' },
   { id: 'shoot', label: 'En shoot', color: '#FFD700' },
   { id: 'indispo', label: 'Indisponible', color: '#FF4D4D' },
 ];

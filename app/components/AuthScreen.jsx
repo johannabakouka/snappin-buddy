@@ -99,7 +99,7 @@ export default function AuthScreen({ onLogin, theme }) {
 
       {message && (
         <p style={{
-          color: message.includes('envoyé') || message.includes('confirmer') ? '#3DFF8F' : '#FF4D4D',
+          color: message.includes('envoyé') || message.includes('confirmer') ? '#2ECC71' : '#FF4D4D',
           fontSize: '13px', marginBottom: '16px', lineHeight: 1.5,
         }}>{message}</p>
       )}

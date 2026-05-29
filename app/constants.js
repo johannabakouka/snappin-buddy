@@ -41,3 +41,8 @@ export const ROLE_FILTERS = [
   { id: 'designer', label: 'Design', icon: '✏️' },
   { id: 'brand owner', label: 'Brand', icon: '🏷️' },
 ];
+export const COLORS = {
+  dispo: '#2ECC71',
+  shoot: '#F0B429',
+  indispo: '#FF4D4D',
+};

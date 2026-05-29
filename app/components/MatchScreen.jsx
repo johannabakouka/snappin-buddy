@@ -86,7 +86,7 @@ export default function MatchScreen({ theme, setScreen }) {
   }
 
   const statusBadge = (status) => {
-    if (status === 'accepted') return { label: 'Accepté ✓', color: '#3DFF8F' };
+    if (status === 'accepted') return { label: 'Accepté ✓', color: '#2ECC71' };
     if (status === 'declined') return { label: 'Refusé', color: '#FF4D4D' };
     return { label: 'En attente', color: '#FFD700' };
   };
@@ -186,7 +186,7 @@ export default function MatchScreen({ theme, setScreen }) {
                         {o.zone && <span style={{ fontSize: '11px', color: subText }}> · {o.zone}</span>}
                         {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
                       </div>
-                      <span style={{ fontSize: '11px', color: '#3DFF8F', fontWeight: '700' }}>Ouverte</span>
+                      <span style={{ fontSize: '11px', color: '#2ECC71', fontWeight: '700' }}>Ouverte</span>
                     </div>
                   </div>
                 ))}
@@ -245,7 +245,7 @@ export default function MatchScreen({ theme, setScreen }) {
                     <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'pending' || c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || 'Pas de message'}</p>
                     {c.status === 'pending' && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                        <button onClick={() => respondCollab(c.id, 'accepted', c.sender_id)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#3DFF8F', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Accepter</button>
+                        <button onClick={() => respondCollab(c.id, 'accepted', c.sender_id)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#2ECC71', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Accepter</button>
                         <button onClick={() => respondCollab(c.id, 'declined', null)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #FF4D4D', background: 'transparent', color: '#FF4D4D', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Refuser</button>
                       </div>
                     )}

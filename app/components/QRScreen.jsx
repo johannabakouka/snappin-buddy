@@ -79,7 +79,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
     ctx.lineTo(920, 520);
     ctx.stroke();
 
-    ctx.fillStyle = '#3DFF8F';
+    ctx.fillStyle = '#2ECC71';
     ctx.font = 'bold 32px Arial';
     ctx.fillText('✓ Collab réalisée', 540, 630);
 
@@ -184,7 +184,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             <p style={{ fontSize: '18px', marginBottom: '4px' }}>🗺 📸</p>
             <p style={{ color: 'white', fontWeight: '900', fontSize: '16px', marginBottom: '2px' }}>Snappin&apos;Buddy</p>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', marginBottom: '10px', letterSpacing: '3px' }}>MATCH AND CREATE</p>
-            <p style={{ color: '#3DFF8F', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>✓ Collab réalisée</p>
+            <p style={{ color: '#2ECC71', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>✓ Collab réalisée</p>
             <p style={{ color: 'white', fontWeight: '800', fontSize: '13px' }}>@{myHandle} × @{buddyName}</p>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', marginTop: '8px' }}>{today}</p>
             <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px', marginTop: '4px' }}>#snappinbuddy</p>
@@ -192,7 +192,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
 
           <button onClick={downloadShareCard} style={{
             width: '100%', padding: '13px', borderRadius: '24px', border: 'none',
-            background: 'linear-gradient(135deg, #3DFF8F, #00C864)',
+            background: 'linear-gradient(135deg, #2ECC71, #00C864)',
             color: '#000', fontSize: '14px', fontWeight: '800', cursor: 'pointer',
             marginBottom: '10px',
           }}>
