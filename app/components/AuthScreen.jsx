@@ -12,6 +12,9 @@ export default function AuthScreen({ onLogin, theme }) {
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
   const color = theme?.color ?? 'white';
+  const subText = darkMode ? '#555' : '#999';
+  const inputBg = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const inputBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
   async function handleSubmit() {
     setLoading(true);
@@ -28,9 +31,21 @@ export default function AuthScreen({ onLogin, theme }) {
     setLoading(false);
   }
 
+  async function handleForgotPassword() {
+    if (!email) { setMessage('Entre ton email d\'abord !'); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://snappin-buddy.vercel.app',
+    });
+    if (error) setMessage(error.message);
+    else setMessage('Email de réinitialisation envoyé ! Vérifie ta boîte mail 📩');
+    setLoading(false);
+  }
+
   return (
     <div style={{ padding: '60px 24px', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: bg, color }}>
-      
+
+      {/* Logo */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '48px' }}>
         <img
           src={darkMode ? '/logo.png' : '/logo-dark.png'}
@@ -39,51 +54,65 @@ export default function AuthScreen({ onLogin, theme }) {
         />
         <span style={{
           fontFamily: 'var(--font-nunito)',
-          fontSize: '42px',
-          fontWeight: '900',
-          color,
-          letterSpacing: '-1px',
-          lineHeight: 1.1,
-          textAlign: 'center',
+          fontSize: '42px', fontWeight: '900', color,
+          letterSpacing: '-1px', lineHeight: 1.1, textAlign: 'center',
         }}>
           Snappin&apos;Buddy
         </span>
-        <span style={{
-          color: darkMode ? '#555' : '#999',
-          fontSize: '12px',
-          letterSpacing: '3px',
-          textTransform: 'uppercase',
-          marginTop: '8px',
-        }}>
+        <span style={{ color: subText, fontSize: '12px', letterSpacing: '3px', textTransform: 'uppercase', marginTop: '8px' }}>
           match and create
         </span>
       </div>
 
+      {/* Onglets */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button onClick={() => setMode('login')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: mode === 'login' ? color : 'transparent', color: mode === 'login' ? bg : color, fontWeight: '700', cursor: 'pointer' }}>Connexion</button>
-        <button onClick={() => setMode('signup')} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: mode === 'signup' ? color : 'transparent', color: mode === 'signup' ? bg : color, fontWeight: '700', cursor: 'pointer' }}>Inscription</button>
+        <button onClick={() => { setMode('login'); setMessage(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: mode === 'login' ? color : 'transparent', color: mode === 'login' ? bg : color, fontWeight: '700', cursor: 'pointer' }}>Connexion</button>
+        <button onClick={() => { setMode('signup'); setMessage(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: mode === 'signup' ? color : 'transparent', color: mode === 'signup' ? bg : color, fontWeight: '700', cursor: 'pointer' }}>Inscription</button>
       </div>
 
+      {/* Champs */}
       <input
-        type="email"
-        placeholder="Email"
-        value={email}
+        type="email" placeholder="Email" value={email}
         onChange={e => setEmail(e.target.value)}
-        style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '12px', boxSizing: 'border-box' }}
-      />
-      <input
-        type="password"
-        placeholder="Mot de passe"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box' }}
+        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+        style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', marginBottom: '12px', boxSizing: 'border-box', outline: 'none' }}
       />
 
-      {message && <p style={{ color: message.includes('email') ? '#3DFF8F' : '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{message}</p>}
+      {mode !== 'reset' && (
+        <input
+          type="password" placeholder="Mot de passe" value={password}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+          style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
+        />
+      )}
+
+      {/* Mot de passe oublié */}
+      {mode === 'login' && (
+        <button
+          onClick={handleForgotPassword}
+          style={{ background: 'none', border: 'none', color: subText, fontSize: '12px', cursor: 'pointer', textAlign: 'right', marginBottom: '16px', padding: 0 }}
+        >
+          Mot de passe oublié ?
+        </button>
+      )}
+
+      {message && (
+        <p style={{
+          color: message.includes('envoyé') || message.includes('confirmer') ? '#3DFF8F' : '#FF4D4D',
+          fontSize: '13px', marginBottom: '16px', lineHeight: 1.5,
+        }}>{message}</p>
+      )}
 
       <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
         {loading ? 'Chargement...' : mode === 'login' ? 'Se connecter' : "S'inscrire"}
       </button>
+
+      {mode === 'signup' && (
+        <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginTop: '16px', lineHeight: 1.5 }}>
+          En t&apos;inscrivant tu acceptes nos conditions d&apos;utilisation
+        </p>
+      )}
     </div>
   );
 }
