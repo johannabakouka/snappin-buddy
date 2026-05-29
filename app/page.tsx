@@ -43,12 +43,18 @@ export default function Home() {
       }
       setLoading(false);
     });
+
     supabase.auth.onAuthStateChange(async (_event, session) => {
       const u: any = session?.user ?? null;
       setUser(u);
       if (u) {
+        setLoading(true);
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
         setProfile(p);
+        setLoading(false);
+      } else {
+        setProfile(null);
+        setLoading(false);
       }
     });
   }, []);
