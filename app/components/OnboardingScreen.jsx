@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 
 const ROLES = [
@@ -27,8 +27,11 @@ export default function OnboardingScreen({ user, onComplete }) {
   const [values, setValues] = useState({ username: '', handle: '', bio: '', zone: '' });
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedStyles, setSelectedStyles] = useState([]);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   function toggleStyle(s) {
     setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -38,6 +41,20 @@ export default function OnboardingScreen({ user, onComplete }) {
     if (step === 0) return values.username && values.handle;
     if (step === 1) return selectedRole !== null;
     return true;
+  }
+
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/avatar.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+    if (!uploadError) {
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      setAvatarUrl(data.publicUrl + '?t=' + Date.now());
+    }
+    setUploading(false);
   }
 
   async function handleFinish() {
@@ -50,6 +67,7 @@ export default function OnboardingScreen({ user, onComplete }) {
       bio: values.bio,
       zone: values.zone,
       styles: selectedStyles.join(', '),
+      avatar_url: avatarUrl,
       is_active: true,
       user_id: user.id,
     });
@@ -84,9 +102,33 @@ export default function OnboardingScreen({ user, onComplete }) {
       {/* Contenu */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
 
-        {/* Étape 1 — Identité */}
+        {/* Étape 1 — Identité + Avatar */}
         {step === 0 && (
           <>
+            {/* Avatar upload */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: '88px', height: '88px', borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '2px dashed rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', overflow: 'hidden', position: 'relative',
+                }}
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ fontSize: '24px', marginBottom: '2px' }}>{uploading ? '⏳' : '📷'}</p>
+                    <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>PHOTO</p>
+                  </div>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+            </div>
+
             {[
               { key: 'username', label: 'Ton prénom ou pseudo *', placeholder: 'Ex: Léa Moreau' },
               { key: 'handle', label: 'Ton handle *', placeholder: '@leamorphoto' },
@@ -115,20 +157,14 @@ export default function OnboardingScreen({ user, onComplete }) {
             {ROLES.map(r => {
               const active = selectedRole === r.id;
               return (
-                <button
-                  key={r.id}
-                  onClick={() => setSelectedRole(r.id)}
-                  style={{
-                    padding: '16px 12px',
-                    borderRadius: '16px',
-                    border: `1.5px solid ${active ? 'white' : 'rgba(255,255,255,0.12)'}`,
-                    background: active ? 'white' : 'rgba(255,255,255,0.04)',
-                    color: active ? '#000' : 'rgba(255,255,255,0.7)',
-                    cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                    transition: 'all 0.2s',
-                  }}
-                >
+                <button key={r.id} onClick={() => setSelectedRole(r.id)} style={{
+                  padding: '16px 12px', borderRadius: '16px',
+                  border: `1.5px solid ${active ? 'white' : 'rgba(255,255,255,0.12)'}`,
+                  background: active ? 'white' : 'rgba(255,255,255,0.04)',
+                  color: active ? '#000' : 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                  transition: 'all 0.2s',
+                }}>
                   <span style={{ fontSize: '24px' }}>{r.icon}</span>
                   <span style={{ fontSize: '12px', fontWeight: '700', textAlign: 'center' }}>{r.label}</span>
                 </button>
@@ -206,7 +242,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             background: 'white', color: 'black',
             fontSize: '15px', fontWeight: '700', cursor: 'pointer',
           }}>
-            {loading ? 'Création...' : '🚀 Rejoindre Snappin\'Buddy'}
+            {loading ? 'Création...' : "🚀 Rejoindre Snappin'Buddy"}
           </button>
         )}
       </div>
