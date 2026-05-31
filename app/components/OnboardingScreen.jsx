@@ -2,14 +2,18 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import { ROLES, UNIVERS } from '../constants';
-
-const STEPS = [
-  { id: 'identity', title: 'Qui es-tu ?', subtitle: 'Commence par te présenter' },
-  { id: 'role', title: 'Ton rôle', subtitle: 'Comment tu contribues à un projet ?' },
-  { id: 'univers', title: 'Ton univers', subtitle: 'Dans quels domaines tu crées ?' },
-];
+import { useT } from '../i18n';
 
 export default function OnboardingScreen({ user, onComplete }) {
+  const t = useT();
+  const isEn = t.map === 'Map';
+
+  const STEPS = [
+    { id: 'identity', title: t.whoAreYou, subtitle: t.whoSub },
+    { id: 'role', title: t.yourRole, subtitle: t.roleSub },
+    { id: 'univers', title: t.yourUnivers, subtitle: t.universSub },
+  ];
+
   const [step, setStep] = useState(0);
   const [values, setValues] = useState({ username: '', handle: '', bio: '', zone: '' });
   const [selectedRole, setSelectedRole] = useState(null);
@@ -52,16 +56,12 @@ export default function OnboardingScreen({ user, onComplete }) {
 
     const cleanHandle = values.handle.startsWith('@') ? values.handle : `@${values.handle}`;
 
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('handle')
-      .eq('handle', cleanHandle)
-      .single();
+    const { data: existing } = await supabase.from('profiles').select('handle').eq('handle', cleanHandle).single();
 
     if (existing) {
       const base = cleanHandle.replace('@', '');
       const sugg = `@${base}${Math.floor(Math.random() * 99) + 1}`;
-      setError('Ce handle est déjà pris !');
+      setError(t.handleTaken);
       setSuggestion(sugg);
       setLoading(false);
       return;
@@ -98,7 +98,7 @@ export default function OnboardingScreen({ user, onComplete }) {
           <button onClick={() => setStep(s => s - 1)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '20px', cursor: 'pointer', marginBottom: '16px', padding: 0 }}>←</button>
         )}
         <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', fontWeight: '700' }}>
-          ÉTAPE {step + 1}/{STEPS.length}
+          {t.step} {step + 1}/{STEPS.length}
         </span>
         <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '6px', marginTop: '8px', fontFamily: 'var(--font-nunito)' }}>{current.title}</h2>
         <p style={{ color: '#666', fontSize: '14px', marginBottom: '32px' }}>{current.subtitle}</p>
@@ -106,20 +106,16 @@ export default function OnboardingScreen({ user, onComplete }) {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
 
-        {/* Étape 1 — Identité */}
         {step === 0 && (
           <>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  width: '88px', height: '88px', borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '2px dashed rgba(255,255,255,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', overflow: 'hidden',
-                }}
-              >
+              <div onClick={() => fileInputRef.current?.click()} style={{
+                width: '88px', height: '88px', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.06)',
+                border: '2px dashed rgba(255,255,255,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden',
+              }}>
                 {avatarUrl ? (
                   <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
@@ -133,8 +129,8 @@ export default function OnboardingScreen({ user, onComplete }) {
             </div>
 
             {[
-              { key: 'username', label: 'Ton prénom ou pseudo *', placeholder: 'Ex: Léa Moreau' },
-              { key: 'handle', label: 'Ton handle *', placeholder: '@leamorphoto' },
+              { key: 'username', label: isEn ? 'Your name or username *' : 'Ton prénom ou pseudo *', placeholder: isEn ? 'Ex: Lea Moreau' : 'Ex: Léa Moreau' },
+              { key: 'handle', label: isEn ? 'Your handle *' : 'Ton handle *', placeholder: '@leamorphoto' },
             ].map(field => (
               <div key={field.key} style={{ marginBottom: '16px' }}>
                 <p style={{ color: '#888', fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>{field.label}</p>
@@ -158,13 +154,9 @@ export default function OnboardingScreen({ user, onComplete }) {
                 {suggestion && (
                   <button
                     onClick={() => { setValues(v => ({ ...v, handle: suggestion })); setError(''); setSuggestion(''); }}
-                    style={{
-                      background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '20px', padding: '8px 16px', color: 'white',
-                      fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-                    }}
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', padding: '8px 16px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
                   >
-                    Utiliser {suggestion} →
+                    {t.useThis} {suggestion} →
                   </button>
                 )}
               </div>
@@ -172,7 +164,6 @@ export default function OnboardingScreen({ user, onComplete }) {
           </>
         )}
 
-        {/* Étape 2 — Rôle */}
         {step === 1 && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {ROLES.map(r => {
@@ -194,12 +185,11 @@ export default function OnboardingScreen({ user, onComplete }) {
           </div>
         )}
 
-        {/* Étape 3 — Univers */}
         {step === 2 && (
           <>
             {[
-              { key: 'bio', label: 'Ton projet en cours', placeholder: 'Une phrase sur ce sur quoi tu travailles...' },
-              { key: 'zone', label: 'Ta zone', placeholder: 'Oberkampf, Belleville, Pigalle...' },
+              { key: 'bio', label: isEn ? 'Current project' : 'Ton projet en cours', placeholder: isEn ? 'One sentence about what you\'re working on...' : 'Une phrase sur ce sur quoi tu travailles...' },
+              { key: 'zone', label: isEn ? 'Your area' : 'Ta zone', placeholder: isEn ? 'Shoreditch, Kreuzberg, Pigalle...' : 'Oberkampf, Belleville, Pigalle...' },
             ].map(field => (
               <div key={field.key} style={{ marginBottom: '16px' }}>
                 <p style={{ color: '#888', fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>{field.label}</p>
@@ -217,7 +207,9 @@ export default function OnboardingScreen({ user, onComplete }) {
               </div>
             ))}
 
-            <p style={{ color: '#888', fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>TON UNIVERS</p>
+            <p style={{ color: '#888', fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>
+              {isEn ? 'YOUR WORLD' : 'TON UNIVERS'}
+            </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
               {UNIVERS.map(s => {
                 const active = selectedUnivers.includes(s);
@@ -234,7 +226,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             </div>
             {selectedUnivers.length > 0 && (
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '8px' }}>
-                {selectedUnivers.length} univers sélectionné{selectedUnivers.length > 1 ? 's' : ''}
+                {selectedUnivers.length} {isEn ? `world${selectedUnivers.length > 1 ? 's' : ''} selected` : `univers sélectionné${selectedUnivers.length > 1 ? 's' : ''}`}
               </p>
             )}
             {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginTop: '8px' }}>{error}</p>}
@@ -245,7 +237,7 @@ export default function OnboardingScreen({ user, onComplete }) {
       <div style={{ padding: '16px 24px 40px', flexShrink: 0 }}>
         {step < STEPS.length - 1 ? (
           <button
-            onClick={() => { setError(''); setSuggestion(''); if (canNext()) setStep(s => s + 1); else setError('Remplis les champs obligatoires !'); }}
+            onClick={() => { setError(''); setSuggestion(''); if (canNext()) setStep(s => s + 1); else setError(isEn ? 'Please fill in required fields!' : 'Remplis les champs obligatoires !'); }}
             style={{
               width: '100%', padding: '16px', borderRadius: '24px', border: 'none',
               background: canNext() ? 'white' : 'rgba(255,255,255,0.15)',
@@ -253,7 +245,7 @@ export default function OnboardingScreen({ user, onComplete }) {
               fontSize: '15px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
             }}
           >
-            Continuer →
+            {t.continue}
           </button>
         ) : (
           <button onClick={handleFinish} disabled={loading} style={{
@@ -261,7 +253,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             background: 'white', color: 'black',
             fontSize: '15px', fontWeight: '700', cursor: 'pointer',
           }}>
-            {loading ? 'Vérification...' : "🚀 Rejoindre Snappin'Buddy"}
+            {loading ? (isEn ? 'Checking...' : 'Vérification...') : t.createProfile}
           </button>
         )}
       </div>
