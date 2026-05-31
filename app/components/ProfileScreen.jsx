@@ -3,20 +3,24 @@ import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
-
-const STATUTS = [
-  { id: 'dispo', label: 'Disponible', color: '#2ECC71' },
-  { id: 'shoot', label: 'En shoot', color: '#FFD700' },
-  { id: 'indispo', label: 'Indisponible', color: '#FF4D4D' },
-];
+import { useT } from '../i18n';
 
 export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
   const fileInputRef = useRef(null);
+
+  const isEn = t.map === 'Map';
+
+  const STATUTS = [
+    { id: 'dispo', label: isEn ? 'Available' : 'Disponible', color: '#2ECC71' },
+    { id: 'shoot', label: isEn ? 'On shoot' : 'En shoot', color: '#FFD700' },
+    { id: 'indispo', label: isEn ? 'Unavailable' : 'Indisponible', color: '#FF4D4D' },
+  ];
 
   const styles = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (profile?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
@@ -67,7 +71,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
 
-      {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
@@ -97,29 +100,18 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
       <div style={{ padding: '24px 16px 100px' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-
-          {/* Avatar */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: '88px', height: '88px', borderRadius: '50%',
-              background: darkMode ? '#2C2C2C' : '#DDD',
-              margin: '0 auto 12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '32px', border: `2px solid ${tagBorder}`,
-              cursor: 'pointer', overflow: 'hidden', position: 'relative',
-            }}
-          >
+          <div onClick={() => fileInputRef.current?.click()} style={{
+            width: '88px', height: '88px', borderRadius: '50%',
+            background: darkMode ? '#2C2C2C' : '#DDD',
+            margin: '0 auto 12px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '32px', border: `2px solid ${tagBorder}`,
+            cursor: 'pointer', overflow: 'hidden', position: 'relative',
+          }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              uploading ? '⏳' : '◉'
-            )}
-            <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: 'rgba(0,0,0,0.5)', padding: '4px 0',
-              fontSize: '10px', color: 'white', fontWeight: '700',
-            }}>
+            ) : (uploading ? '⏳' : '◉')}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', padding: '4px 0', fontSize: '10px', color: 'white', fontWeight: '700' }}>
               {uploading ? '...' : '✏️'}
             </div>
           </div>
@@ -145,14 +137,14 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         {profile?.bio && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>PROJET EN COURS</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{t.currentProject}</p>
             <p style={{ fontSize: '14px', color: cardText }}>{profile.bio}</p>
           </div>
         )}
 
         {styles.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>STYLE</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{t.style}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {styles.map(s => (
                 <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>{s}</span>
@@ -163,7 +155,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         {zones.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>ZONES DE SHOOT</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{t.shootZones}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {zones.map(z => (
                 <span key={z} style={{ fontSize: '12px', color: tagColor, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', borderRadius: '20px', padding: '4px 12px' }}>{z}</span>
@@ -173,15 +165,15 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
         )}
 
         <button onClick={() => setEditing(true)} style={{ width: '100%', background: theme.color, color: theme.bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-          Modifier le profil
+          {t.editProfile}
         </button>
 
         <button onClick={() => setShowLegal(true)} style={{ width: '100%', background: 'transparent', color: subText, border: `1px solid ${tagBorder}`, borderRadius: '24px', padding: '14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' }}>
-          CGU & Mentions légales
+          {t.legal}
         </button>
 
         <button onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }} style={{ width: '100%', background: 'transparent', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-          Se déconnecter
+          {t.logout}
         </button>
       </div>
     </div>
