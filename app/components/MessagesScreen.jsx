@@ -3,8 +3,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import ChatScreen from './ChatScreen';
 import Header from './Header';
+import { useT } from '../i18n';
 
 export default function MessagesScreen({ theme }) {
+  const t = useT();
+  const isEn = t.map === 'Map';
   const [activeBuddy, setActiveBuddy] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [buddies, setBuddies] = useState([]);
@@ -29,106 +32,56 @@ export default function MessagesScreen({ theme }) {
   }, []);
 
   async function loadConversations(userId) {
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('*')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
-
+    const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
     if (!msgs || msgs.length === 0) return;
-
-    const buddyIds = [...new Set(msgs.map(m =>
-      m.sender_id === userId ? m.receiver_id : m.sender_id
-    ))];
-
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, username, handle, avatar_url')
-      .in('user_id', buddyIds);
-
+    const buddyIds = [...new Set(msgs.map(m => m.sender_id === userId ? m.receiver_id : m.sender_id))];
+    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url').in('user_id', buddyIds);
     const convs = buddyIds.map(buddyId => {
       const profile = profiles?.find(p => p.user_id === buddyId);
-      const lastMsg = msgs.find(m =>
-        (m.sender_id === userId && m.receiver_id === buddyId) ||
-        (m.sender_id === buddyId && m.receiver_id === userId)
-      );
+      const lastMsg = msgs.find(m => (m.sender_id === userId && m.receiver_id === buddyId) || (m.sender_id === buddyId && m.receiver_id === userId));
       return {
-        id: buddyId,
-        user_id: buddyId,
-        username: profile?.username || 'Créatif',
+        id: buddyId, user_id: buddyId,
+        username: profile?.username || (isEn ? 'Creative' : 'Créatif'),
         handle: profile?.handle || '',
         avatar_url: profile?.avatar_url || null,
         last: lastMsg?.content || '',
-        time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+        time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString(isEn ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
         unread: 0,
       };
     });
-
     setConversations(convs);
   }
 
   async function loadBuddies(userId) {
-    // Buddies = collabs acceptées
-    const { data: collabs } = await supabase
-      .from('collabs')
-      .select('*')
-      .eq('status', 'accepted')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
-
+    const { data: collabs } = await supabase.from('collabs').select('*').eq('status', 'accepted').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
     if (!collabs || collabs.length === 0) return;
-
-    const buddyIds = [...new Set(collabs.map(c =>
-      c.sender_id === userId ? c.receiver_id : c.sender_id
-    ))];
-
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, username, handle, avatar_url, role, styles')
-      .in('user_id', buddyIds);
-
+    const buddyIds = [...new Set(collabs.map(c => c.sender_id === userId ? c.receiver_id : c.sender_id))];
+    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').in('user_id', buddyIds);
     setBuddies(profiles || []);
   }
 
   async function loadFollowing(userId) {
-    const { data } = await supabase
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', userId);
-
+    const { data } = await supabase.from('follows').select('following_id').eq('follower_id', userId);
     if (!data || data.length === 0) return;
-
     const ids = data.map(f => f.following_id);
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, username, handle, avatar_url, role, styles')
-      .in('user_id', ids);
-
+    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').in('user_id', ids);
     setFollowing(profiles || []);
   }
 
   async function toggleFollow(targetUserId) {
     if (!user) return;
-    const isFollowing = following.some(f => f.user_id === targetUserId);
-    if (isFollowing) {
-      await supabase.from('follows').delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', targetUserId);
+    const isF = following.some(f => f.user_id === targetUserId);
+    if (isF) {
+      await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', targetUserId);
       setFollowing(prev => prev.filter(f => f.user_id !== targetUserId));
     } else {
-      await supabase.from('follows').insert({
-        follower_id: user.id,
-        following_id: targetUserId,
-      });
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id, username, handle, avatar_url, role, styles')
-        .eq('user_id', targetUserId)
-        .single();
+      await supabase.from('follows').insert({ follower_id: user.id, following_id: targetUserId });
+      const { data: profile } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').eq('user_id', targetUserId).single();
       if (profile) setFollowing(prev => [...prev, profile]);
     }
   }
 
-  const isFollowing = (uid) => following.some(f => f.user_id === uid);
+  const isFollowingUser = (uid) => following.some(f => f.user_id === uid);
 
   const tabStyle = (active) => ({
     flex: 1, padding: '10px', border: 'none', background: 'transparent',
@@ -156,17 +109,14 @@ export default function MessagesScreen({ theme }) {
             </div>
           )}
         </div>
-        <button
-          onClick={() => toggleFollow(p.user_id)}
-          style={{
-            padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-            border: `1px solid ${isFollowing(p.user_id) ? cardBorder : theme?.color}`,
-            background: isFollowing(p.user_id) ? 'transparent' : theme?.color,
-            color: isFollowing(p.user_id) ? subText : theme?.bg,
-            flexShrink: 0,
-          }}
-        >
-          {isFollowing(p.user_id) ? 'Suivi ✓' : 'Suivre'}
+        <button onClick={() => toggleFollow(p.user_id)} style={{
+          padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+          border: `1px solid ${isFollowingUser(p.user_id) ? cardBorder : theme?.color}`,
+          background: isFollowingUser(p.user_id) ? 'transparent' : theme?.color,
+          color: isFollowingUser(p.user_id) ? subText : theme?.bg,
+          flexShrink: 0,
+        }}>
+          {isFollowingUser(p.user_id) ? (isEn ? 'Following ✓' : 'Suivi ✓') : (isEn ? 'Follow' : 'Suivre')}
         </button>
       </div>
     );
@@ -182,21 +132,19 @@ export default function MessagesScreen({ theme }) {
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
       <Header theme={theme} />
 
-      {/* Onglets */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
-        <button style={tabStyle(tab === 'messages')} onClick={() => setTab('messages')}>💬 Messages</button>
+        <button style={tabStyle(tab === 'messages')} onClick={() => setTab('messages')}>💬 {t.messages}</button>
         <button style={tabStyle(tab === 'buddies')} onClick={() => setTab('buddies')}>⚡ Buddies</button>
-        <button style={tabStyle(tab === 'suivis')} onClick={() => setTab('suivis')}>🔖 Suivis</button>
+        <button style={tabStyle(tab === 'suivis')} onClick={() => setTab('suivis')}>🔖 {isEn ? 'Following' : 'Suivis'}</button>
       </div>
 
       <div style={{ padding: '20px 16px 100px' }}>
 
-        {/* ═══ MESSAGES ═══ */}
         {tab === 'messages' && (
           <>
             {conversations.length === 0 && (
               <p style={{ color: subText, fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
-                Aucune conversation pour l&apos;instant
+                {isEn ? 'No conversations yet' : 'Aucune conversation pour l\'instant'}
               </p>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -218,17 +166,16 @@ export default function MessagesScreen({ theme }) {
           </>
         )}
 
-        {/* ═══ BUDDIES ═══ */}
         {tab === 'buddies' && (
           <>
             <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>
-              Créatifs avec qui tu as déjà collaboré
+              {isEn ? 'Creatives you\'ve already collaborated with' : 'Créatifs avec qui tu as déjà collaboré'}
             </p>
             {buddies.length === 0 ? (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
                 <p style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</p>
-                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>Pas encore de buddies</p>
-                <p style={{ color: subText, fontSize: '13px' }}>Tes collabs acceptées apparaîtront ici !</p>
+                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'No buddies yet' : 'Pas encore de buddies'}</p>
+                <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Your accepted collabs will appear here!' : 'Tes collabs acceptées apparaîtront ici !'}</p>
               </div>
             ) : (
               buddies.map(p => <ProfileCard key={p.user_id} p={p} />)
@@ -236,24 +183,22 @@ export default function MessagesScreen({ theme }) {
           </>
         )}
 
-        {/* ═══ SUIVIS ═══ */}
         {tab === 'suivis' && (
           <>
             <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>
-              Ta liste privée de créatifs à suivre
+              {isEn ? 'Your private list of creatives to follow' : 'Ta liste privée de créatifs à suivre'}
             </p>
             {following.length === 0 ? (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
                 <p style={{ fontSize: '32px', marginBottom: '12px' }}>🔖</p>
-                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>Personne encore</p>
-                <p style={{ color: subText, fontSize: '13px' }}>Suis des créatifs depuis Explorer ou Buddies !</p>
+                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'Nobody yet' : 'Personne encore'}</p>
+                <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Follow creatives from Explore or Buddies!' : 'Suis des créatifs depuis Explorer ou Buddies !'}</p>
               </div>
             ) : (
               following.map(p => <ProfileCard key={p.user_id} p={p} />)
             )}
           </>
         )}
-
       </div>
     </div>
   );
