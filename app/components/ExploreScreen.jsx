@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
 import { ROLE_ICONS, ROLE_FILTERS, UNIVERS } from '../constants';
+import { useT } from '../i18n';
 
 function getMatchScore(myStyles, theirStyles) {
   if (!myStyles || !theirStyles) return 0;
@@ -13,6 +14,7 @@ function getMatchScore(myStyles, theirStyles) {
 }
 
 export default function ExploreScreen({ theme }) {
+  const t = useT();
   const [profiles, setProfiles] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
@@ -67,21 +69,25 @@ export default function ExploreScreen({ theme }) {
     fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
   });
 
+  const statusLabel = (status) => {
+    if (status === 'dispo') return t.map === 'Map' ? 'Available' : 'Dispo';
+    if (status === 'shoot') return t.map === 'Map' ? 'On shoot' : 'En shoot';
+    return t.map === 'Map' ? 'Unavailable' : 'Indispo';
+  };
+
   return (
     <div ref={scrollRef} style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
       <Header theme={theme} onLogoClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
       <div style={{ padding: '24px 16px 100px' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>Explorer</h2>
-        <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>Créatifs autour de toi</p>
+        <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
+        <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>{t.exploreSubtitle}</p>
 
-        {/* Filtres statut */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
-          <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 Dispo</button>
-          <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>Tous</button>
+          <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {t.map === 'Map' ? 'Available' : 'Dispo'}</button>
+          <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{t.map === 'Map' ? 'All' : 'Tous'}</button>
         </div>
 
-        {/* Filtres rôle */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {ROLE_FILTERS.map(r => (
             <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
@@ -90,7 +96,6 @@ export default function ExploreScreen({ theme }) {
           ))}
         </div>
 
-        {/* Filtres univers */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {UNIVERS.map(s => (
             <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
@@ -100,8 +105,8 @@ export default function ExploreScreen({ theme }) {
         </div>
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
-          {displayed.length} CRÉATIF{displayed.length > 1 ? 'S' : ''}
-          {filter === 'match' && myProfile?.styles ? ' · TRIÉS PAR COMPATIBILITÉ' : ''}
+          {displayed.length} {t.map === 'Map' ? 'CREATIVE' : 'CRÉATIF'}{displayed.length > 1 ? 'S' : ''}
+          {filter === 'match' && myProfile?.styles ? t.sortedByMatch : ''}
           {roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
           {universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
         </p>
@@ -132,7 +137,7 @@ export default function ExploreScreen({ theme }) {
                       <span style={{ fontSize: '13px' }}>{roleIcon}</span>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
                       <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
-                        {p.status === 'dispo' ? 'Dispo' : p.status === 'shoot' ? 'En shoot' : 'Indispo'}
+                        {statusLabel(p.status)}
                       </span>
                     </div>
                     <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
@@ -155,7 +160,9 @@ export default function ExploreScreen({ theme }) {
                       })}
                     </div>
                   </div>
-                  <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>Voir</button>
+                  <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
+                    {t.map === 'Map' ? 'View' : 'Voir'}
+                  </button>
                 </div>
 
                 {portfolio.length > 0 && (
