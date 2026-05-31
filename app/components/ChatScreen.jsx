@@ -1,8 +1,11 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { useT } from '../i18n';
 
 export default function ChatScreen({ buddy, onBack, theme }) {
+  const t = useT();
+  const isEn = t.map === 'Map';
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [user, setUser] = useState(null);
@@ -30,8 +33,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
       .order('created_at', { ascending: true });
     if (data) {
       setMessages(data);
-      // Affiche le reminder QR si la collab vient d'être acceptée (premier message = message auto)
-      if (data.length === 1 && data[0].content.includes('Collab acceptée')) {
+      if (data.length === 1 && (data[0].content.includes('Collab acceptée') || data[0].content.includes('Collab accepted'))) {
         setShowQRReminder(true);
       }
     }
@@ -39,30 +41,21 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   }
 
   function subscribeToMessages(myId, buddyId) {
-    supabase
-      .channel('messages-' + buddyId)
+    supabase.channel('messages-' + buddyId)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
         const msg = payload.new;
-        if (
-          (msg.sender_id === myId && msg.receiver_id === buddyId) ||
-          (msg.sender_id === buddyId && msg.receiver_id === myId)
-        ) {
+        if ((msg.sender_id === myId && msg.receiver_id === buddyId) || (msg.sender_id === buddyId && msg.receiver_id === myId)) {
           setMessages(prev => [...prev, msg]);
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
-      })
-      .subscribe();
+      }).subscribe();
   }
 
   async function sendMessage() {
     if (!text.trim() || !user || !buddyUserId) return;
     const content = text;
     setText('');
-    const { data } = await supabase.from('messages').insert({
-      sender_id: user.id,
-      receiver_id: buddyUserId,
-      content,
-    }).select().single();
+    const { data } = await supabase.from('messages').insert({ sender_id: user.id, receiver_id: buddyUserId, content }).select().single();
     if (data) {
       setMessages(prev => [...prev, data]);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -80,14 +73,10 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: bg, color }}>
 
-      {/* Header */}
       <div style={{ padding: '16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-          {buddy?.avatar_url
-            ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : '◉'
-          }
+          {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
         </div>
         <div>
           <div style={{ fontWeight: '700', fontSize: '15px', color }}>{buddy?.username}</div>
@@ -95,38 +84,39 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         </div>
       </div>
 
-      {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-        {/* Reminder QR */}
         {showQRReminder && (
           <div style={{
             background: darkMode ? 'rgba(255,154,61,0.08)' : 'rgba(255,154,61,0.1)',
             border: '1px solid rgba(255,154,61,0.3)',
-            borderRadius: '14px', padding: '12px 14px',
-            marginBottom: '8px', position: 'relative',
+            borderRadius: '14px', padding: '12px 14px', marginBottom: '8px', position: 'relative',
           }}>
-            <button
-              onClick={() => setShowQRReminder(false)}
-              style={{ position: 'absolute', top: '8px', right: '10px', background: 'none', border: 'none', color: subText, fontSize: '14px', cursor: 'pointer' }}
-            >✕</button>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,154,61,0.9)', marginBottom: '4px' }}>🔒 Avant de vous retrouver</p>
+            <button onClick={() => setShowQRReminder(false)} style={{ position: 'absolute', top: '8px', right: '10px', background: 'none', border: 'none', color: subText, fontSize: '14px', cursor: 'pointer' }}>✕</button>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,154,61,0.9)', marginBottom: '4px' }}>
+              🔒 {isEn ? 'Before you meet' : 'Avant de vous retrouver'}
+            </p>
             <p style={{ fontSize: '12px', color: subText, lineHeight: 1.5 }}>
-              Pensez à générer et scanner vos QR codes respectifs dans l&apos;onglet <strong style={{ color }}>Match → 🤝</strong> pour confirmer vos identités !
+              {isEn
+                ? <>Remember to generate and scan your QR codes in the <strong style={{ color }}>Match → 🤝</strong> tab to confirm your identities!</>
+                : <>Pensez à générer et scanner vos QR codes dans l&apos;onglet <strong style={{ color }}>Match → 🤝</strong> pour confirmer vos identités !</>
+              }
             </p>
           </div>
         )}
 
         {messages.length === 0 && (
-          <p style={{ color: subText, textAlign: 'center', marginTop: '40px' }}>Commence la conversation !</p>
+          <p style={{ color: subText, textAlign: 'center', marginTop: '40px' }}>
+            {isEn ? 'Start the conversation!' : 'Commence la conversation !'}
+          </p>
         )}
 
         {messages.map(m => {
           const isMe = m.sender_id === user?.id;
-          const isSystem = m.content.includes('Collab acceptée');
+          const isSystem = m.content.includes('Collab acceptée') || m.content.includes('Collab accepted');
           if (isSystem) return (
             <div key={m.id} style={{ textAlign: 'center', margin: '8px 0' }}>
-              <span style={{ fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(61,255,143,0.08)' : 'rgba(61,255,143,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(61,255,143,0.2)' }}>
+              <span style={{ fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(46,204,113,0.08)' : 'rgba(46,204,113,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(46,204,113,0.2)' }}>
                 {m.content}
               </span>
             </div>
@@ -144,16 +134,15 @@ export default function ChatScreen({ buddy, onBack, theme }) {
             </div>
           );
         })}
-        <div ref={bottomRef}/>
+        <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div style={{ padding: '12px 16px 80px', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
         <input
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder="Message..."
+          placeholder={isEn ? 'Message...' : 'Message...'}
           style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px' }}
         />
         <button onClick={sendMessage} style={{ width: '40px', height: '40px', borderRadius: '50%', background: color, border: 'none', fontSize: '18px', cursor: 'pointer', color: bg }}>↑</button>
