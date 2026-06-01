@@ -119,12 +119,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
-{profile?.is_early_adopter && (
-  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', background: 'linear-gradient(135deg, #F0B429, #FF6B6B)', borderRadius: '20px', padding: '3px 10px' }}>
-    <span style={{ fontSize: '11px' }}>🌟</span>
-    <span style={{ fontSize: '11px', fontWeight: '800', color: 'white', letterSpacing: '0.5px' }}>EARLY ADOPTER</span>
-  </div>
-)}
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
             {STATUTS.map(s => (
