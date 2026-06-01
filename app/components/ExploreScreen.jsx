@@ -29,6 +29,7 @@ export default function ExploreScreen({ theme }) {
   const tagColor = darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
   const tagBorder = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';
+  const isEn = t.map === 'Map';
 
   useEffect(() => {
     async function loadData() {
@@ -70,9 +71,9 @@ export default function ExploreScreen({ theme }) {
   });
 
   const statusLabel = (status) => {
-    if (status === 'dispo') return t.map === 'Map' ? 'Available' : 'Dispo';
-    if (status === 'shoot') return t.map === 'Map' ? 'On shoot' : 'En shoot';
-    return t.map === 'Map' ? 'Unavailable' : 'Indispo';
+    if (status === 'dispo') return isEn ? 'Available' : 'Dispo';
+    if (status === 'shoot') return isEn ? 'On shoot' : 'En shoot';
+    return isEn ? 'Unavailable' : 'Indispo';
   };
 
   return (
@@ -84,8 +85,8 @@ export default function ExploreScreen({ theme }) {
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
-          <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {t.map === 'Map' ? 'Available' : 'Dispo'}</button>
-          <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{t.map === 'Map' ? 'All' : 'Tous'}</button>
+          <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {isEn ? 'Available' : 'Dispo'}</button>
+          <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{isEn ? 'All' : 'Tous'}</button>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
@@ -105,7 +106,7 @@ export default function ExploreScreen({ theme }) {
         </div>
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
-          {displayed.length} {t.map === 'Map' ? 'CREATIVE' : 'CRÉATIF'}{displayed.length > 1 ? 'S' : ''}
+          {displayed.length} {isEn ? 'CREATIVE' : 'CRÉATIF'}{displayed.length > 1 ? 'S' : ''}
           {filter === 'match' && myProfile?.styles ? t.sortedByMatch : ''}
           {roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
           {universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
@@ -135,6 +136,9 @@ export default function ExploreScreen({ theme }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{p.username}</span>
                       <span style={{ fontSize: '13px' }}>{roleIcon}</span>
+                      {p.is_early_adopter && (
+                        <span style={{ fontSize: '10px', fontWeight: '800', background: 'linear-gradient(135deg, #F0B429, #FF6B6B)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>🌟 Early</span>
+                      )}
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }}/>
                       <span style={{ fontSize: '11px', color: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D' }}>
                         {statusLabel(p.status)}
@@ -161,7 +165,7 @@ export default function ExploreScreen({ theme }) {
                     </div>
                   </div>
                   <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
-                    {t.map === 'Map' ? 'View' : 'Voir'}
+                    {isEn ? 'View' : 'Voir'}
                   </button>
                 </div>
 
