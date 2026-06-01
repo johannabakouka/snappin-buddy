@@ -9,6 +9,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [selectedRole, setSelectedRole] = useState(profile?.role || null);
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
+  const [videoUrl, setVideoUrl] = useState(profile?.video_url || '');
   const [selectedUnivers, setSelectedUnivers] = useState(
     profile?.styles ? profile.styles.split(',').map(s => s.trim()).filter(Boolean) : []
   );
@@ -49,6 +50,23 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
     setUploadingPortfolio(false);
   }
 
+  function getVideoEmbed(url) {
+    if (!url) return null;
+    if (url.includes('youtube.com/watch')) {
+      const id = new URL(url).searchParams.get('v');
+      return `https://www.youtube.com/embed/${id}`;
+    }
+    if (url.includes('youtu.be/')) {
+      const id = url.split('youtu.be/')[1]?.split('?')[0];
+      return `https://www.youtube.com/embed/${id}`;
+    }
+    if (url.includes('vimeo.com/')) {
+      const id = url.split('vimeo.com/')[1]?.split('?')[0];
+      return `https://player.vimeo.com/video/${id}`;
+    }
+    return null;
+  }
+
   async function handleSave() {
     if (!username || !handle || !selectedRole) { setError('Champs obligatoires manquants'); return; }
     setLoading(true);
@@ -56,11 +74,14 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       username, handle, role: selectedRole,
       bio, zone, styles: selectedUnivers.join(', '),
       portfolio_urls: portfolioUrls,
+      video_url: videoUrl || null,
     }).eq('user_id', profile.user_id);
     if (error) setError(error.message);
     else onSave();
     setLoading(false);
   }
+
+  const embedUrl = getVideoEmbed(videoUrl);
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto', padding: '24px 16px 40px' }}>
@@ -145,6 +166,20 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         )}
       </div>
       <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
+
+      {/* Lien vidéo */}
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 LIEN VIDÉO <span style={{ fontWeight: '400' }}>(YouTube ou Vimeo)</span></p>
+      <input
+        value={videoUrl}
+        onChange={e => setVideoUrl(e.target.value)}
+        placeholder="https://youtube.com/watch?v=..."
+        style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none', marginBottom: '12px' }}
+      />
+      {embedUrl && (
+        <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', aspectRatio: '16/9' }}>
+          <iframe src={embedUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+        </div>
+      )}
 
       {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 

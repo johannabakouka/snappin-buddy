@@ -2,6 +2,23 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
 
+function getVideoEmbed(url) {
+  if (!url) return null;
+  if (url.includes('youtube.com/watch')) {
+    const id = new URL(url).searchParams.get('v');
+    return `https://www.youtube.com/embed/${id}`;
+  }
+  if (url.includes('youtu.be/')) {
+    const id = url.split('youtu.be/')[1]?.split('?')[0];
+    return `https://www.youtube.com/embed/${id}`;
+  }
+  if (url.includes('vimeo.com/')) {
+    const id = url.split('vimeo.com/')[1]?.split('?')[0];
+    return `https://player.vimeo.com/video/${id}`;
+  }
+  return null;
+}
+
 export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
@@ -23,6 +40,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const portfolio = buddy?.portfolio_urls || [];
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = buddy?.status === 'shoot' ? 'En shoot' : buddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
+  const embedUrl = getVideoEmbed(buddy?.video_url);
 
   async function sendCollab() {
     setSending(true);
@@ -56,7 +74,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         </div>
 
-        {/* Portfolio carrousel */}
+        {/* Portfolio */}
         {portfolio.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
             <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>PORTFOLIO</p>
@@ -64,6 +82,16 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
               {portfolio.map((url, i) => (
                 <img key={i} src={url} alt={`portfolio-${i}`} style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Vidéo */}
+        {embedUrl && (
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>🎬 VIDÉO</p>
+            <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
+              <iframe src={embedUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
             </div>
           </div>
         )}
