@@ -20,7 +20,6 @@ const STATUS_FILTERS = [
   { id: 'shoot', label: '🟡 En shoot' },
 ];
 
-// Rôles avec icône seulement pour la carte
 const MAP_ROLE_FILTERS = ROLE_FILTERS.map(r => ({ id: r.id, label: r.icon }));
 
 export default function MapComponent({ theme }) {
@@ -35,8 +34,12 @@ export default function MapComponent({ theme }) {
   const [universFilter, setUniversFilter] = useState(null);
   const [roleFilter, setRoleFilter] = useState(null);
   const [L, setL] = useState(null);
+  const [showGeoPrompt, setShowGeoPrompt] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('geoAsked');
+  });
 
-  useEffect(() => {
+  async function initMap(askGeo = false) {
     if (mapInstance.current) return;
     import('leaflet').then(async (LeafletModule) => {
       import('leaflet/dist/leaflet.css');
@@ -60,7 +63,7 @@ export default function MapComponent({ theme }) {
         setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
       }
 
-      if (navigator.geolocation) {
+      if (askGeo && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async pos => {
           const { latitude, longitude } = pos.coords;
           map.setView([latitude, longitude], 14);
@@ -71,7 +74,10 @@ export default function MapComponent({ theme }) {
         });
       }
     });
+  }
 
+  useEffect(() => {
+    if (!showGeoPrompt) initMap(true);
     return () => {
       if (mapInstance.current) {
         mapInstance.current.remove();
@@ -79,6 +85,18 @@ export default function MapComponent({ theme }) {
       }
     };
   }, []);
+
+  function handleAllow() {
+    localStorage.setItem('geoAsked', 'true');
+    setShowGeoPrompt(false);
+    initMap(true);
+  }
+
+  function handleDeny() {
+    localStorage.setItem('geoAsked', 'true');
+    setShowGeoPrompt(false);
+    initMap(false);
+  }
 
   useEffect(() => {
     if (!L || !mapInstance.current || profiles.length === 0) return;
@@ -148,6 +166,47 @@ export default function MapComponent({ theme }) {
   return (
     <div style={{ position: 'relative', height: '100vh' }}>
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
+
+      {/* Prompt géolocalisation */}
+      {showGeoPrompt && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          zIndex: 3000, background: darkMode ? 'rgba(10,10,10,0.96)' : 'rgba(245,245,245,0.96)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }}>
+          <div style={{
+            background: darkMode ? '#1A1A1A' : '#FFFFFF',
+            borderRadius: '24px', padding: '32px 24px', maxWidth: '320px', width: '100%',
+            border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺</div>
+            <h3 style={{ fontSize: '18px', fontWeight: '900', color: darkMode ? 'white' : '#111', marginBottom: '12px', fontFamily: 'var(--font-nunito)' }}>
+              Trouve les créatifs autour de toi
+            </h3>
+            <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', lineHeight: 1.6, marginBottom: '24px' }}>
+              Snappin&apos;Buddy utilise ta position pour afficher les buddies dans ton quartier. Ta position exacte n&apos;est jamais partagée — elle est floutée à ~400m.
+            </p>
+            <button onClick={handleAllow} style={{
+              width: '100%', padding: '14px', borderRadius: '24px', border: 'none',
+              background: darkMode ? 'white' : '#111',
+              color: darkMode ? 'black' : 'white',
+              fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px',
+            }}>
+              📍 Autoriser la localisation
+            </button>
+            <button onClick={handleDeny} style={{
+              width: '100%', padding: '14px', borderRadius: '24px',
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              background: 'transparent',
+              color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+            }}>
+              Pas maintenant
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
