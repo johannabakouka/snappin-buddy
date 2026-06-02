@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
@@ -36,7 +36,9 @@ export default function MatchScreen({ theme, setScreen }) {
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
   const [filterZone, setFilterZone] = useState('');
+  const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [sortBy, setSortBy] = useState('match');
+  const zoneTimeout = useRef(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -112,6 +114,23 @@ export default function MatchScreen({ theme, setScreen }) {
       score += os.filter(s => ms.includes(s)).length;
     }
     return score;
+  }
+
+  async function handleZoneSearch(val) {
+    setFilterZone(val);
+    setZoneSuggestions([]);
+    if (val.length < 2) return;
+    clearTimeout(zoneTimeout.current);
+    zoneTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5&addressdetails=1`);
+        const data = await res.json();
+        setZoneSuggestions(data.map(d => ({
+          label: [d.address?.city || d.address?.town || d.address?.village || d.address?.county, d.address?.country].filter(Boolean).join(', '),
+          value: d.address?.city || d.address?.town || d.address?.village || d.address?.county || d.display_name,
+        })));
+      } catch { setZoneSuggestions([]); }
+    }, 350);
   }
 
   let displayedOffers = [...offers];
@@ -216,9 +235,7 @@ export default function MatchScreen({ theme, setScreen }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                   {ROLES.map(r => {
                     const active = offerRoles.includes(r.id);
-                    return (
-                      <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>
-                    );
+                    return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
                   })}
                 </div>
 
@@ -229,9 +246,7 @@ export default function MatchScreen({ theme, setScreen }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                   {UNIVERS.map(s => {
                     const active = offerStyles.includes(s);
-                    return (
-                      <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>
-                    );
+                    return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
                   })}
                 </div>
 
@@ -272,15 +287,34 @@ export default function MatchScreen({ theme, setScreen }) {
               </>
             )}
 
-            {/* Filtres feed — cachés quand formulaire ouvert */}
+            {/* Filtres feed */}
             {!showNewOffer && (
               <div style={{ marginBottom: '12px' }}>
-                <input
-                  value={filterZone}
-                  onChange={e => setFilterZone(e.target.value)}
-                  placeholder={isEn ? '📍 City or area...' : '📍 Ville ou zone...'}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
-                />
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <input
+                    value={filterZone}
+                    onChange={e => handleZoneSearch(e.target.value)}
+                    placeholder={isEn ? '📍 City, country...' : '📍 Ville, pays...'}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                  {zoneSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                      background: darkMode ? '#1A1A1A' : '#FFFFFF',
+                      border: `1px solid ${cardBorder}`, borderRadius: '12px',
+                      overflow: 'hidden', marginTop: '4px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                    }}>
+                      {zoneSuggestions.map((s, i) => (
+                        <div key={i} onClick={() => { setFilterZone(s.value); setZoneSuggestions([]); }}
+                          style={{ padding: '10px 14px', fontSize: '13px', color: theme?.color, cursor: 'pointer', borderBottom: i < zoneSuggestions.length - 1 ? `1px solid ${cardBorder}` : 'none' }}>
+                          📍 {s.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
                   <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
