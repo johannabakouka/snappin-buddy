@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
@@ -36,9 +36,7 @@ export default function MatchScreen({ theme, setScreen }) {
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
   const [filterZone, setFilterZone] = useState('');
-  const [zoneSuggestions, setZoneSuggestions] = useState([]);
   const [sortBy, setSortBy] = useState('match');
-  const zoneTimeout = useRef(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -54,13 +52,11 @@ export default function MatchScreen({ theme, setScreen }) {
   async function loadCollabs(userId) {
     const { data: recv } = await supabase.from('collabs').select('*').eq('receiver_id', userId).order('created_at', { ascending: false });
     const { data: snt } = await supabase.from('collabs').select('*').eq('sender_id', userId).order('created_at', { ascending: false });
-
     if (recv && recv.length > 0) {
       const senderIds = recv.map(c => c.sender_id);
       const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls').in('user_id', senderIds);
       setReceived(recv.map(c => ({ ...c, senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id) })));
     } else setReceived([]);
-
     if (snt && snt.length > 0) {
       const receiverIds = snt.map(c => c.receiver_id);
       const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls').in('user_id', receiverIds);
@@ -114,23 +110,6 @@ export default function MatchScreen({ theme, setScreen }) {
       score += os.filter(s => ms.includes(s)).length;
     }
     return score;
-  }
-
-  async function handleZoneSearch(val) {
-    setFilterZone(val);
-    setZoneSuggestions([]);
-    if (val.length < 2) return;
-    clearTimeout(zoneTimeout.current);
-    zoneTimeout.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5&addressdetails=1`);
-        const data = await res.json();
-        setZoneSuggestions(data.map(d => ({
-          label: [d.address?.city || d.address?.town || d.address?.village || d.address?.county, d.address?.country].filter(Boolean).join(', '),
-          value: d.address?.city || d.address?.town || d.address?.village || d.address?.county || d.display_name,
-        })));
-      } catch { setZoneSuggestions([]); }
-    }, 350);
   }
 
   let displayedOffers = [...offers];
@@ -226,36 +205,36 @@ export default function MatchScreen({ theme, setScreen }) {
               <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '20px', border: `1px solid ${cardBorder}` }}>
                 <p style={{ color: subText, fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '14px' }}>{isEn ? 'NEW BRIEF' : 'NOUVELLE OFFRE'}</p>
                 <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
-                <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder={isEn ? 'Project description...' : 'Description du projet...'} rows={3} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box', resize: 'none' }} />
+                <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder={isEn ? 'Project description...' : 'Description du projet...'} rows={2} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box', resize: 'none' }} />
 
-                <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-                  {isEn ? 'ROLES NEEDED *' : 'RÔLES RECHERCHÉS *'}
+                <p style={{ color: subText, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>
+                  {isEn ? 'ROLES *' : 'RÔLES *'}
                   {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   {ROLES.map(r => {
                     const active = offerRoles.includes(r.id);
-                    return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
+                    return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
                   })}
                 </div>
 
-                <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-                  {isEn ? 'UNIVERSE / TAGS' : 'UNIVERS / TAGS'}
+                <p style={{ color: subText, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>
+                  {isEn ? 'TAGS' : 'TAGS'}
                   {offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   {UNIVERS.map(s => {
                     const active = offerStyles.includes(s);
-                    return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
+                    return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
                   })}
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City / Area' : 'Ville / Zone'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
+                  <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City' : 'Ville'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
                   <input value={offerDate} onChange={e => setOfferDate(e.target.value)} placeholder={isEn ? 'Date' : 'Date'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
                 </div>
                 <button onClick={createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-                  {offerLoading ? (isEn ? 'Publishing...' : 'Publication...') : (isEn ? 'Publish brief' : "Publier l'offre")}
+                  {offerLoading ? (isEn ? 'Publishing...' : 'Publication...') : (isEn ? 'Publish' : "Publier")}
                 </button>
               </div>
             )}
@@ -287,48 +266,24 @@ export default function MatchScreen({ theme, setScreen }) {
               </>
             )}
 
-            {/* Filtres feed */}
             {!showNewOffer && (
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <input
-                    value={filterZone}
-                    onChange={e => handleZoneSearch(e.target.value)}
-                    placeholder={isEn ? '📍 City, country...' : '📍 Ville, pays...'}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
-                  />
-                  {zoneSuggestions.length > 0 && (
-                    <div style={{
-                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-                      background: darkMode ? '#1A1A1A' : '#FFFFFF',
-                      border: `1px solid ${cardBorder}`, borderRadius: '12px',
-                      overflow: 'hidden', marginTop: '4px',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-                    }}>
-                      {zoneSuggestions.map((s, i) => (
-                        <div key={i} onClick={() => { setFilterZone(s.value); setZoneSuggestions([]); }}
-                          style={{ padding: '10px 14px', fontSize: '13px', color: theme?.color, cursor: 'pointer', borderBottom: i < zoneSuggestions.length - 1 ? `1px solid ${cardBorder}` : 'none' }}>
-                          📍 {s.label}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
+                <input
+                  value={filterZone}
+                  onChange={e => setFilterZone(e.target.value)}
+                  placeholder={isEn ? '📍 City or country...' : '📍 Ville ou pays...'}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
+                />
                 <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
                   <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
                   {ROLES.slice(0, 6).map(r => (
-                    <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>
-                      {r.icon} {r.label}
-                    </button>
+                    <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>{r.icon} {r.label}</button>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   {UNIVERS.map(s => (
-                    <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>
-                      {s}
-                    </button>
+                    <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>{s}</button>
                   ))}
                 </div>
               </div>
