@@ -33,9 +33,9 @@ export default function MatchScreen({ theme, setScreen }) {
   const [offerDate, setOfferDate] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
 
-  // Filtres feed
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
+  const [filterZone, setFilterZone] = useState('');
   const [sortBy, setSortBy] = useState('match');
 
   useEffect(() => {
@@ -81,14 +81,9 @@ export default function MatchScreen({ theme, setScreen }) {
     if (!offerTitle || offerRoles.length === 0) return;
     setOfferLoading(true);
     await supabase.from('offers').insert({
-      user_id: user.id,
-      title: offerTitle,
-      description: offerDesc,
-      role_needed: offerRoles.join(', '),
-      styles_needed: offerStyles.join(', '),
-      zone: offerZone,
-      date: offerDate,
-      status: 'open'
+      user_id: user.id, title: offerTitle, description: offerDesc,
+      role_needed: offerRoles.join(', '), styles_needed: offerStyles.join(', '),
+      zone: offerZone, date: offerDate, status: 'open'
     });
     setOfferTitle(''); setOfferDesc(''); setOfferRoles([]); setOfferStyles([]); setOfferZone(''); setOfferDate('');
     setShowNewOffer(false);
@@ -112,9 +107,9 @@ export default function MatchScreen({ theme, setScreen }) {
       if (roles.includes(myProfile.role)) score += 3;
     }
     if (offer.styles_needed && myProfile.styles) {
-      const offerStyles = offer.styles_needed.toLowerCase().split(',').map(s => s.trim());
-      const myStyles = myProfile.styles.toLowerCase().split(',').map(s => s.trim());
-      score += offerStyles.filter(s => myStyles.includes(s)).length;
+      const os = offer.styles_needed.toLowerCase().split(',').map(s => s.trim());
+      const ms = myProfile.styles.toLowerCase().split(',').map(s => s.trim());
+      score += os.filter(s => ms.includes(s)).length;
     }
     return score;
   }
@@ -122,6 +117,7 @@ export default function MatchScreen({ theme, setScreen }) {
   let displayedOffers = [...offers];
   if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
   if (filterUnivers) displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterUnivers.toLowerCase()));
+  if (filterZone) displayedOffers = displayedOffers.filter(o => (o.zone || '').toLowerCase().includes(filterZone.toLowerCase()));
   if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => getMatchScore(b) - getMatchScore(a));
 
   async function respondCollab(id, status, senderId) {
@@ -221,12 +217,7 @@ export default function MatchScreen({ theme, setScreen }) {
                   {ROLES.map(r => {
                     const active = offerRoles.includes(r.id);
                     return (
-                      <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{
-                        padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-                        border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
-                        background: active ? theme?.color : 'transparent',
-                        color: active ? theme?.bg : subText,
-                      }}>{r.icon} {r.label}</button>
+                      <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>
                     );
                   })}
                 </div>
@@ -239,18 +230,13 @@ export default function MatchScreen({ theme, setScreen }) {
                   {UNIVERS.map(s => {
                     const active = offerStyles.includes(s);
                     return (
-                      <button key={s} onClick={() => toggleOfferStyle(s)} style={{
-                        padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-                        border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
-                        background: active ? theme?.color : 'transparent',
-                        color: active ? theme?.bg : subText,
-                      }}>{s}</button>
+                      <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>
                     );
                   })}
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'Area' : 'Zone'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
+                  <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City / Area' : 'Ville / Zone'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
                   <input value={offerDate} onChange={e => setOfferDate(e.target.value)} placeholder={isEn ? 'Date' : 'Date'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
                 </div>
                 <button onClick={createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
@@ -286,25 +272,33 @@ export default function MatchScreen({ theme, setScreen }) {
               </>
             )}
 
-            {/* Filtres feed */}
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
-                <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
-                {ROLES.slice(0, 6).map(r => (
-                  <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>
-                    {r.icon} {r.label}
-                  </button>
-                ))}
+            {/* Filtres feed — cachés quand formulaire ouvert */}
+            {!showNewOffer && (
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  value={filterZone}
+                  onChange={e => setFilterZone(e.target.value)}
+                  placeholder={isEn ? '📍 City or area...' : '📍 Ville ou zone...'}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
+                />
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                  <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
+                  <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
+                  {ROLES.slice(0, 6).map(r => (
+                    <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>
+                      {r.icon} {r.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                  {UNIVERS.map(s => (
+                    <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {UNIVERS.map(s => (
-                  <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             {displayedOffers.length > 0 ? (
               <>
