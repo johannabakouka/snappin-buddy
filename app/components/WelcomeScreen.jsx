@@ -1,10 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useT } from '../i18n';
 
 export default function WelcomeScreen({ onStart }) {
   const t = useT();
   const [slide, setSlide] = useState(0);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
 
   const SLIDES = [
     { emoji: '📸', title: t.slide1Title, subtitle: t.slide1Sub, color: '#2ECC71' },
@@ -18,6 +20,28 @@ export default function WelcomeScreen({ onStart }) {
     else onStart();
   }
 
+  function prev() {
+    if (slide > 0) setSlide(s => s - 1);
+  }
+
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    // Swipe horizontal seulement (pas vertical)
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) next();
+      else prev();
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }
+
   const current = SLIDES[slide];
 
   const getRgb = (color) => {
@@ -29,8 +53,11 @@ export default function WelcomeScreen({ onStart }) {
   };
 
   return (
-    <div style={{ height: '100vh', background: '#0A0A0A', color: 'white', display: 'flex', flexDirection: 'column', padding: '0 0 40px' }}>
-
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{ height: '100vh', background: '#0A0A0A', color: 'white', display: 'flex', flexDirection: 'column', padding: '0 0 40px', userSelect: 'none' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px 24px 0' }}>
         <button onClick={onStart} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
           {t.skip}
