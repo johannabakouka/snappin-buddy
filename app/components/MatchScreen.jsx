@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
-import { ROLES } from '../constants';
+import { ROLES, UNIVERS } from '../constants';
 import { useT } from '../i18n';
 
 export default function MatchScreen({ theme, setScreen }) {
@@ -20,6 +20,7 @@ export default function MatchScreen({ theme, setScreen }) {
   const [received, setReceived] = useState([]);
   const [sent, setSent] = useState([]);
   const [user, setUser] = useState(null);
+  const [myProfile, setMyProfile] = useState(null);
   const [qrCollab, setQrCollab] = useState(null);
   const [offers, setOffers] = useState([]);
   const [myOffers, setMyOffers] = useState([]);
@@ -27,9 +28,15 @@ export default function MatchScreen({ theme, setScreen }) {
   const [offerTitle, setOfferTitle] = useState('');
   const [offerDesc, setOfferDesc] = useState('');
   const [offerRoles, setOfferRoles] = useState([]);
+  const [offerStyles, setOfferStyles] = useState([]);
   const [offerZone, setOfferZone] = useState('');
   const [offerDate, setOfferDate] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
+
+  // Filtres feed
+  const [filterRole, setFilterRole] = useState(null);
+  const [filterUnivers, setFilterUnivers] = useState(null);
+  const [sortBy, setSortBy] = useState('match');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -37,6 +44,7 @@ export default function MatchScreen({ theme, setScreen }) {
         setUser(data.user);
         loadCollabs(data.user.id);
         loadOffers(data.user.id);
+        supabase.from('profiles').select('*').eq('user_id', data.user.id).single().then(({ data: p }) => setMyProfile(p));
       }
     });
   }, []);
@@ -77,21 +85,44 @@ export default function MatchScreen({ theme, setScreen }) {
       title: offerTitle,
       description: offerDesc,
       role_needed: offerRoles.join(', '),
+      styles_needed: offerStyles.join(', '),
       zone: offerZone,
       date: offerDate,
       status: 'open'
     });
-    setOfferTitle(''); setOfferDesc(''); setOfferRoles([]); setOfferZone(''); setOfferDate('');
+    setOfferTitle(''); setOfferDesc(''); setOfferRoles([]); setOfferStyles([]); setOfferZone(''); setOfferDate('');
     setShowNewOffer(false);
     loadOffers(user.id);
     setOfferLoading(false);
   }
 
   function toggleOfferRole(roleId) {
-    setOfferRoles(prev =>
-      prev.includes(roleId) ? prev.filter(r => r !== roleId) : [...prev, roleId]
-    );
+    setOfferRoles(prev => prev.includes(roleId) ? prev.filter(r => r !== roleId) : [...prev, roleId]);
   }
+
+  function toggleOfferStyle(s) {
+    setOfferStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  }
+
+  function getMatchScore(offer) {
+    if (!myProfile) return 0;
+    let score = 0;
+    if (offer.role_needed && myProfile.role) {
+      const roles = offer.role_needed.split(',').map(r => r.trim());
+      if (roles.includes(myProfile.role)) score += 3;
+    }
+    if (offer.styles_needed && myProfile.styles) {
+      const offerStyles = offer.styles_needed.toLowerCase().split(',').map(s => s.trim());
+      const myStyles = myProfile.styles.toLowerCase().split(',').map(s => s.trim());
+      score += offerStyles.filter(s => myStyles.includes(s)).length;
+    }
+    return score;
+  }
+
+  let displayedOffers = [...offers];
+  if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
+  if (filterUnivers) displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterUnivers.toLowerCase()));
+  if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => getMatchScore(b) - getMatchScore(a));
 
   async function respondCollab(id, status, senderId) {
     await supabase.from('collabs').update({ status }).eq('id', id);
@@ -114,6 +145,14 @@ export default function MatchScreen({ theme, setScreen }) {
     fontWeight: active ? '800' : '600', fontSize: '14px', cursor: 'pointer',
     borderBottom: `2px solid ${active ? theme?.color : 'transparent'}`,
     transition: 'all 0.2s',
+  });
+
+  const pillStyle = (active) => ({
+    padding: '6px 12px', borderRadius: '20px', flexShrink: 0,
+    border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
+    background: active ? theme?.color : 'transparent',
+    color: active ? theme?.bg : subText,
+    fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap',
   });
 
   function MiniProfile({ profile }) {
@@ -164,7 +203,7 @@ export default function MatchScreen({ theme, setScreen }) {
 
         {tab === 'offres' && (
           <>
-            <button onClick={() => setShowNewOffer(!showNewOffer)} style={{ width: '100%', padding: '14px', borderRadius: '14px', marginBottom: '20px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: theme?.color, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+            <button onClick={() => setShowNewOffer(!showNewOffer)} style={{ width: '100%', padding: '14px', borderRadius: '14px', marginBottom: '16px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: theme?.color, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
               {showNewOffer ? t.cancelOffer : t.postOffer}
             </button>
 
@@ -176,9 +215,9 @@ export default function MatchScreen({ theme, setScreen }) {
 
                 <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
                   {isEn ? 'ROLES NEEDED *' : 'RÔLES RECHERCHÉS *'}
-                  {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length} sélectionné{offerRoles.length > 1 ? 's' : ''})</span>}
+                  {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                   {ROLES.map(r => {
                     const active = offerRoles.includes(r.id);
                     return (
@@ -188,6 +227,24 @@ export default function MatchScreen({ theme, setScreen }) {
                         background: active ? theme?.color : 'transparent',
                         color: active ? theme?.bg : subText,
                       }}>{r.icon} {r.label}</button>
+                    );
+                  })}
+                </div>
+
+                <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
+                  {isEn ? 'UNIVERSE / TAGS' : 'UNIVERS / TAGS'}
+                  {offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                  {UNIVERS.map(s => {
+                    const active = offerStyles.includes(s);
+                    return (
+                      <button key={s} onClick={() => toggleOfferStyle(s)} style={{
+                        padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+                        border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
+                        background: active ? theme?.color : 'transparent',
+                        color: active ? theme?.bg : subText,
+                      }}>{s}</button>
                     );
                   })}
                 </div>
@@ -225,45 +282,80 @@ export default function MatchScreen({ theme, setScreen }) {
                     </div>
                   </div>
                 ))}
-                <div style={{ marginBottom: '20px' }} />
+                <div style={{ marginBottom: '16px' }} />
               </>
             )}
 
-            {offers.length > 0 ? (
-              <>
-                <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>{t.offersNow}</p>
-                {offers.map(o => (
-                  <div key={o.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                        {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (isEn ? 'Creative' : 'Créatif')}</p>
-                        <p style={{ fontSize: '11px', color: subText }}>{o.authorProfile?.role}</p>
-                      </div>
-                    </div>
-                    <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color, marginBottom: '6px' }}>{o.title}</p>
-                    {o.description && <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', marginBottom: '10px', lineHeight: 1.4 }}>{o.description}</p>}
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      {o.role_needed && o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
-                        const role = ROLES.find(x => x.id === r);
-                        return <span key={r} style={{ fontSize: '11px', color: theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700' }}>{role?.icon} {r}</span>;
-                      })}
-                      {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
-                      {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
-                    </div>
-                    <button onClick={async () => {
-                      const { data: { user: u } } = await supabase.auth.getUser();
-                      if (u) {
-                        await supabase.from('collabs').insert({ sender_id: u.id, receiver_id: o.user_id, message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`, status: 'pending' });
-                        alert(isEn ? 'Application sent!' : 'Candidature envoyée !');
-                      }
-                    }} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-                      {t.applyOffer}
-                    </button>
-                  </div>
+            {/* Filtres feed */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
+                <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
+                {ROLES.slice(0, 6).map(r => (
+                  <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>
+                    {r.icon} {r.label}
+                  </button>
                 ))}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                {UNIVERS.map(s => (
+                  <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {displayedOffers.length > 0 ? (
+              <>
+                <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>
+                  {sortBy === 'match' ? (isEn ? 'MATCHING YOUR PROFILE' : 'CORRESPOND À TON PROFIL') : t.offersNow}
+                </p>
+                {displayedOffers.map(o => {
+                  const score = getMatchScore(o);
+                  return (
+                    <div key={o.id} style={{ background: card, border: `1px solid ${score > 0 ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                          {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (isEn ? 'Creative' : 'Créatif')}</p>
+                          <p style={{ fontSize: '11px', color: subText }}>{o.authorProfile?.role}</p>
+                        </div>
+                        {score > 0 && (
+                          <div style={{ background: '#2ECC71', color: '#000', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '900' }}>
+                            {score}✓ match
+                          </div>
+                        )}
+                      </div>
+                      <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color, marginBottom: '6px' }}>{o.title}</p>
+                      {o.description && <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', marginBottom: '10px', lineHeight: 1.4 }}>{o.description}</p>}
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                        {o.role_needed && o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
+                          const role = ROLES.find(x => x.id === r);
+                          const isMyRole = myProfile?.role === r;
+                          return <span key={r} style={{ fontSize: '11px', color: isMyRole ? '#000' : theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700', background: isMyRole ? '#2ECC71' : 'transparent' }}>{role?.icon} {r}</span>;
+                        })}
+                        {o.styles_needed && o.styles_needed.split(',').map(s => s.trim()).filter(Boolean).map(s => {
+                          const isMyStyle = myProfile?.styles?.toLowerCase().includes(s.toLowerCase());
+                          return <span key={s} style={{ fontSize: '11px', color: isMyStyle ? theme?.color : subText, border: `1px solid ${isMyStyle ? theme?.color : cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: isMyStyle ? '700' : '400' }}>{s}</span>;
+                        })}
+                        {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
+                        {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
+                      </div>
+                      <button onClick={async () => {
+                        const { data: { user: u } } = await supabase.auth.getUser();
+                        if (u) {
+                          await supabase.from('collabs').insert({ sender_id: u.id, receiver_id: o.user_id, message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`, status: 'pending' });
+                          alert(isEn ? 'Application sent!' : 'Candidature envoyée !');
+                        }
+                      }} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                        {t.applyOffer}
+                      </button>
+                    </div>
+                  );
+                })}
               </>
             ) : (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
