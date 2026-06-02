@@ -6,15 +6,22 @@ function getVideoEmbed(url) {
   if (!url) return null;
   if (url.includes('youtube.com/watch')) {
     const id = new URL(url).searchParams.get('v');
-    return `https://www.youtube.com/embed/${id}`;
+    return { type: 'iframe', src: `https://www.youtube.com/embed/${id}` };
   }
   if (url.includes('youtu.be/')) {
     const id = url.split('youtu.be/')[1]?.split('?')[0];
-    return `https://www.youtube.com/embed/${id}`;
+    return { type: 'iframe', src: `https://www.youtube.com/embed/${id}` };
   }
   if (url.includes('vimeo.com/')) {
     const id = url.split('vimeo.com/')[1]?.split('?')[0];
-    return `https://player.vimeo.com/video/${id}`;
+    return { type: 'iframe', src: `https://player.vimeo.com/video/${id}` };
+  }
+  if (url.includes('tiktok.com/')) {
+    const id = url.split('/video/')[1]?.split('?')[0];
+    return { type: 'iframe', src: `https://www.tiktok.com/embed/v2/${id}` };
+  }
+  if (url.includes('instagram.com/')) {
+    return { type: 'link', src: url };
   }
   return null;
 }
@@ -74,7 +81,6 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         </div>
 
-        {/* Portfolio */}
         {portfolio.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
             <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>PORTFOLIO</p>
@@ -86,13 +92,18 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         )}
 
-        {/* Vidéo */}
         {embedUrl && (
           <div style={{ marginBottom: '16px' }}>
             <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>🎬 VIDÉO</p>
-            <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
-              <iframe src={embedUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
-            </div>
+            {embedUrl.type === 'iframe' ? (
+              <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
+                <iframe src={embedUrl.src} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+              </div>
+            ) : (
+              <a href={embedUrl.src} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)', color: 'white', fontWeight: '700', fontSize: '13px', textAlign: 'center', textDecoration: 'none' }}>
+                📸 Voir sur Instagram →
+              </a>
+            )}
           </div>
         )}
 

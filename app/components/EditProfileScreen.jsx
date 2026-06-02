@@ -3,6 +3,30 @@ import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import { ROLES, UNIVERS } from '../constants';
 
+function getVideoEmbed(url) {
+  if (!url) return null;
+  if (url.includes('youtube.com/watch')) {
+    const id = new URL(url).searchParams.get('v');
+    return { type: 'iframe', src: `https://www.youtube.com/embed/${id}` };
+  }
+  if (url.includes('youtu.be/')) {
+    const id = url.split('youtu.be/')[1]?.split('?')[0];
+    return { type: 'iframe', src: `https://www.youtube.com/embed/${id}` };
+  }
+  if (url.includes('vimeo.com/')) {
+    const id = url.split('vimeo.com/')[1]?.split('?')[0];
+    return { type: 'iframe', src: `https://player.vimeo.com/video/${id}` };
+  }
+  if (url.includes('tiktok.com/')) {
+    const id = url.split('/video/')[1]?.split('?')[0];
+    return { type: 'iframe', src: `https://www.tiktok.com/embed/v2/${id}` };
+  }
+  if (url.includes('instagram.com/')) {
+    return { type: 'link', src: url };
+  }
+  return null;
+}
+
 export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [username, setUsername] = useState(profile?.username || '');
   const [handle, setHandle] = useState(profile?.handle || '');
@@ -50,23 +74,6 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
     setUploadingPortfolio(false);
   }
 
-  function getVideoEmbed(url) {
-    if (!url) return null;
-    if (url.includes('youtube.com/watch')) {
-      const id = new URL(url).searchParams.get('v');
-      return `https://www.youtube.com/embed/${id}`;
-    }
-    if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube.com/embed/${id}`;
-    }
-    if (url.includes('vimeo.com/')) {
-      const id = url.split('vimeo.com/')[1]?.split('?')[0];
-      return `https://player.vimeo.com/video/${id}`;
-    }
-    return null;
-  }
-
   async function handleSave() {
     if (!username || !handle || !selectedRole) { setError('Champs obligatoires manquants'); return; }
     setLoading(true);
@@ -110,7 +117,6 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         </div>
       ))}
 
-      {/* Rôle */}
       <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>RÔLE *</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
         {ROLES.map(r => {
@@ -131,7 +137,6 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         })}
       </div>
 
-      {/* Univers */}
       <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>UNIVERS</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {UNIVERS.map(s => {
@@ -148,7 +153,6 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         })}
       </div>
 
-      {/* Portfolio */}
       <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>PORTFOLIO <span style={{ fontWeight: '400' }}>(max 5 photos)</span></p>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         {portfolioUrls.map((url, i) => (
@@ -167,18 +171,22 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       </div>
       <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
 
-      {/* Lien vidéo */}
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 LIEN VIDÉO <span style={{ fontWeight: '400' }}>(YouTube ou Vimeo)</span></p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 LIEN VIDÉO <span style={{ fontWeight: '400' }}>(YouTube, Vimeo, TikTok ou Instagram)</span></p>
       <input
         value={videoUrl}
         onChange={e => setVideoUrl(e.target.value)}
-        placeholder="https://youtube.com/watch?v=..."
+        placeholder="https://youtube.com, vimeo.com, tiktok.com ou instagram.com..."
         style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none', marginBottom: '12px' }}
       />
-      {embedUrl && (
+      {embedUrl && embedUrl.type === 'iframe' && (
         <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', aspectRatio: '16/9' }}>
-          <iframe src={embedUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+          <iframe src={embedUrl.src} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
         </div>
+      )}
+      {embedUrl && embedUrl.type === 'link' && (
+        <a href={embedUrl.src} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)', color: 'white', fontWeight: '700', fontSize: '13px', textAlign: 'center', marginBottom: '16px', textDecoration: 'none' }}>
+          📸 Voir sur Instagram →
+        </a>
       )}
 
       {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
