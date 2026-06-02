@@ -185,7 +185,7 @@ export default function MatchScreen({ theme, setScreen }) {
   if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color, position: 'relative' }}>
       <Header theme={theme} />
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
@@ -193,51 +193,59 @@ export default function MatchScreen({ theme, setScreen }) {
         <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>{t.matchTab}</button>
       </div>
 
-      <div style={{ padding: '20px 16px 100px' }}>
+      {/* Modal formulaire nouvelle offre */}
+      {showNewOffer && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
+          <div style={{ padding: '20px 16px 100px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <button onClick={() => setShowNewOffer(false)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+              <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>{isEn ? 'New brief' : 'Nouvelle offre'}</h2>
+            </div>
+
+            <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
+            <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder={isEn ? 'Project description...' : 'Description du projet...'} rows={3} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none' }} />
+
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
+              {isEn ? 'ROLES NEEDED *' : 'RÔLES RECHERCHÉS *'}
+              {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
+            </p>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {ROLES.map(r => {
+                const active = offerRoles.includes(r.id);
+                return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
+              })}
+            </div>
+
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
+              TAGS
+              {offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
+            </p>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {UNIVERS.map(s => {
+                const active = offerStyles.includes(s);
+                return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City' : 'Ville'} style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
+              <input value={offerDate} onChange={e => setOfferDate(e.target.value)} placeholder='Date' style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
+            </div>
+
+            <button onClick={createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+              {offerLoading ? (isEn ? 'Publishing...' : 'Publication...') : (isEn ? '⚡ Publish brief' : "⚡ Publier l'offre")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px' }}>
 
         {tab === 'offres' && (
           <>
-            <button onClick={() => setShowNewOffer(!showNewOffer)} style={{ width: '100%', padding: '14px', borderRadius: '14px', marginBottom: '16px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: theme?.color, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              {showNewOffer ? t.cancelOffer : t.postOffer}
+            <button onClick={() => setShowNewOffer(true)} style={{ width: '100%', padding: '14px', borderRadius: '14px', marginBottom: '16px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: theme?.color, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+              {t.postOffer}
             </button>
-
-            {showNewOffer && (
-              <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '20px', border: `1px solid ${cardBorder}` }}>
-                <p style={{ color: subText, fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '14px' }}>{isEn ? 'NEW BRIEF' : 'NOUVELLE OFFRE'}</p>
-                <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
-                <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder={isEn ? 'Project description...' : 'Description du projet...'} rows={2} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box', resize: 'none' }} />
-
-                <p style={{ color: subText, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>
-                  {isEn ? 'ROLES *' : 'RÔLES *'}
-                  {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
-                </p>
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  {ROLES.map(r => {
-                    const active = offerRoles.includes(r.id);
-                    return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
-                  })}
-                </div>
-
-                <p style={{ color: subText, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>
-                  {isEn ? 'TAGS' : 'TAGS'}
-                  {offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
-                </p>
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  {UNIVERS.map(s => {
-                    const active = offerStyles.includes(s);
-                    return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
-                  })}
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City' : 'Ville'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
-                  <input value={offerDate} onChange={e => setOfferDate(e.target.value)} placeholder={isEn ? 'Date' : 'Date'} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
-                </div>
-                <button onClick={createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '12px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-                  {offerLoading ? (isEn ? 'Publishing...' : 'Publication...') : (isEn ? 'Publish' : "Publier")}
-                </button>
-              </div>
-            )}
 
             {myOffers.length > 0 && (
               <>
@@ -266,28 +274,26 @@ export default function MatchScreen({ theme, setScreen }) {
               </>
             )}
 
-            {!showNewOffer && (
-              <div style={{ marginBottom: '12px' }}>
-                <input
-                  value={filterZone}
-                  onChange={e => setFilterZone(e.target.value)}
-                  placeholder={isEn ? '📍 City or country...' : '📍 Ville ou pays...'}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
-                />
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
-                  <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
-                  {ROLES.slice(0, 6).map(r => (
-                    <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>{r.icon} {r.label}</button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  {UNIVERS.map(s => (
-                    <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>{s}</button>
-                  ))}
-                </div>
+            <div style={{ marginBottom: '12px' }}>
+              <input
+                value={filterZone}
+                onChange={e => setFilterZone(e.target.value)}
+                placeholder={isEn ? '📍 City or country...' : '📍 Ville ou pays...'}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
+              />
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
+                <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
+                {ROLES.slice(0, 6).map(r => (
+                  <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>{r.icon} {r.label}</button>
+                ))}
               </div>
-            )}
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                {UNIVERS.map(s => (
+                  <button key={s} onClick={() => setFilterUnivers(filterUnivers === s ? null : s)} style={pillStyle(filterUnivers === s)}>{s}</button>
+                ))}
+              </div>
+            </div>
 
             {displayedOffers.length > 0 ? (
               <>
