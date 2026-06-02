@@ -1,6 +1,7 @@
+import { ROLES_FR, ROLES_EN, UNIVERS_FR, UNIVERS_EN } from './constants';
+
 export const translations = {
   fr: {
-    // Auth
     login: 'Connexion',
     signup: 'Inscription',
     email: 'Email',
@@ -12,8 +13,6 @@ export const translations = {
     acceptCgu: "En t'inscrivant tu acceptes nos conditions d'utilisation",
     resetSent: 'Email de réinitialisation envoyé ! Vérifie ta boîte mail 📩',
     enterEmailFirst: "Entre ton email d'abord !",
-
-    // Welcome
     skip: 'Passer →',
     continue: 'Continuer →',
     join: "🚀 Rejoindre Snappin'Buddy",
@@ -25,27 +24,21 @@ export const translations = {
     slide3Sub: "Chaque session est sécurisée par QR code. Ta sécurité, notre priorité.",
     slide4Title: 'Une app créée par une créative, pour les créatifs',
     slide4Sub: "On a tous besoin des uns et des autres pour réaliser de beaux projets. Bienvenue dans la communauté Snappin'Buddy.",
-
-    // Navbar
     map: 'Carte',
     explore: 'Explorer',
     match: 'Match',
     messages: 'Messages',
     profile: 'Profil',
-
-    // Explorer
     exploreTitle: 'Explorer',
     exploreSubtitle: 'Créatifs autour de toi',
     sortedByMatch: '· TRIÉS PAR COMPATIBILITÉ',
-
-    // Match
     offers: '⚡ Offres',
     matchTab: '🤝 Match',
     postOffer: '+ Poster une offre',
     cancelOffer: '✕ Annuler',
     myOffers: 'MES OFFRES',
     offersNow: 'OFFRES DU MOMENT',
-    noOffers: 'Aucune offre pour l\'instant',
+    noOffers: "Aucune offre pour l'instant",
     beFirst: 'Sois le premier à poster une offre !',
     applyOffer: '⚡ Candidater',
     noMatch: 'Pas encore de match',
@@ -56,16 +49,12 @@ export const translations = {
     accept: 'Accepter',
     decline: 'Refuser',
     generateQR: '🔒 Générer mon QR de session',
-
-    // Profile
     currentProject: 'PROJET EN COURS',
     style: 'STYLE',
     shootZones: 'ZONES DE SHOOT',
     editProfile: 'Modifier le profil',
     logout: 'Se déconnecter',
     legal: 'CGU & Mentions légales',
-
-    // Onboarding
     step: 'ÉTAPE',
     whoAreYou: 'Qui es-tu ?',
     whoSub: 'Commence par te présenter',
@@ -80,7 +69,6 @@ export const translations = {
   },
 
   en: {
-    // Auth
     login: 'Login',
     signup: 'Sign up',
     email: 'Email',
@@ -92,8 +80,6 @@ export const translations = {
     acceptCgu: 'By signing up you accept our terms of use',
     resetSent: 'Reset email sent! Check your inbox 📩',
     enterEmailFirst: 'Enter your email first!',
-
-    // Welcome
     skip: 'Skip →',
     continue: 'Continue →',
     join: "🚀 Join Snappin'Buddy",
@@ -105,20 +91,14 @@ export const translations = {
     slide3Sub: 'Every session is secured by QR code. Your safety is our priority.',
     slide4Title: 'An app built by a creative, for creatives',
     slide4Sub: "We all need each other to create beautiful projects. Welcome to the Snappin'Buddy community.",
-
-    // Navbar
     map: 'Map',
     explore: 'Explore',
     match: 'Match',
     messages: 'Messages',
     profile: 'Profile',
-
-    // Explorer
     exploreTitle: 'Explore',
     exploreSubtitle: 'Creatives around you',
     sortedByMatch: '· SORTED BY COMPATIBILITY',
-
-    // Match
     offers: '⚡ Briefs',
     matchTab: '🤝 Match',
     postOffer: '+ Post a brief',
@@ -136,16 +116,12 @@ export const translations = {
     accept: 'Accept',
     decline: 'Decline',
     generateQR: '🔒 Generate my session QR',
-
-    // Profile
     currentProject: 'CURRENT PROJECT',
     style: 'STYLE',
     shootZones: 'SHOOT ZONES',
     editProfile: 'Edit profile',
     logout: 'Sign out',
     legal: 'Terms & Legal',
-
-    // Onboarding
     step: 'STEP',
     whoAreYou: 'Who are you?',
     whoSub: 'Start by introducing yourself',
@@ -164,14 +140,13 @@ export function getLang() {
   if (typeof window === 'undefined') return 'fr';
   const lang = navigator.language?.toLowerCase() || 'fr';
   if (lang.startsWith('fr')) return 'fr';
-  return 'en'; // Default to English for all other languages
+  return 'en';
 }
 
 export function useT() {
   const lang = getLang();
   return translations[lang] || translations.en;
 }
-import { ROLES_FR, ROLES_EN, UNIVERS_FR, UNIVERS_EN } from './constants';
 
 export function useRoles() {
   const lang = getLang();
