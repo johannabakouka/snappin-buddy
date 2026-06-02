@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
-import { ROLES, UNIVERS } from '../constants';
+import { useRoles, useUnivers, useT } from '../i18n';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -28,6 +28,11 @@ function getVideoEmbed(url) {
 }
 
 export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
+  const t = useT();
+  const isEn = t.map === 'Map';
+  const ROLES = useRoles();
+  const UNIVERS = useUnivers();
+
   const [username, setUsername] = useState(profile?.username || '');
   const [handle, setHandle] = useState(profile?.handle || '');
   const [selectedRole, setSelectedRole] = useState(profile?.role || null);
@@ -57,7 +62,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   async function handlePortfolioUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    if (portfolioUrls.length + files.length > 5) { setError('Maximum 5 photos de portfolio'); return; }
+    if (portfolioUrls.length + files.length > 5) { setError(isEn ? 'Maximum 5 portfolio photos' : 'Maximum 5 photos de portfolio'); return; }
     setUploadingPortfolio(true);
     const { data: { user } } = await supabase.auth.getUser();
     const newUrls = [...portfolioUrls];
@@ -75,11 +80,20 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   }
 
   async function handleSave() {
-    if (!username || !handle || !selectedRole) { setError('Champs obligatoires manquants'); return; }
+    if (!username || !handle || !selectedRole) { setError(isEn ? 'Required fields missing' : 'Champs obligatoires manquants'); return; }
     setLoading(true);
+
+    // Toujours stocker les IDs FR en base
+    const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
+    const universToSave = selectedUnivers.map(label => {
+      if (!isEn) return label;
+      const idx = UNIVERS_EN.indexOf(label);
+      return idx >= 0 ? UNIVERS_FR[idx] : label;
+    });
+
     const { error } = await supabase.from('profiles').update({
       username, handle, role: selectedRole,
-      bio, zone, styles: selectedUnivers.join(', '),
+      bio, zone, styles: universToSave.join(', '),
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
     }).eq('user_id', profile.user_id);
@@ -95,7 +109,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-        <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>Modifier le profil</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{isEn ? 'Edit profile' : 'Modifier le profil'}</h2>
       </div>
 
       {profile?.avatar_url && (
@@ -105,10 +119,10 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       )}
 
       {[
-        { label: 'Nom', value: username, set: setUsername, placeholder: 'Ton prénom ou pseudo' },
+        { label: isEn ? 'Name' : 'Nom', value: username, set: setUsername, placeholder: isEn ? 'Your name or username' : 'Ton prénom ou pseudo' },
         { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle' },
-        { label: 'Pitch', value: bio, set: setBio, placeholder: 'Ton projet en cours...' },
-        { label: 'Zone', value: zone, set: setZone, placeholder: 'Belleville, Oberkampf...' },
+        { label: isEn ? 'Pitch' : 'Pitch', value: bio, set: setBio, placeholder: isEn ? 'Current project...' : 'Ton projet en cours...' },
+        { label: isEn ? 'Area' : 'Zone', value: zone, set: setZone, placeholder: isEn ? 'Shoreditch, Kreuzberg...' : 'Belleville, Oberkampf...' },
       ].map(({ label, value, set, placeholder }) => (
         <div key={label} style={{ marginBottom: '16px' }}>
           <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>{label}</p>
@@ -117,7 +131,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         </div>
       ))}
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>RÔLE *</p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{isEn ? 'ROLE *' : 'RÔLE *'}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
         {ROLES.map(r => {
           const active = selectedRole === r.id;
@@ -137,7 +151,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         })}
       </div>
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>UNIVERS</p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{isEn ? 'UNIVERSE' : 'UNIVERS'}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {UNIVERS.map(s => {
           const active = selectedUnivers.includes(s);
@@ -153,7 +167,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         })}
       </div>
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>PORTFOLIO <span style={{ fontWeight: '400' }}>(max 5 photos)</span></p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>PORTFOLIO <span style={{ fontWeight: '400' }}>(max 5)</span></p>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         {portfolioUrls.map((url, i) => (
           <div key={i} style={{ position: 'relative', width: '80px', height: '80px' }}>
@@ -171,11 +185,11 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       </div>
       <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 LIEN VIDÉO <span style={{ fontWeight: '400' }}>(YouTube, Vimeo, TikTok ou Instagram)</span></p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 {isEn ? 'VIDEO LINK' : 'LIEN VIDÉO'} <span style={{ fontWeight: '400' }}>(YouTube, Vimeo, TikTok, Instagram)</span></p>
       <input
         value={videoUrl}
         onChange={e => setVideoUrl(e.target.value)}
-        placeholder="https://youtube.com, vimeo.com, tiktok.com ou instagram.com..."
+        placeholder="https://youtube.com, vimeo.com, tiktok.com, instagram.com..."
         style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none', marginBottom: '12px' }}
       />
       {embedUrl && embedUrl.type === 'iframe' && (
@@ -185,14 +199,14 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       )}
       {embedUrl && embedUrl.type === 'link' && (
         <a href={embedUrl.src} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)', color: 'white', fontWeight: '700', fontSize: '13px', textAlign: 'center', marginBottom: '16px', textDecoration: 'none' }}>
-          📸 Voir sur Instagram →
+          📸 {isEn ? 'View on Instagram →' : 'Voir sur Instagram →'}
         </a>
       )}
 
       {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
       <button onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-        {loading ? 'Sauvegarde...' : 'Enregistrer'}
+        {loading ? (isEn ? 'Saving...' : 'Sauvegarde...') : (isEn ? 'Save' : 'Enregistrer')}
       </button>
     </div>
   );

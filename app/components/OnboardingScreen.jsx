@@ -1,12 +1,13 @@
 'use client';
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
-import { ROLES, UNIVERS } from '../constants';
-import { useT } from '../i18n';
+import { useT, useRoles, useUnivers } from '../i18n';
 
 export default function OnboardingScreen({ user, onComplete }) {
   const t = useT();
   const isEn = t.map === 'Map';
+  const ROLES = useRoles();
+  const UNIVERS = useUnivers();
 
   const STEPS = [
     { id: 'identity', title: t.whoAreYou, subtitle: t.whoSub },
@@ -55,7 +56,6 @@ export default function OnboardingScreen({ user, onComplete }) {
     setSuggestion('');
 
     const cleanHandle = values.handle.startsWith('@') ? values.handle : `@${values.handle}`;
-
     const { data: existing } = await supabase.from('profiles').select('handle').eq('handle', cleanHandle).single();
 
     if (existing) {
@@ -67,13 +67,23 @@ export default function OnboardingScreen({ user, onComplete }) {
       return;
     }
 
+    // Stocker les IDs FR en base (indépendant de la langue)
+    const { ROLES_FR } = await import('../constants');
+    const roleId = selectedRole;
+    const universIds = selectedUnivers.map(label => {
+      if (!isEn) return label;
+      const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
+      const idx = UNIVERS_EN.indexOf(label);
+      return idx >= 0 ? UNIVERS_FR[idx] : label;
+    });
+
     const { error } = await supabase.from('profiles').insert({
       username: values.username,
       handle: cleanHandle,
-      role: selectedRole,
+      role: roleId,
       bio: values.bio,
       zone: values.zone,
-      styles: selectedUnivers.join(', '),
+      styles: universIds.join(', '),
       avatar_url: avatarUrl,
       is_active: true,
       user_id: user.id,
@@ -111,8 +121,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
               <div onClick={() => fileInputRef.current?.click()} style={{
                 width: '88px', height: '88px', borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)',
-                border: '2px dashed rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(255,255,255,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', overflow: 'hidden',
               }}>
@@ -152,10 +161,8 @@ export default function OnboardingScreen({ user, onComplete }) {
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '8px' }}>{error}</p>
                 {suggestion && (
-                  <button
-                    onClick={() => { setValues(v => ({ ...v, handle: suggestion })); setError(''); setSuggestion(''); }}
-                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', padding: '8px 16px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                  >
+                  <button onClick={() => { setValues(v => ({ ...v, handle: suggestion })); setError(''); setSuggestion(''); }}
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', padding: '8px 16px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                     {t.useThis} {suggestion} →
                   </button>
                 )}
@@ -188,7 +195,7 @@ export default function OnboardingScreen({ user, onComplete }) {
         {step === 2 && (
           <>
             {[
-              { key: 'bio', label: isEn ? 'Current project' : 'Ton projet en cours', placeholder: isEn ? 'One sentence about what you\'re working on...' : 'Une phrase sur ce sur quoi tu travailles...' },
+              { key: 'bio', label: isEn ? 'Current project' : 'Ton projet en cours', placeholder: isEn ? "One sentence about what you're working on..." : 'Une phrase sur ce sur quoi tu travailles...' },
               { key: 'zone', label: isEn ? 'Your area' : 'Ta zone', placeholder: isEn ? 'Shoreditch, Kreuzberg, Pigalle...' : 'Oberkampf, Belleville, Pigalle...' },
             ].map(field => (
               <div key={field.key} style={{ marginBottom: '16px' }}>

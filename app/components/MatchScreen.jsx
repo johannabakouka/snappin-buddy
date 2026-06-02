@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
-import { ROLES, UNIVERS } from '../constants';
-import { useT } from '../i18n';
+import { useT, useRoles, useUnivers } from '../i18n';
 
 export default function MatchScreen({ theme, setScreen }) {
   const t = useT();
   const isEn = t.map === 'Map';
+  const ROLES = useRoles();
+  const UNIVERS = useUnivers();
   const darkMode = theme?.dark ?? true;
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardBorder = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
@@ -78,9 +79,16 @@ export default function MatchScreen({ theme, setScreen }) {
   async function createOffer() {
     if (!offerTitle || offerRoles.length === 0) return;
     setOfferLoading(true);
+    // Toujours stocker les IDs FR en base
+    const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
+    const stylesToSave = offerStyles.map(label => {
+      if (!isEn) return label;
+      const idx = UNIVERS_EN.indexOf(label);
+      return idx >= 0 ? UNIVERS_FR[idx] : label;
+    });
     await supabase.from('offers').insert({
       user_id: user.id, title: offerTitle, description: offerDesc,
-      role_needed: offerRoles.join(', '), styles_needed: offerStyles.join(', '),
+      role_needed: offerRoles.join(', '), styles_needed: stylesToSave.join(', '),
       zone: offerZone, date: offerDate, status: 'open'
     });
     setOfferTitle(''); setOfferDesc(''); setOfferRoles([]); setOfferStyles([]); setOfferZone(''); setOfferDate('');
@@ -114,7 +122,11 @@ export default function MatchScreen({ theme, setScreen }) {
 
   let displayedOffers = [...offers];
   if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
-  if (filterUnivers) displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterUnivers.toLowerCase()));
+  if (filterUnivers) {
+    // Comparer toujours en FR
+    const filterFR = isEn ? (() => { try { const { UNIVERS_FR: fr, UNIVERS_EN: en } = require('../constants'); const i = en.indexOf(filterUnivers); return i >= 0 ? fr[i] : filterUnivers; } catch { return filterUnivers; } })() : filterUnivers;
+    displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterFR.toLowerCase()));
+  }
   if (filterZone) displayedOffers = displayedOffers.filter(o => (o.zone || '').toLowerCase().includes(filterZone.toLowerCase()));
   if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => getMatchScore(b) - getMatchScore(a));
 
@@ -193,7 +205,6 @@ export default function MatchScreen({ theme, setScreen }) {
         <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>{t.matchTab}</button>
       </div>
 
-      {/* Modal formulaire nouvelle offre */}
       {showNewOffer && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
           <div style={{ padding: '20px 16px 100px' }}>
@@ -201,10 +212,8 @@ export default function MatchScreen({ theme, setScreen }) {
               <button onClick={() => setShowNewOffer(false)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
               <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>{isEn ? 'New brief' : 'Nouvelle offre'}</h2>
             </div>
-
             <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
             <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder={isEn ? 'Project description...' : 'Description du projet...'} rows={3} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none' }} />
-
             <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
               {isEn ? 'ROLES NEEDED *' : 'RÔLES RECHERCHÉS *'}
               {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
@@ -215,10 +224,8 @@ export default function MatchScreen({ theme, setScreen }) {
                 return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
               })}
             </div>
-
             <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-              TAGS
-              {offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
+              TAGS{offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
             </p>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
               {UNIVERS.map(s => {
@@ -226,12 +233,10 @@ export default function MatchScreen({ theme, setScreen }) {
                 return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
               })}
             </div>
-
             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
               <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City' : 'Ville'} style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
               <input value={offerDate} onChange={e => setOfferDate(e.target.value)} placeholder='Date' style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
             </div>
-
             <button onClick={createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
               {offerLoading ? (isEn ? 'Publishing...' : 'Publication...') : (isEn ? '⚡ Publish brief' : "⚡ Publier l'offre")}
             </button>
@@ -259,7 +264,7 @@ export default function MatchScreen({ theme, setScreen }) {
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
                             {o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
                               const role = ROLES.find(x => x.id === r);
-                              return <span key={r} style={{ fontSize: '11px', color: subText }}>{role?.icon} {r}</span>;
+                              return <span key={r} style={{ fontSize: '11px', color: subText }}>{role?.icon} {role?.label || r}</span>;
                             })}
                           </div>
                         )}
@@ -275,9 +280,7 @@ export default function MatchScreen({ theme, setScreen }) {
             )}
 
             <div style={{ marginBottom: '12px' }}>
-              <input
-                value={filterZone}
-                onChange={e => setFilterZone(e.target.value)}
+              <input value={filterZone} onChange={e => setFilterZone(e.target.value)}
                 placeholder={isEn ? '📍 City or country...' : '📍 Ville ou pays...'}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
               />
@@ -324,7 +327,7 @@ export default function MatchScreen({ theme, setScreen }) {
                         {o.role_needed && o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
                           const role = ROLES.find(x => x.id === r);
                           const isMyRole = myProfile?.role === r;
-                          return <span key={r} style={{ fontSize: '11px', color: isMyRole ? '#000' : theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700', background: isMyRole ? '#2ECC71' : 'transparent' }}>{role?.icon} {r}</span>;
+                          return <span key={r} style={{ fontSize: '11px', color: isMyRole ? '#000' : theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700', background: isMyRole ? '#2ECC71' : 'transparent' }}>{role?.icon} {role?.label || r}</span>;
                         })}
                         {o.styles_needed && o.styles_needed.split(',').map(s => s.trim()).filter(Boolean).map(s => {
                           const isMyStyle = myProfile?.styles?.toLowerCase().includes(s.toLowerCase());
