@@ -171,3 +171,14 @@ export function useT() {
   const lang = getLang();
   return translations[lang] || translations.en;
 }
+import { ROLES_FR, ROLES_EN, UNIVERS_FR, UNIVERS_EN } from './constants';
+
+export function useRoles() {
+  const lang = getLang();
+  return lang === 'fr' ? ROLES_FR : ROLES_EN;
+}
+
+export function useUnivers() {
+  const lang = getLang();
+  return lang === 'fr' ? UNIVERS_FR : UNIVERS_EN;
+}
