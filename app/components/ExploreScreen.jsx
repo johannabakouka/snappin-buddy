@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
-import { ROLE_ICONS, ROLE_FILTERS, UNIVERS } from '../constants';
-import { useT } from '../i18n';
+import { ROLE_ICONS } from '../constants';
+import { useT, useRoles, useUnivers } from '../i18n';
 
 function getMatchScore(myStyles, theirStyles) {
   if (!myStyles || !theirStyles) return 0;
@@ -15,6 +15,8 @@ function getMatchScore(myStyles, theirStyles) {
 
 export default function ExploreScreen({ theme }) {
   const t = useT();
+  const ROLES = useRoles();
+  const UNIVERS = useUnivers();
   const [profiles, setProfiles] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
@@ -49,7 +51,12 @@ export default function ExploreScreen({ theme }) {
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
   if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
   if (roleFilter) displayed = displayed.filter(p => p.role?.toLowerCase() === roleFilter.toLowerCase());
-  if (universFilter) displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(universFilter.toLowerCase()));
+  if (universFilter) {
+    // Filtrer toujours en FR (les données sont stockées en FR)
+    const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
+    const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
+    displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
+  }
 
   if (filter === 'match') {
     displayed = [...displayed].sort((a, b) => {
@@ -90,7 +97,7 @@ export default function ExploreScreen({ theme }) {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {ROLE_FILTERS.map(r => (
+          {ROLES.map(r => (
             <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
               {r.icon} {r.label}
             </button>
@@ -121,6 +128,10 @@ export default function ExploreScreen({ theme }) {
             const roleIcon = ROLE_ICONS[p.role?.toLowerCase()] || '✨';
             const portfolio = p.portfolio_urls || [];
 
+            // Trouver le label traduit du rôle
+            const roleObj = ROLES.find(r => r.id === p.role?.toLowerCase());
+            const roleLabel = roleObj?.label || p.role || '';
+
             return (
               <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', overflow: 'hidden' }}>
                 <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -142,12 +153,21 @@ export default function ExploreScreen({ theme }) {
                       </span>
                     </div>
                     <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
-                      {p.role && <span style={{ marginRight: '6px' }}>{p.role}</span>}
+                      {roleLabel && <span style={{ marginRight: '6px' }}>{roleLabel}</span>}
                       {p.zone && <span>· {p.zone}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                       {(p.styles || '').split(',').map(s => {
-                        const isMatch = matchStyles.includes(s.trim());
+                        const sClean = s.trim();
+                        if (!sClean) return null;
+                        const isMatch = matchStyles.includes(sClean);
+                        // Traduire le tag si EN
+                        let displayTag = sClean;
+                        if (isEn) {
+                          const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
+                          const idx = UNIVERS_FR.indexOf(sClean);
+                          if (idx >= 0) displayTag = UNIVERS_EN[idx];
+                        }
                         return (
                           <span key={s} style={{
                             fontSize: '11px',
@@ -156,7 +176,7 @@ export default function ExploreScreen({ theme }) {
                             borderRadius: '20px', padding: '2px 10px',
                             background: isMatch ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
                             fontWeight: isMatch ? '700' : '400',
-                          }}>{s.trim()}</span>
+                          }}>{displayTag}</span>
                         );
                       })}
                     </div>
