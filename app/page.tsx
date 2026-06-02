@@ -16,7 +16,10 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('welcomeSeen');
+  });
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return true;
     const saved = localStorage.getItem('darkMode');
@@ -64,7 +67,10 @@ export default function Home() {
   if (!user) {
     if (showWelcome) return (
       <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh' }}>
-        <WelcomeScreen onStart={() => setShowWelcome(false)} />
+        <WelcomeScreen onStart={() => {
+          localStorage.setItem('welcomeSeen', 'true');
+          setShowWelcome(false);
+        }} />
       </div>
     );
     return (
