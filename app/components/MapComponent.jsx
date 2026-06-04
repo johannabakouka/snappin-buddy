@@ -167,7 +167,6 @@ export default function MapComponent({ theme }) {
     <div style={{ position: 'relative', height: '100vh' }}>
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
 
-      {/* Prompt géolocalisation */}
       {showGeoPrompt && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -189,8 +188,7 @@ export default function MapComponent({ theme }) {
             </p>
             <button onClick={handleAllow} style={{
               width: '100%', padding: '14px', borderRadius: '24px', border: 'none',
-              background: darkMode ? 'white' : '#111',
-              color: darkMode ? 'black' : 'white',
+              background: darkMode ? 'white' : '#111', color: darkMode ? 'black' : 'white',
               fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px',
             }}>
               📍 Autoriser la localisation
@@ -209,7 +207,7 @@ export default function MapComponent({ theme }) {
       )}
 
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 400,
         background: darkMode
           ? 'linear-gradient(to bottom, rgba(10,10,10,0.98) 0%, rgba(10,10,10,0.0) 100%)'
           : 'linear-gradient(to bottom, rgba(245,245,245,0.98) 0%, rgba(245,245,245,0.0) 100%)',
@@ -248,7 +246,7 @@ export default function MapComponent({ theme }) {
         position: 'absolute', bottom: '90px', left: '16px',
         background: darkMode ? 'rgba(10,10,10,0.85)' : 'rgba(245,245,245,0.85)',
         borderRadius: '10px', padding: '8px 12px', fontSize: '12px',
-        color: darkMode ? '#666' : '#999', zIndex: 1000,
+        color: darkMode ? '#666' : '#999', zIndex: 400,
       }}>
         <span style={{ color: '#2ECC71' }}>●</span> Dispo ·{' '}
         <span style={{ color: '#FFD700' }}>●</span> En shoot ·{' '}
@@ -258,7 +256,7 @@ export default function MapComponent({ theme }) {
       {popupBuddy && (
         <div style={{
           position: 'absolute', bottom: '100px', left: '16px', right: '16px',
-          zIndex: 2000,
+          zIndex: 500,
           background: darkMode ? '#1A1A1A' : '#FFFFFF',
           borderRadius: '18px', padding: '16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
