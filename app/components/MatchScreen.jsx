@@ -76,10 +76,14 @@ export default function MatchScreen({ theme, setScreen }) {
     if (mine) setMyOffers(mine);
   }
 
+  async function closeOffer(offerId) {
+    await supabase.from('offers').update({ status: 'closed' }).eq('id', offerId);
+    loadOffers(user.id);
+  }
+
   async function createOffer() {
     if (!offerTitle || offerRoles.length === 0) return;
     setOfferLoading(true);
-    // Toujours stocker les IDs FR en base
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const stylesToSave = offerStyles.map(label => {
       if (!isEn) return label;
@@ -123,7 +127,6 @@ export default function MatchScreen({ theme, setScreen }) {
   let displayedOffers = [...offers];
   if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
   if (filterUnivers) {
-    // Comparer toujours en FR
     const filterFR = isEn ? (() => { try { const { UNIVERS_FR: fr, UNIVERS_EN: en } = require('../constants'); const i = en.indexOf(filterUnivers); return i >= 0 ? fr[i] : filterUnivers; } catch { return filterUnivers; } })() : filterUnivers;
     displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterFR.toLowerCase()));
   }
@@ -271,7 +274,20 @@ export default function MatchScreen({ theme, setScreen }) {
                         {o.zone && <span style={{ fontSize: '11px', color: subText }}> · {o.zone}</span>}
                         {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
                       </div>
-                      <span style={{ fontSize: '11px', color: '#2ECC71', fontWeight: '700' }}>{isEn ? 'Open' : 'Ouverte'}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
+                          {o.status === 'open' ? (isEn ? 'Open' : 'Ouverte') : (isEn ? 'Closed' : 'Fermée')}
+                        </span>
+                        {o.status === 'open' && (
+                          <button onClick={() => closeOffer(o.id)} style={{
+                            background: 'none', border: `1px solid ${darkMode ? 'rgba(255,77,77,0.4)' : 'rgba(255,77,77,0.4)'}`,
+                            color: '#FF4D4D', borderRadius: '12px', padding: '3px 8px',
+                            fontSize: '10px', fontWeight: '700', cursor: 'pointer',
+                          }}>
+                            {isEn ? 'Close' : 'Fermer'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
