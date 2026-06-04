@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import { ROLE_FILTERS, UNIVERS } from '../constants';
+import { useT } from '../i18n';
 
 function fuzzPosition(lat, lng) {
   const r = 0.004;
@@ -14,15 +15,11 @@ function fuzzPosition(lat, lng) {
   };
 }
 
-const STATUS_FILTERS = [
-  { id: 'all', label: 'Tous' },
-  { id: 'dispo', label: '🟢 Dispo' },
-  { id: 'shoot', label: '🟡 En shoot' },
-];
-
 const MAP_ROLE_FILTERS = ROLE_FILTERS.map(r => ({ id: r.id, label: r.icon }));
 
 export default function MapComponent({ theme }) {
+  const t = useT();
+  const isEn = t.map === 'Map';
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
@@ -38,6 +35,13 @@ export default function MapComponent({ theme }) {
     if (typeof window === 'undefined') return false;
     return !localStorage.getItem('geoAsked');
   });
+
+  const STATUS_FILTERS = [
+    { id: 'all', label: isEn ? 'All' : t.map === 'Mapa' ? 'Todos' : t.map === 'Karte' ? 'Alle' : t.map === 'Mapa' ? 'Todos' : 'Tous' },
+    { id: 'dispo', label: `🟢 ${isEn ? 'Available' : t.map === 'Mapa' ? 'Disponible' : t.map === 'Karte' ? 'Verfügbar' : 'Dispo'}` },
+    { id: 'shoot', label: `🟡 ${isEn ? 'On shoot' : t.map === 'Karte' ? 'Am Drehen' : 'En shoot'}` },
+    { id: 'indispo', label: `🔴 ${isEn ? 'Unavailable' : t.map === 'Mapa' ? 'No disponible' : t.map === 'Karte' ? 'Nicht verfügbar' : 'Indispo'}` },
+  ];
 
   async function initMap(askGeo = false) {
     if (mapInstance.current) return;
@@ -123,7 +127,7 @@ export default function MapComponent({ theme }) {
             <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;">
               ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : 'MOI'}
             </div>
-            <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">Vous</span>
+            <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${isEn ? 'Me' : 'Moi'}</span>
           </div>`,
           iconSize: [44, 60], iconAnchor: [22, 22],
         });
@@ -149,7 +153,12 @@ export default function MapComponent({ theme }) {
   }, [L, profiles, statusFilter, universFilter, roleFilter]);
 
   const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
-  const statusLabel = popupBuddy?.status === 'shoot' ? 'En shoot' : popupBuddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
+  const statusLabel = popupBuddy?.status === 'shoot'
+    ? (isEn ? 'On shoot' : 'En shoot')
+    : popupBuddy?.status === 'indispo'
+    ? (isEn ? 'Unavailable' : 'Indisponible')
+    : (isEn ? 'Available' : 'Disponible');
+
   const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
   const pillStyle = (active) => ({
@@ -181,17 +190,20 @@ export default function MapComponent({ theme }) {
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺</div>
             <h3 style={{ fontSize: '18px', fontWeight: '900', color: darkMode ? 'white' : '#111', marginBottom: '12px', fontFamily: 'var(--font-nunito)' }}>
-              Trouve les créatifs autour de toi
+              {isEn ? 'Find creatives around you' : 'Trouve les créatifs autour de toi'}
             </h3>
             <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', lineHeight: 1.6, marginBottom: '24px' }}>
-              Snappin&apos;Buddy utilise ta position pour afficher les buddies dans ton quartier. Ta position exacte n&apos;est jamais partagée — elle est floutée à ~400m.
+              {isEn
+                ? "Snappin'Buddy uses your location to show buddies in your area. Your exact position is never shared — it's blurred to ~400m."
+                : "Snappin'Buddy utilise ta position pour afficher les buddies dans ton quartier. Ta position exacte n'est jamais partagée — elle est floutée à ~400m."
+              }
             </p>
             <button onClick={handleAllow} style={{
               width: '100%', padding: '14px', borderRadius: '24px', border: 'none',
               background: darkMode ? 'white' : '#111', color: darkMode ? 'black' : 'white',
               fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px',
             }}>
-              📍 Autoriser la localisation
+              📍 {isEn ? 'Allow location' : 'Autoriser la localisation'}
             </button>
             <button onClick={handleDeny} style={{
               width: '100%', padding: '14px', borderRadius: '24px',
@@ -200,7 +212,7 @@ export default function MapComponent({ theme }) {
               color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
               fontSize: '14px', fontWeight: '600', cursor: 'pointer',
             }}>
-              Pas maintenant
+              {isEn ? 'Not now' : 'Pas maintenant'}
             </button>
           </div>
         </div>
@@ -248,9 +260,9 @@ export default function MapComponent({ theme }) {
         borderRadius: '10px', padding: '8px 12px', fontSize: '12px',
         color: darkMode ? '#666' : '#999', zIndex: 400,
       }}>
-        <span style={{ color: '#2ECC71' }}>●</span> Dispo ·{' '}
-        <span style={{ color: '#FFD700' }}>●</span> En shoot ·{' '}
-        <span style={{ color: '#FF4D4D' }}>●</span> Indispo
+        <span style={{ color: '#2ECC71' }}>●</span> {isEn ? 'Available' : 'Dispo'} ·{' '}
+        <span style={{ color: '#FFD700' }}>●</span> {isEn ? 'On shoot' : 'En shoot'} ·{' '}
+        <span style={{ color: '#FF4D4D' }}>●</span> {isEn ? 'Unavailable' : 'Indispo'}
       </div>
 
       {popupBuddy && (
@@ -316,7 +328,7 @@ export default function MapComponent({ theme }) {
               fontSize: '13px', fontWeight: '700', cursor: 'pointer',
             }}
           >
-            Voir le profil →
+            {isEn ? 'View profile →' : 'Voir le profil →'}
           </button>
         </div>
       )}
