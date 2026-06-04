@@ -11,6 +11,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const [user, setUser] = useState(null);
   const [showQRReminder, setShowQRReminder] = useState(false);
   const bottomRef = useRef(null);
+  const channelRef = useRef(null);
   const darkMode = theme?.dark ?? true;
 
   const buddyUserId = buddy?.user_id || buddy?.id;
@@ -23,6 +24,12 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         subscribeToMessages(data.user.id, buddyUserId);
       }
     });
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [buddy]);
 
   async function loadMessages(myId, buddyId) {
@@ -41,25 +48,41 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   }
 
   function subscribeToMessages(myId, buddyId) {
-    supabase.channel('messages-' + buddyId)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+    const channel = supabase.channel('chat-' + myId + '-' + buddyId)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, payload => {
         const msg = payload.new;
-        if ((msg.sender_id === myId && msg.receiver_id === buddyId) || (msg.sender_id === buddyId && msg.receiver_id === myId)) {
-          setMessages(prev => [...prev, msg]);
+        if (
+          (msg.sender_id === myId && msg.receiver_id === buddyId) ||
+          (msg.sender_id === buddyId && msg.receiver_id === myId)
+        ) {
+          setMessages(prev => {
+            // Éviter les doublons
+            if (prev.find(m => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
-      }).subscribe();
+      })
+      .subscribe();
+    channelRef.current = channel;
   }
 
   async function sendMessage() {
     if (!text.trim() || !user || !buddyUserId) return;
-    const content = text;
+    const content = text.trim();
     setText('');
-    const { data } = await supabase.from('messages').insert({ sender_id: user.id, receiver_id: buddyUserId, content }).select().single();
-    if (data) {
-      setMessages(prev => [...prev, data]);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    }
+    await supabase.from('messages').insert({
+      sender_id: user.id,
+      receiver_id: buddyUserId,
+      content,
+    });
   }
 
   const bg = darkMode ? '#0A0A0A' : '#F5F5F5';
@@ -78,9 +101,9 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
           {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontWeight: '700', fontSize: '15px', color }}>{buddy?.username}</div>
-          <div style={{ color: subText, fontSize: '12px' }}>{buddy?.handle}</div>
+          <div style={{ color: '#2ECC71', fontSize: '11px', fontWeight: '600' }}>● {isEn ? 'Online' : 'En ligne'}</div>
         </div>
       </div>
 
@@ -98,8 +121,8 @@ export default function ChatScreen({ buddy, onBack, theme }) {
             </p>
             <p style={{ fontSize: '12px', color: subText, lineHeight: 1.5 }}>
               {isEn
-                ? <>Remember to generate and scan your QR codes in the <strong style={{ color }}>Match → 🤝</strong> tab to confirm your identities!</>
-                : <>Pensez à générer et scanner vos QR codes dans l&apos;onglet <strong style={{ color }}>Match → 🤝</strong> pour confirmer vos identités !</>
+                ? <>Remember to generate and scan your QR codes in the <strong style={{ color }}>Match → 🤝</strong> tab!</>
+                : <>Pensez à générer et scanner vos QR codes dans l&apos;onglet <strong style={{ color }}>Match → 🤝</strong> !</>
               }
             </p>
           </div>
@@ -125,9 +148,11 @@ export default function ChatScreen({ buddy, onBack, theme }) {
             <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
               <div style={{
                 maxWidth: '75%', padding: '10px 14px', borderRadius: '18px',
+                borderBottomRightRadius: isMe ? '4px' : '18px',
+                borderBottomLeftRadius: isMe ? '18px' : '4px',
                 background: isMe ? (darkMode ? 'white' : '#111') : (darkMode ? '#1A1A1A' : '#E0E0E0'),
                 color: isMe ? (darkMode ? 'black' : 'white') : color,
-                fontSize: '14px',
+                fontSize: '14px', lineHeight: 1.4,
               }}>
                 {m.content}
               </div>
@@ -143,9 +168,9 @@ export default function ChatScreen({ buddy, onBack, theme }) {
           onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
           placeholder={isEn ? 'Message...' : 'Message...'}
-          style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px' }}
+          style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', outline: 'none' }}
         />
-        <button onClick={sendMessage} style={{ width: '40px', height: '40px', borderRadius: '50%', background: color, border: 'none', fontSize: '18px', cursor: 'pointer', color: bg }}>↑</button>
+        <button onClick={sendMessage} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>
       </div>
     </div>
   );
