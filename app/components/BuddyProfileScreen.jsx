@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '../supabase';
+import { useT } from '../i18n';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -27,6 +28,8 @@ function getVideoEmbed(url) {
 }
 
 export default function BuddyProfileScreen({ buddy, onBack, theme }) {
+  const t = useT();
+  const isEn = t.map === 'Map';
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
   const color = theme?.color ?? 'white';
@@ -46,7 +49,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
   const portfolio = buddy?.portfolio_urls || [];
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
-  const statusLabel = buddy?.status === 'shoot' ? 'En shoot' : buddy?.status === 'indispo' ? 'Indisponible' : 'Disponible';
+  const statusLabel = buddy?.status === 'shoot' ? (isEn ? 'On shoot' : 'En shoot') : buddy?.status === 'indispo' ? (isEn ? 'Unavailable' : 'Indisponible') : (isEn ? 'Available' : 'Disponible');
   const embedUrl = getVideoEmbed(buddy?.video_url);
 
   async function sendCollab() {
@@ -94,14 +97,14 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {embedUrl && (
           <div style={{ marginBottom: '16px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>🎬 VIDÉO</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>🎬 {isEn ? 'VIDEO' : 'VIDÉO'}</p>
             {embedUrl.type === 'iframe' ? (
               <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
                 <iframe src={embedUrl.src} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
               </div>
             ) : (
               <a href={embedUrl.src} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)', color: 'white', fontWeight: '700', fontSize: '13px', textAlign: 'center', textDecoration: 'none' }}>
-                📸 Voir sur Instagram →
+                📸 {isEn ? 'View on Instagram →' : 'Voir sur Instagram →'}
               </a>
             )}
           </div>
@@ -109,21 +112,21 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {buddy?.bio && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>PROJET EN COURS</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{isEn ? 'CURRENT PROJECT' : 'PROJET EN COURS'}</p>
             <p style={{ fontSize: '14px', color }}>{buddy.bio}</p>
           </div>
         )}
 
         {buddy?.role && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>ROLE</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{isEn ? 'ROLE' : 'RÔLE'}</p>
             <p style={{ fontSize: '14px', color }}>{buddy.role}</p>
           </div>
         )}
 
         {styles.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>STYLE</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'STYLE' : 'STYLE'}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {styles.map(s => (
                 <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>{s}</span>
@@ -134,7 +137,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {zones.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>ZONES DE SHOOT</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'SHOOT ZONES' : 'ZONES DE SHOOT'}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {zones.map(z => (
                 <span key={z} style={{ fontSize: '12px', color: tagColor, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', borderRadius: '20px', padding: '4px 12px' }}>{z}</span>
@@ -145,19 +148,20 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {sent ? (
           <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#2ECC71', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
-            ✓ Proposition envoyée !
+            {isEn ? '✓ Proposal sent!' : '✓ Proposition envoyée !'}
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
-            <input value={message} onChange={e => setMessage(e.target.value)} placeholder="Décris ton projet en quelques mots..."
+            <input value={message} onChange={e => setMessage(e.target.value)}
+              placeholder={isEn ? 'Describe your project in a few words...' : 'Décris ton projet en quelques mots...'}
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
             <button onClick={sendCollab} disabled={sending} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              {sending ? 'Envoi...' : '⚡ Envoyer la proposition'}
+              {sending ? (isEn ? 'Sending...' : 'Envoi...') : (isEn ? '⚡ Send' : '⚡ Envoyer')}
             </button>
           </div>
         ) : (
           <button onClick={() => setShowInput(true)} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-            ⚡ Proposer un collab
+            {isEn ? '⚡ Propose a collab' : '⚡ Proposer une collab'}
           </button>
         )}
       </div>
