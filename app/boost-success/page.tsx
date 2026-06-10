@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../supabase';
 
-export default function BoostSuccess() {
+function BoostSuccessContent() {
   const searchParams = useSearchParams();
   const offerId = searchParams.get('offer_id');
   const days = parseInt(searchParams.get('days') || '1');
@@ -34,5 +34,17 @@ export default function BoostSuccess() {
       </p>
       {done && <p style={{ color: '#2ECC71', fontSize: '13px' }}>Redirection automatique...</p>}
     </div>
+  );
+}
+
+export default function BoostSuccess() {
+  return (
+    <Suspense fallback={
+      <div style={{ height: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'white', fontSize: '24px' }}>🚀</div>
+      </div>
+    }>
+      <BoostSuccessContent />
+    </Suspense>
   );
 }
