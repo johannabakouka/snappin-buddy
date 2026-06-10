@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
+import OfferForm from './OfferForm';
 import { useT, useRoles, useUnivers } from '../i18n';
 
 export default function MatchScreen({ theme, setScreen }) {
@@ -27,13 +28,6 @@ export default function MatchScreen({ theme, setScreen }) {
   const [myOffers, setMyOffers] = useState([]);
   const [showNewOffer, setShowNewOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
-  const [offerTitle, setOfferTitle] = useState('');
-  const [offerDesc, setOfferDesc] = useState('');
-  const [offerRoles, setOfferRoles] = useState([]);
-  const [offerStyles, setOfferStyles] = useState([]);
-  const [offerZone, setOfferZone] = useState('');
-  const [offerDate, setOfferDate] = useState('');
-  const [offerLoading, setOfferLoading] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [offerCandidates, setOfferCandidates] = useState([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
@@ -102,12 +96,7 @@ export default function MatchScreen({ theme, setScreen }) {
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          offerId: offer.id,
-          offerTitle: offer.title,
-          boostDays: days,
-          price: priceInCents,
-        }),
+        body: JSON.stringify({ offerId: offer.id, offerTitle: offer.title, boostDays: days, price: priceInCents }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -116,66 +105,15 @@ export default function MatchScreen({ theme, setScreen }) {
     }
   }
 
-  function openEditOffer(offer) {
-    setEditingOffer(offer);
-    setOfferTitle(offer.title);
-    setOfferDesc(offer.description || '');
-    setOfferRoles(offer.role_needed ? offer.role_needed.split(', ').filter(Boolean) : []);
-    setOfferStyles(offer.styles_needed ? offer.styles_needed.split(', ').filter(Boolean) : []);
-    setOfferZone(offer.zone || '');
-    setOfferDate(offer.date || '');
-  }
-
-  function closeEditOffer() {
-    setEditingOffer(null);
-    setOfferTitle(''); setOfferDesc(''); setOfferRoles([]); setOfferStyles([]); setOfferZone(''); setOfferDate('');
-  }
-
-  async function saveEditOffer() {
-    if (!offerTitle || offerRoles.length === 0) return;
-    setOfferLoading(true);
-    const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
-    const stylesToSave = offerStyles.map(label => {
-      if (!isEn) return label;
-      const idx = UNIVERS_EN.indexOf(label);
-      return idx >= 0 ? UNIVERS_FR[idx] : label;
-    });
-    await supabase.from('offers').update({
-      title: offerTitle, description: offerDesc,
-      role_needed: offerRoles.join(', '), styles_needed: stylesToSave.join(', '),
-      zone: offerZone, date: offerDate,
-    }).eq('id', editingOffer.id);
-    closeEditOffer();
+  async function handleSaveOffer(fields) {
+    if (editingOffer) {
+      await supabase.from('offers').update(fields).eq('id', editingOffer.id);
+      setEditingOffer(null);
+    } else {
+      await supabase.from('offers').insert({ user_id: user.id, ...fields, status: 'open' });
+      setShowNewOffer(false);
+    }
     loadOffers(user.id);
-    setOfferLoading(false);
-  }
-
-  async function createOffer() {
-    if (!offerTitle || offerRoles.length === 0) return;
-    setOfferLoading(true);
-    const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
-    const stylesToSave = offerStyles.map(label => {
-      if (!isEn) return label;
-      const idx = UNIVERS_EN.indexOf(label);
-      return idx >= 0 ? UNIVERS_FR[idx] : label;
-    });
-    await supabase.from('offers').insert({
-      user_id: user.id, title: offerTitle, description: offerDesc,
-      role_needed: offerRoles.join(', '), styles_needed: stylesToSave.join(', '),
-      zone: offerZone, date: offerDate, status: 'open'
-    });
-    setOfferTitle(''); setOfferDesc(''); setOfferRoles([]); setOfferStyles([]); setOfferZone(''); setOfferDate('');
-    setShowNewOffer(false);
-    loadOffers(user.id);
-    setOfferLoading(false);
-  }
-
-  function toggleOfferRole(roleId) {
-    setOfferRoles(prev => prev.includes(roleId) ? prev.filter(r => r !== roleId) : [...prev, roleId]);
-  }
-
-  function toggleOfferStyle(s) {
-    setOfferStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   }
 
   function getMatchScore(offer) {
@@ -271,53 +209,29 @@ export default function MatchScreen({ theme, setScreen }) {
     );
   }
 
-  const OfferForm = ({ isEdit }) => (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
-      <div style={{ padding: '20px 16px 100px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <button onClick={isEdit ? closeEditOffer : () => setShowNewOffer(false)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-          <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>
-            {isEdit ? (isEn ? 'Edit brief' : "Modifier l'offre") : (isEn ? 'New brief' : 'Nouvelle offre')}
-          </h2>
-        </div>
-        <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
-        <textarea value={offerDesc} onChange={e => setOfferDesc(e.target.value)} placeholder={isEn ? 'Project description...' : 'Description du projet...'} rows={3} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none' }} />
-        <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-          {isEn ? 'ROLES NEEDED *' : 'RÔLES RECHERCHÉS *'}
-          {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
-        </p>
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {ROLES.map(r => {
-            const active = offerRoles.includes(r.id);
-            return <button key={r.id} onClick={() => toggleOfferRole(r.id)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{r.icon} {r.label}</button>;
-          })}
-        </div>
-        <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-          TAGS{offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
-        </p>
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {UNIVERS.map(s => {
-            const active = offerStyles.includes(s);
-            return <button key={s} onClick={() => toggleOfferStyle(s)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>{s}</button>;
-          })}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-          <input value={offerZone} onChange={e => setOfferZone(e.target.value)} placeholder={isEn ? 'City' : 'Ville'} style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
-          <input value={offerDate} onChange={e => setOfferDate(e.target.value)} placeholder='Date' style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box' }} />
-        </div>
-        <button onClick={isEdit ? saveEditOffer : createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}>
-          {offerLoading ? (isEn ? 'Saving...' : 'Sauvegarde...') : isEdit ? (isEn ? '✓ Save changes' : '✓ Enregistrer') : (isEn ? '⚡ Publish brief' : "⚡ Publier l'offre")}
-        </button>
-        {isEdit && (
-          <button onClick={async () => { await closeOffer(editingOffer.id); closeEditOffer(); }} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(255,77,77,0.4)', background: 'transparent', color: '#FF4D4D', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-            🔒 {isEn ? 'Close this brief' : 'Fermer cette offre'}
-          </button>
-        )}
-      </div>
-    </div>
+  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
+
+  if (showNewOffer) return (
+    <OfferForm
+      theme={theme}
+      isEdit={false}
+      editingOffer={null}
+      onClose={() => setShowNewOffer(false)}
+      onSave={handleSaveOffer}
+      onCloseOffer={null}
+    />
   );
 
-  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
+  if (editingOffer) return (
+    <OfferForm
+      theme={theme}
+      isEdit={true}
+      editingOffer={editingOffer}
+      onClose={() => setEditingOffer(null)}
+      onSave={handleSaveOffer}
+      onCloseOffer={async () => { await closeOffer(editingOffer.id); setEditingOffer(null); }}
+    />
+  );
 
   if (selectedOffer) return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
@@ -370,9 +284,6 @@ export default function MatchScreen({ theme, setScreen }) {
         <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>{t.matchTab}</button>
       </div>
 
-      {showNewOffer && <OfferForm isEdit={false} />}
-      {editingOffer && <OfferForm isEdit={true} />}
-
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px' }}>
 
         {tab === 'offres' && (
@@ -412,7 +323,7 @@ export default function MatchScreen({ theme, setScreen }) {
                           <span style={{ fontSize: '10px', color: subText }}>
                             {isEn ? 'See applications →' : 'Voir candidatures →'}
                           </span>
-                          <button onClick={e => { e.stopPropagation(); openEditOffer(o); }} style={{
+                          <button onClick={e => { e.stopPropagation(); setEditingOffer(o); }} style={{
                             background: 'none', border: `1px solid ${cardBorder}`,
                             color: theme?.color, borderRadius: '12px', padding: '3px 8px',
                             fontSize: '10px', fontWeight: '700', cursor: 'pointer',
@@ -421,18 +332,10 @@ export default function MatchScreen({ theme, setScreen }) {
                           </button>
                           {o.status === 'open' && !isBoosted && (
                             <div style={{ display: 'flex', gap: '4px' }}>
-                              <button onClick={e => { e.stopPropagation(); boostOffer(o, 1, 199); }} style={{
-                                background: 'linear-gradient(135deg, #F0B429, #FF6B35)',
-                                border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px',
-                                fontSize: '10px', fontWeight: '700', cursor: 'pointer',
-                              }}>
+                              <button onClick={e => { e.stopPropagation(); boostOffer(o, 1, 199); }} style={{ background: 'linear-gradient(135deg, #F0B429, #FF6B35)', border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                                 🚀 1j 1,99€
                               </button>
-                              <button onClick={e => { e.stopPropagation(); boostOffer(o, 7, 499); }} style={{
-                                background: 'linear-gradient(135deg, #F0B429, #FF6B35)',
-                                border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px',
-                                fontSize: '10px', fontWeight: '700', cursor: 'pointer',
-                              }}>
+                              <button onClick={e => { e.stopPropagation(); boostOffer(o, 7, 499); }} style={{ background: 'linear-gradient(135deg, #F0B429, #FF6B35)', border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                                 🚀 7j 4,99€
                               </button>
                             </div>
