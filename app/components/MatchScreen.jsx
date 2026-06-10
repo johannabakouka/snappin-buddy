@@ -70,7 +70,7 @@ export default function MatchScreen({ theme, setScreen }) {
   }
 
   async function loadOffers(userId) {
-    const { data: all } = await supabase.from('offers').select('*').eq('status', 'open').neq('user_id', userId).order('created_at', { ascending: false });
+    const { data: all } = await supabase.from('offers').select('*').neq('user_id', userId).order('created_at', { ascending: false });
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (all) {
       const userIds = all.map(o => o.user_id);
@@ -247,14 +247,13 @@ export default function MatchScreen({ theme, setScreen }) {
     );
   }
 
-  // Formulaire offre (création ou modification)
   const OfferForm = ({ isEdit }) => (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
       <div style={{ padding: '20px 16px 100px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button onClick={isEdit ? closeEditOffer : () => setShowNewOffer(false)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>
-            {isEdit ? (isEn ? 'Edit brief' : 'Modifier l\'offre') : (isEn ? 'New brief' : 'Nouvelle offre')}
+            {isEdit ? (isEn ? 'Edit brief' : "Modifier l'offre") : (isEn ? 'New brief' : 'Nouvelle offre')}
           </h2>
         </div>
         <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
@@ -285,7 +284,7 @@ export default function MatchScreen({ theme, setScreen }) {
         <button onClick={isEdit ? saveEditOffer : createOffer} disabled={offerLoading || !offerTitle || offerRoles.length === 0} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}>
           {offerLoading ? (isEn ? 'Saving...' : 'Sauvegarde...') : isEdit ? (isEn ? '✓ Save changes' : '✓ Enregistrer') : (isEn ? '⚡ Publish brief' : "⚡ Publier l'offre")}
         </button>
-        {isEdit && editingOffer?.status === 'open' && (
+        {isEdit && (
           <button onClick={async () => { await closeOffer(editingOffer.id); closeEditOffer(); }} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(255,77,77,0.4)', background: 'transparent', color: '#FF4D4D', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
             🔒 {isEn ? 'Close this brief' : 'Fermer cette offre'}
           </button>
@@ -426,7 +425,7 @@ export default function MatchScreen({ theme, setScreen }) {
                 {displayedOffers.map(o => {
                   const score = getMatchScore(o);
                   return (
-                    <div key={o.id} style={{ background: card, border: `1px solid ${score > 0 ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px' }}>
+                    <div key={o.id} style={{ background: card, border: `1px solid ${score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                           {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
@@ -435,7 +434,7 @@ export default function MatchScreen({ theme, setScreen }) {
                           <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (isEn ? 'Creative' : 'Créatif')}</p>
                           <p style={{ fontSize: '11px', color: subText }}>{o.authorProfile?.role}</p>
                         </div>
-                        {score > 0 && (
+                        {score > 0 && o.status === 'open' && (
                           <div style={{ background: '#2ECC71', color: '#000', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '900' }}>
                             {score}✓ match
                           </div>
@@ -456,15 +455,21 @@ export default function MatchScreen({ theme, setScreen }) {
                         {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
                         {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
                       </div>
-                      <button onClick={async () => {
-                        const { data: { user: u } } = await supabase.auth.getUser();
-                        if (u) {
-                          await supabase.from('collabs').insert({ sender_id: u.id, receiver_id: o.user_id, message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`, status: 'pending' });
-                          alert(isEn ? 'Application sent!' : 'Candidature envoyée !');
-                        }
-                      }} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-                        {t.applyOffer}
-                      </button>
+                      {o.status === 'open' ? (
+                        <button onClick={async () => {
+                          const { data: { user: u } } = await supabase.auth.getUser();
+                          if (u) {
+                            await supabase.from('collabs').insert({ sender_id: u.id, receiver_id: o.user_id, message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`, status: 'pending' });
+                            alert(isEn ? 'Application sent!' : 'Candidature envoyée !');
+                          }
+                        }} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                          {t.applyOffer}
+                        </button>
+                      ) : (
+                        <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>
+                          🔒 {isEn ? 'No longer accepting applications' : "N'accepte plus de candidatures"}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
