@@ -33,6 +33,9 @@ export default function MatchScreen({ theme, setScreen }) {
   const [offerZone, setOfferZone] = useState('');
   const [offerDate, setOfferDate] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState(null);
+  const [offerCandidates, setOfferCandidates] = useState([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
 
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
@@ -74,6 +77,18 @@ export default function MatchScreen({ theme, setScreen }) {
       setOffers(all.map(o => ({ ...o, authorProfile: profiles?.find(p => p.user_id === o.user_id) })));
     }
     if (mine) setMyOffers(mine);
+  }
+
+  async function openOfferCandidates(offer) {
+    setSelectedOffer(offer);
+    setLoadingCandidates(true);
+    const { data: collabs } = await supabase.from('collabs').select('*').eq('receiver_id', user.id).ilike('message', `%${offer.title}%`).order('created_at', { ascending: false });
+    if (collabs && collabs.length > 0) {
+      const senderIds = collabs.map(c => c.sender_id);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio').in('user_id', senderIds);
+      setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
+    } else setOfferCandidates([]);
+    setLoadingCandidates(false);
   }
 
   async function closeOffer(offerId) {
@@ -199,6 +214,49 @@ export default function MatchScreen({ theme, setScreen }) {
 
   if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
 
+  // Modal candidatures par offre
+  if (selectedOffer) return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+      <div style={{ padding: '16px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+        <button onClick={() => setSelectedOffer(null)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color }}>{selectedOffer.title}</p>
+          <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {isEn ? 'application(s)' : 'candidature(s)'}</p>
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
+        {loadingCandidates ? (
+          <p style={{ color: subText, textAlign: 'center', marginTop: '40px' }}>...</p>
+        ) : offerCandidates.length === 0 ? (
+          <div style={{ textAlign: 'center', marginTop: '60px' }}>
+            <p style={{ fontSize: '32px', marginBottom: '12px' }}>📭</p>
+            <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'No applications yet' : 'Pas encore de candidatures'}</p>
+            <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Share your offer to get applications!' : 'Partage ton offre pour recevoir des candidatures !'}</p>
+          </div>
+        ) : (
+          offerCandidates.map(c => (
+            <div key={c.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '11px', color: statusBadge(c.status).color, fontWeight: '700' }}>{statusBadge(c.status).label}</span>
+                <span style={{ fontSize: '10px', color: subText }}>{new Date(c.created_at).toLocaleDateString()}</span>
+              </div>
+              <MiniProfile profile={c.senderProfile} />
+              {c.message && (
+                <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px', marginBottom: '12px' }}>{c.message}</p>
+              )}
+              {c.status === 'pending' && (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => { respondCollab(c.id, 'accepted', c.sender_id); setSelectedOffer(null); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#2ECC71', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>{t.accept}</button>
+                  <button onClick={() => { respondCollab(c.id, 'declined', null); openOfferCandidates(selectedOffer); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #FF4D4D', background: 'transparent', color: '#FF4D4D', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>{t.decline}</button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color, position: 'relative' }}>
       <Header theme={theme} />
@@ -259,7 +317,7 @@ export default function MatchScreen({ theme, setScreen }) {
               <>
                 <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>{t.myOffers}</p>
                 {myOffers.map(o => (
-                  <div key={o.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px' }}>
+                  <div key={o.id} onClick={() => openOfferCandidates(o)} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: '800', color: theme?.color, marginBottom: '4px' }}>{o.title}</p>
@@ -278,9 +336,12 @@ export default function MatchScreen({ theme, setScreen }) {
                         <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
                           {o.status === 'open' ? (isEn ? 'Open' : 'Ouverte') : (isEn ? 'Closed' : 'Fermée')}
                         </span>
+                        <span style={{ fontSize: '10px', color: subText }}>
+                          {isEn ? 'See applications →' : 'Voir candidatures →'}
+                        </span>
                         {o.status === 'open' && (
-                          <button onClick={() => closeOffer(o.id)} style={{
-                            background: 'none', border: `1px solid ${darkMode ? 'rgba(255,77,77,0.4)' : 'rgba(255,77,77,0.4)'}`,
+                          <button onClick={e => { e.stopPropagation(); closeOffer(o.id); }} style={{
+                            background: 'none', border: `1px solid rgba(255,77,77,0.4)`,
                             color: '#FF4D4D', borderRadius: '12px', padding: '3px 8px',
                             fontSize: '10px', fontWeight: '700', cursor: 'pointer',
                           }}>
