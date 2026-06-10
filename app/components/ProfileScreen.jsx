@@ -3,10 +3,18 @@ import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
-import { useT } from '../i18n';
+import { useT, useRoles } from '../i18n';
+import { UNIVERS_FR, UNIVERS_EN } from '../constants';
+
+function translateTag(tag, isEn) {
+  if (!isEn) return tag;
+  const idx = UNIVERS_FR.indexOf(tag.toLowerCase());
+  return idx >= 0 ? UNIVERS_EN[idx] : tag;
+}
 
 export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
   const t = useT();
+  const ROLES = useRoles();
   const [editing, setEditing] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [status, setStatus] = useState(profile?.status || 'dispo');
@@ -29,6 +37,10 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const tagColor = darkMode ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.65)';
   const tagBorder = darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
   const subText = darkMode ? '#666' : '#888';
+
+  // Traduire le rôle
+  const roleObj = ROLES.find(r => r.id === profile?.role?.toLowerCase());
+  const roleLabel = roleObj?.label || profile?.role || '';
 
   async function updateStatus(newStatus) {
     setStatus(newStatus);
@@ -119,6 +131,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
+          {roleLabel && <p style={{ color: subText, fontSize: '12px', marginTop: '4px' }}>{roleLabel}</p>}
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
             {STATUTS.map(s => (
@@ -144,10 +157,12 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         {styles.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{t.style}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'UNIVERSE' : 'UNIVERS'}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {styles.map(s => (
-                <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>{s}</span>
+                <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>
+                  {translateTag(s, isEn)}
+                </span>
               ))}
             </div>
           </div>

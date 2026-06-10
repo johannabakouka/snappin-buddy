@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '../supabase';
-import { useT } from '../i18n';
+import { useT, useRoles } from '../i18n';
+import { UNIVERS_FR, UNIVERS_EN } from '../constants';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -27,9 +28,16 @@ function getVideoEmbed(url) {
   return null;
 }
 
+function translateTag(tag, isEn) {
+  if (!isEn) return tag;
+  const idx = UNIVERS_FR.indexOf(tag.toLowerCase());
+  return idx >= 0 ? UNIVERS_EN[idx] : tag;
+}
+
 export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const t = useT();
   const isEn = t.map === 'Map';
+  const ROLES = useRoles();
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
   const color = theme?.color ?? 'white';
@@ -52,6 +60,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const statusLabel = buddy?.status === 'shoot' ? (isEn ? 'On shoot' : 'En shoot') : buddy?.status === 'indispo' ? (isEn ? 'Unavailable' : 'Indisponible') : (isEn ? 'Available' : 'Disponible');
   const embedUrl = getVideoEmbed(buddy?.video_url);
 
+  // Traduire le rôle
+  const roleObj = ROLES.find(r => r.id === buddy?.role?.toLowerCase());
+  const roleLabel = roleObj?.label || buddy?.role || '';
+
   async function sendCollab() {
     setSending(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,7 +80,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   }
 
   return (
-   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000, background: bg, overflowY: 'auto' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: '24px 16px 100px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: '24px' }}>←</button>
 
@@ -117,19 +129,21 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         )}
 
-        {buddy?.role && (
+        {roleLabel && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
             <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{isEn ? 'ROLE' : 'RÔLE'}</p>
-            <p style={{ fontSize: '14px', color }}>{buddy.role}</p>
+            <p style={{ fontSize: '14px', color }}>{roleLabel}</p>
           </div>
         )}
 
         {styles.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'STYLE' : 'STYLE'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'UNIVERSE' : 'UNIVERS'}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {styles.map(s => (
-                <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>{s}</span>
+                <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>
+                  {translateTag(s, isEn)}
+                </span>
               ))}
             </div>
           </div>
