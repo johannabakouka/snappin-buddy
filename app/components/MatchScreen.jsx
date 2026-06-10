@@ -97,6 +97,25 @@ export default function MatchScreen({ theme, setScreen }) {
     loadOffers(user.id);
   }
 
+  async function boostOffer(offer, days, priceInCents) {
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: offer.id,
+          offerTitle: offer.title,
+          boostDays: days,
+          price: priceInCents,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      alert(isEn ? 'Payment error, try again.' : 'Erreur de paiement, réessaie.');
+    }
+  }
+
   function openEditOffer(offer) {
     setEditingOffer(offer);
     setOfferTitle(offer.title);
@@ -181,7 +200,12 @@ export default function MatchScreen({ theme, setScreen }) {
     displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterFR.toLowerCase()));
   }
   if (filterZone) displayedOffers = displayedOffers.filter(o => (o.zone || '').toLowerCase().includes(filterZone.toLowerCase()));
-  if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => getMatchScore(b) - getMatchScore(a));
+  if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => {
+    const boostedA = a.boosted_until && new Date(a.boosted_until) > new Date() ? 1 : 0;
+    const boostedB = b.boosted_until && new Date(b.boosted_until) > new Date() ? 1 : 0;
+    if (boostedB !== boostedA) return boostedB - boostedA;
+    return getMatchScore(b) - getMatchScore(a);
+  });
 
   async function respondCollab(id, status, senderId) {
     await supabase.from('collabs').update({ status }).eq('id', id);
@@ -360,40 +384,64 @@ export default function MatchScreen({ theme, setScreen }) {
             {myOffers.length > 0 && (
               <>
                 <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>{t.myOffers}</p>
-                {myOffers.map(o => (
-                  <div key={o.id} onClick={() => openOfferCandidates(o)} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: '800', color: theme?.color, marginBottom: '4px' }}>{o.title}</p>
-                        {o.role_needed && (
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
-                            {o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
-                              const role = ROLES.find(x => x.id === r);
-                              return <span key={r} style={{ fontSize: '11px', color: subText }}>{role?.icon} {role?.label || r}</span>;
-                            })}
+                {myOffers.map(o => {
+                  const isBoosted = o.boosted_until && new Date(o.boosted_until) > new Date();
+                  return (
+                    <div key={o.id} onClick={() => openOfferCandidates(o)} style={{ background: card, border: `1px solid ${isBoosted ? '#F0B429' : cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                            {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '1px 6px', fontWeight: '700' }}>🚀 Boostée</span>}
+                            <p style={{ fontWeight: '800', color: theme?.color }}>{o.title}</p>
                           </div>
-                        )}
-                        {o.zone && <span style={{ fontSize: '11px', color: subText }}> · {o.zone}</span>}
-                        {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
-                          {o.status === 'open' ? (isEn ? 'Open' : 'Ouverte') : (isEn ? 'Closed' : 'Fermée')}
-                        </span>
-                        <span style={{ fontSize: '10px', color: subText }}>
-                          {isEn ? 'See applications →' : 'Voir candidatures →'}
-                        </span>
-                        <button onClick={e => { e.stopPropagation(); openEditOffer(o); }} style={{
-                          background: 'none', border: `1px solid ${cardBorder}`,
-                          color: theme?.color, borderRadius: '12px', padding: '3px 8px',
-                          fontSize: '10px', fontWeight: '700', cursor: 'pointer',
-                        }}>
-                          ✏️ {isEn ? 'Edit' : 'Modifier'}
-                        </button>
+                          {o.role_needed && (
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                              {o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
+                                const role = ROLES.find(x => x.id === r);
+                                return <span key={r} style={{ fontSize: '11px', color: subText }}>{role?.icon} {role?.label || r}</span>;
+                              })}
+                            </div>
+                          )}
+                          {o.zone && <span style={{ fontSize: '11px', color: subText }}> · {o.zone}</span>}
+                          {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                          <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
+                            {o.status === 'open' ? (isEn ? 'Open' : 'Ouverte') : (isEn ? 'Closed' : 'Fermée')}
+                          </span>
+                          <span style={{ fontSize: '10px', color: subText }}>
+                            {isEn ? 'See applications →' : 'Voir candidatures →'}
+                          </span>
+                          <button onClick={e => { e.stopPropagation(); openEditOffer(o); }} style={{
+                            background: 'none', border: `1px solid ${cardBorder}`,
+                            color: theme?.color, borderRadius: '12px', padding: '3px 8px',
+                            fontSize: '10px', fontWeight: '700', cursor: 'pointer',
+                          }}>
+                            ✏️ {isEn ? 'Edit' : 'Modifier'}
+                          </button>
+                          {o.status === 'open' && !isBoosted && (
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={e => { e.stopPropagation(); boostOffer(o, 1, 199); }} style={{
+                                background: 'linear-gradient(135deg, #F0B429, #FF6B35)',
+                                border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px',
+                                fontSize: '10px', fontWeight: '700', cursor: 'pointer',
+                              }}>
+                                🚀 1j 1,99€
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); boostOffer(o, 7, 499); }} style={{
+                                background: 'linear-gradient(135deg, #F0B429, #FF6B35)',
+                                border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px',
+                                fontSize: '10px', fontWeight: '700', cursor: 'pointer',
+                              }}>
+                                🚀 7j 4,99€
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div style={{ marginBottom: '16px' }} />
               </>
             )}
@@ -424,8 +472,9 @@ export default function MatchScreen({ theme, setScreen }) {
                 </p>
                 {displayedOffers.map(o => {
                   const score = getMatchScore(o);
+                  const isBoosted = o.boosted_until && new Date(o.boosted_until) > new Date();
                   return (
-                    <div key={o.id} style={{ background: card, border: `1px solid ${score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1 }}>
+                    <div key={o.id} style={{ background: card, border: `1px solid ${isBoosted ? '#F0B429' : score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                           {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
@@ -434,7 +483,8 @@ export default function MatchScreen({ theme, setScreen }) {
                           <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (isEn ? 'Creative' : 'Créatif')}</p>
                           <p style={{ fontSize: '11px', color: subText }}>{o.authorProfile?.role}</p>
                         </div>
-                        {score > 0 && o.status === 'open' && (
+                        {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '2px 8px', fontWeight: '700' }}>🚀 Boost</span>}
+                        {score > 0 && o.status === 'open' && !isBoosted && (
                           <div style={{ background: '#2ECC71', color: '#000', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '900' }}>
                             {score}✓ match
                           </div>
