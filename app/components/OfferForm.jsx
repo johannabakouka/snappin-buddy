@@ -2,6 +2,20 @@
 import { useState } from 'react';
 import { useT, useRoles, useUnivers } from '../i18n';
 
+const EUROPEAN_CITIES = [
+  'Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nantes', 'Lille', 'Strasbourg', 'Nice', 'Rennes',
+  'London', 'Manchester', 'Birmingham', 'Bristol', 'Edinburgh', 'Glasgow',
+  'Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Düsseldorf',
+  'Madrid', 'Barcelona', 'Valencia', 'Seville', 'Bilbao',
+  'Milan', 'Rome', 'Florence', 'Naples', 'Turin', 'Venice',
+  'Lisbon', 'Porto', 'São Paulo', 'Rio de Janeiro',
+  'Amsterdam', 'Rotterdam', 'Brussels', 'Antwerp',
+  'Stockholm', 'Copenhagen', 'Oslo', 'Helsinki',
+  'Warsaw', 'Krakow', 'Prague', 'Vienna', 'Zurich', 'Geneva',
+  'New York', 'Los Angeles', 'Miami', 'Chicago', 'Toronto', 'Montreal',
+  'Tokyo', 'Seoul', 'Dubai', 'Lagos', 'Abidjan', 'Dakar',
+];
+
 export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer }) {
   const t = useT();
   const isEn = t.map === 'Map';
@@ -23,6 +37,26 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   const [offerZone, setOfferZone] = useState(editingOffer?.zone || '');
   const [offerDate, setOfferDate] = useState(editingOffer?.date || '');
   const [offerLoading, setOfferLoading] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState([]);
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+
+  function handleCityChange(val) {
+    setOfferZone(val);
+    if (val.length >= 2) {
+      const filtered = EUROPEAN_CITIES.filter(c =>
+        c.toLowerCase().startsWith(val.toLowerCase())
+      ).slice(0, 5);
+      setCitySuggestions(filtered);
+      setShowCitySuggestions(filtered.length > 0);
+    } else {
+      setShowCitySuggestions(false);
+    }
+  }
+
+  function selectCity(city) {
+    setOfferZone(city);
+    setShowCitySuggestions(false);
+  }
 
   function toggleRole(roleId) {
     setOfferRoles(prev => prev.includes(roleId) ? prev.filter(r => r !== roleId) : [...prev, roleId]);
@@ -105,18 +139,50 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', position: 'relative' }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input
+              value={offerZone}
+              onChange={e => handleCityChange(e.target.value)}
+              onBlur={() => setTimeout(() => setShowCitySuggestions(false), 150)}
+              placeholder={isEn ? 'City' : 'Ville'}
+              style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+            />
+            {showCitySuggestions && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                background: darkMode ? '#1A1A1A' : '#fff',
+                border: `1px solid ${inputBorder}`,
+                borderRadius: '12px', marginTop: '4px',
+                overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              }}>
+                {citySuggestions.map(city => (
+                  <div key={city} onMouseDown={() => selectCity(city)} style={{
+                    padding: '11px 14px', cursor: 'pointer', fontSize: '14px',
+                    color: theme?.color,
+                    borderBottom: `1px solid ${inputBorder}`,
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    📍 {city}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <input
-            value={offerZone}
-            onChange={e => setOfferZone(e.target.value)}
-            placeholder={isEn ? 'City' : 'Ville'}
-            style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
-          />
-          <input
+            type="date"
             value={offerDate}
             onChange={e => setOfferDate(e.target.value)}
-            placeholder='Date'
-            style={{ flex: 1, padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+            style={{
+              flex: 1, padding: '13px', borderRadius: '12px',
+              border: `1px solid ${inputBorder}`,
+              background: inputBg, color: theme?.color,
+              fontSize: '14px', boxSizing: 'border-box', outline: 'none',
+              colorScheme: darkMode ? 'dark' : 'light',
+            }}
           />
         </div>
 
