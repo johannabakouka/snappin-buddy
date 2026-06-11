@@ -12,7 +12,10 @@ import OnboardingScreen from './components/OnboardingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
 
 export default function Home() {
-  const [screen, setScreen] = useState('map');
+  const [screen, setScreen] = useState(() => {
+    if (typeof window === 'undefined') return 'map';
+    return localStorage.getItem('lastScreen') || 'map';
+  });
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +32,10 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('darkMode', String(darkMode));
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('lastScreen', screen);
+  }, [screen]);
 
   const theme = {
     bg: darkMode ? '#0A0A0A' : '#F5F5F5',
