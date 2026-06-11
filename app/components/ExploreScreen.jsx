@@ -23,6 +23,7 @@ export default function ExploreScreen({ theme }) {
   const [filter, setFilter] = useState('match');
   const [roleFilter, setRoleFilter] = useState(null);
   const [universFilter, setUniversFilter] = useState(null);
+  const [search, setSearch] = useState('');
   const scrollRef = useRef(null);
   const darkMode = theme?.dark ?? true;
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
@@ -49,24 +50,32 @@ export default function ExploreScreen({ theme }) {
   if (activeBuddy) return <BuddyProfileScreen buddy={activeBuddy} onBack={() => setActiveBuddy(null)} theme={theme} />;
 
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
-  if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
-  if (roleFilter) displayed = displayed.filter(p => p.role?.toLowerCase() === roleFilter.toLowerCase());
-  if (universFilter) {
-    // Filtrer toujours en FR (les données sont stockées en FR)
-    const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
-    const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
-    displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
-  }
 
-  if (filter === 'match') {
-    displayed = [...displayed].sort((a, b) => {
-      const scoreB = getMatchScore(myProfile?.styles, b.styles);
-      const scoreA = getMatchScore(myProfile?.styles, a.styles);
-      if (scoreB !== scoreA) return scoreB - scoreA;
-      if (a.status === 'dispo' && b.status !== 'dispo') return -1;
-      if (b.status === 'dispo' && a.status !== 'dispo') return 1;
-      return 0;
-    });
+  if (search.trim()) {
+    const q = search.toLowerCase().trim();
+    displayed = displayed.filter(p =>
+      (p.username || '').toLowerCase().includes(q) ||
+      (p.handle || '').toLowerCase().includes(q) ||
+      (p.role || '').toLowerCase().includes(q)
+    );
+  } else {
+    if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
+    if (roleFilter) displayed = displayed.filter(p => p.role?.toLowerCase() === roleFilter.toLowerCase());
+    if (universFilter) {
+      const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
+      const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
+      displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
+    }
+    if (filter === 'match') {
+      displayed = [...displayed].sort((a, b) => {
+        const scoreB = getMatchScore(myProfile?.styles, b.styles);
+        const scoreA = getMatchScore(myProfile?.styles, a.styles);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        if (a.status === 'dispo' && b.status !== 'dispo') return -1;
+        if (b.status === 'dispo' && a.status !== 'dispo') return 1;
+        return 0;
+      });
+    }
   }
 
   const pillStyle = (active) => ({
@@ -90,33 +99,50 @@ export default function ExploreScreen({ theme }) {
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>{t.exploreSubtitle}</p>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
-          <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {isEn ? 'Available' : 'Dispo'}</button>
-          <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{isEn ? 'All' : 'Tous'}</button>
-        </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={isEn ? '🔍 Search by username, role...' : '🔍 Rechercher par username, rôle...'}
+          style={{
+            width: '100%', padding: '11px 16px', borderRadius: '24px',
+            border: `1px solid ${cardBorder}`,
+            background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+            color: theme?.color, fontSize: '13px', marginBottom: '14px',
+            boxSizing: 'border-box', outline: 'none',
+          }}
+        />
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {ROLES.map(r => (
-            <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
-              {r.icon} {r.label}
-            </button>
-          ))}
-        </div>
+        {!search.trim() && (
+          <>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
+              <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {isEn ? 'Available' : 'Dispo'}</button>
+              <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{isEn ? 'All' : 'Tous'}</button>
+            </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {UNIVERS.map(s => (
-            <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
-              {s}
-            </button>
-          ))}
-        </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {ROLES.map(r => (
+                <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
+                  {r.icon} {r.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {UNIVERS.map(s => (
+                <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
           {displayed.length} {isEn ? 'CREATIVE' : 'CRÉATIF'}{displayed.length > 1 ? 'S' : ''}
-          {filter === 'match' && myProfile?.styles ? t.sortedByMatch : ''}
-          {roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
-          {universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
+          {!search.trim() && filter === 'match' && myProfile?.styles ? t.sortedByMatch : ''}
+          {!search.trim() && roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
+          {!search.trim() && universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -127,8 +153,6 @@ export default function ExploreScreen({ theme }) {
               : [];
             const roleIcon = ROLE_ICONS[p.role?.toLowerCase()] || '✨';
             const portfolio = p.portfolio_urls || [];
-
-            // Trouver le label traduit du rôle
             const roleObj = ROLES.find(r => r.id === p.role?.toLowerCase());
             const roleLabel = roleObj?.label || p.role || '';
 
@@ -139,7 +163,7 @@ export default function ExploreScreen({ theme }) {
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
                       {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                     </div>
-                    {score > 0 && (
+                    {score > 0 && !search.trim() && (
                       <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#2ECC71', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
                     )}
                   </div>
@@ -161,7 +185,6 @@ export default function ExploreScreen({ theme }) {
                         const sClean = s.trim();
                         if (!sClean) return null;
                         const isMatch = matchStyles.includes(sClean);
-                        // Traduire le tag si EN
                         let displayTag = sClean;
                         if (isEn) {
                           const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
@@ -199,6 +222,18 @@ export default function ExploreScreen({ theme }) {
               </div>
             );
           })}
+
+          {displayed.length === 0 && (
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <p style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</p>
+              <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>
+                {isEn ? 'No results' : 'Aucun résultat'}
+              </p>
+              <p style={{ color: subText, fontSize: '13px' }}>
+                {isEn ? 'Try a different search' : 'Essaie une autre recherche'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
