@@ -24,7 +24,10 @@ export default function ExploreScreen({ theme }) {
   const [roleFilter, setRoleFilter] = useState(null);
   const [universFilter, setUniversFilter] = useState(null);
   const [search, setSearch] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const scrollRef = useRef(null);
+  const searchRef = useRef(null);
   const darkMode = theme?.dark ?? true;
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardBorder = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
@@ -46,6 +49,31 @@ export default function ExploreScreen({ theme }) {
     }
     loadData();
   }, []);
+
+  function handleSearchChange(val) {
+    setSearch(val);
+    if (val.length >= 1) {
+      const q = val.toLowerCase();
+      const filtered = profiles
+        .filter(p => myProfile ? p.user_id !== myProfile.user_id : true)
+        .filter(p =>
+          (p.username || '').toLowerCase().startsWith(q) ||
+          (p.handle || '').toLowerCase().startsWith(q)
+        )
+        .slice(0, 5);
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }
+
+  function selectSuggestion(p) {
+    setSearch(p.username);
+    setShowSuggestions(false);
+    setActiveBuddy(p);
+  }
 
   if (activeBuddy) return <BuddyProfileScreen buddy={activeBuddy} onBack={() => setActiveBuddy(null)} theme={theme} />;
 
@@ -99,18 +127,56 @@ export default function ExploreScreen({ theme }) {
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>{t.exploreSubtitle}</p>
 
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={isEn ? '🔍 Search by username, role...' : '🔍 Rechercher par username, rôle...'}
-          style={{
-            width: '100%', padding: '11px 16px', borderRadius: '24px',
-            border: `1px solid ${cardBorder}`,
-            background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-            color: theme?.color, fontSize: '13px', marginBottom: '14px',
-            boxSizing: 'border-box', outline: 'none',
-          }}
-        />
+        <div style={{ position: 'relative', marginBottom: '14px' }} ref={searchRef}>
+          <input
+            value={search}
+            onChange={e => handleSearchChange(e.target.value)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onFocus={() => search.length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
+            placeholder={isEn ? '🔍 Search by username, role...' : '🔍 Rechercher par username, rôle...'}
+            style={{
+              width: '100%', padding: '11px 16px', borderRadius: '24px',
+              border: `1px solid ${cardBorder}`,
+              background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+              color: theme?.color, fontSize: '13px',
+              boxSizing: 'border-box', outline: 'none',
+            }}
+          />
+          {showSuggestions && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+              background: darkMode ? '#1A1A1A' : '#fff',
+              border: `1px solid ${cardBorder}`,
+              borderRadius: '16px', marginTop: '6px',
+              overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            }}>
+              {suggestions.map(p => (
+                <div
+                  key={p.user_id}
+                  onMouseDown={() => selectSuggestion(p)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 14px', cursor: 'pointer',
+                    borderBottom: `1px solid ${cardBorder}`,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
+                    {p.avatar_url ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{p.username}</p>
+                    <p style={{ fontSize: '11px', color: subText }}>{p.role}{p.zone ? ` · ${p.zone}` : ''}</p>
+                  </div>
+                  <div style={{ marginLeft: 'auto' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {!search.trim() && (
           <>
@@ -119,7 +185,6 @@ export default function ExploreScreen({ theme }) {
               <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {isEn ? 'Available' : 'Dispo'}</button>
               <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{isEn ? 'All' : 'Tous'}</button>
             </div>
-
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
               {ROLES.map(r => (
                 <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
@@ -127,7 +192,6 @@ export default function ExploreScreen({ theme }) {
                 </button>
               ))}
             </div>
-
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
               {UNIVERS.map(s => (
                 <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
