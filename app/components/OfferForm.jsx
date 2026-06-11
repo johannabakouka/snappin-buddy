@@ -16,6 +16,9 @@ const EUROPEAN_CITIES = [
   'Tokyo', 'Seoul', 'Dubai', 'Lagos', 'Abidjan', 'Dakar',
 ];
 
+const TITLE_MAX = 60;
+const DESC_MAX = 500;
+
 export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer }) {
   const t = useT();
   const isEn = t.map === 'Map';
@@ -86,6 +89,12 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
     setOfferLoading(false);
   }
 
+  function charCount(val, max) {
+    const remaining = max - val.length;
+    const color = remaining <= 10 ? '#FF4D4D' : remaining <= 30 ? '#FFD700' : subText;
+    return <span style={{ fontSize: '11px', color }}>{val.length}/{max}</span>;
+  }
+
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
       <div style={{ padding: '20px 16px 100px' }}>
@@ -96,15 +105,24 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           </h2>
         </div>
 
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{isEn ? 'TITLE *' : 'TITRE *'}</span>
+          {charCount(offerTitle, TITLE_MAX)}
+        </div>
         <input
           value={offerTitle}
-          onChange={e => setOfferTitle(e.target.value)}
+          onChange={e => e.target.value.length <= TITLE_MAX && setOfferTitle(e.target.value)}
           placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"}
-          style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box', outline: 'none' }}
+          style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', outline: 'none' }}
         />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{isEn ? 'DESCRIPTION' : 'DESCRIPTION'}</span>
+          {charCount(offerDesc, DESC_MAX)}
+        </div>
         <textarea
           value={offerDesc}
-          onChange={e => setOfferDesc(e.target.value)}
+          onChange={e => e.target.value.length <= DESC_MAX && setOfferDesc(e.target.value)}
           placeholder={isEn ? 'Project description...' : 'Description du projet...'}
           rows={3}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none', outline: 'none' }}
@@ -139,7 +157,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', position: 'relative' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <input
               value={offerZone}
@@ -159,8 +177,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
                 {citySuggestions.map(city => (
                   <div key={city} onMouseDown={() => selectCity(city)} style={{
                     padding: '11px 14px', cursor: 'pointer', fontSize: '14px',
-                    color: theme?.color,
-                    borderBottom: `1px solid ${inputBorder}`,
+                    color: theme?.color, borderBottom: `1px solid ${inputBorder}`,
                   }}
                     onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -171,7 +188,6 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
               </div>
             )}
           </div>
-
           <input
             type="date"
             value={offerDate}

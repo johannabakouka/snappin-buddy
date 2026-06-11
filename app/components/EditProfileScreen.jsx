@@ -3,6 +3,8 @@ import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useRoles, useUnivers, useT } from '../i18n';
 
+const BIO_MAX = 150;
+
 function getVideoEmbed(url) {
   if (!url) return null;
   if (url.includes('youtube.com/watch')) {
@@ -59,6 +61,12 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
     setSelectedUnivers(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   }
 
+  function charCount(val, max) {
+    const remaining = max - val.length;
+    const c = remaining <= 10 ? '#FF4D4D' : remaining <= 30 ? '#FFD700' : subText;
+    return <span style={{ fontSize: '11px', color: c }}>{val.length}/{max}</span>;
+  }
+
   async function handlePortfolioUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -82,15 +90,12 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   async function handleSave() {
     if (!username || !handle || !selectedRole) { setError(isEn ? 'Required fields missing' : 'Champs obligatoires manquants'); return; }
     setLoading(true);
-
-    // Toujours stocker les IDs FR en base
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const universToSave = selectedUnivers.map(label => {
       if (!isEn) return label;
       const idx = UNIVERS_EN.indexOf(label);
       return idx >= 0 ? UNIVERS_FR[idx] : label;
     });
-
     const { error } = await supabase.from('profiles').update({
       username, handle, role: selectedRole,
       bio, zone, styles: universToSave.join(', '),
@@ -119,10 +124,9 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       )}
 
       {[
-        { label: isEn ? 'Name' : 'Nom', value: username, set: setUsername, placeholder: isEn ? 'Your name or username' : 'Ton prénom ou pseudo' },
-        { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle' },
-        { label: isEn ? 'Pitch' : 'Pitch', value: bio, set: setBio, placeholder: isEn ? 'Current project...' : 'Ton projet en cours...' },
-        { label: isEn ? 'Area' : 'Zone', value: zone, set: setZone, placeholder: isEn ? 'Shoreditch, Kreuzberg...' : 'Belleville, Oberkampf...' },
+        { label: isEn ? 'Name' : 'Nom', value: username, set: setUsername, placeholder: isEn ? 'Your name or username' : 'Ton prénom ou pseudo', max: null },
+        { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle', max: null },
+        { label: isEn ? 'Area' : 'Zone', value: zone, set: setZone, placeholder: isEn ? 'Shoreditch, Kreuzberg...' : 'Belleville, Oberkampf...', max: null },
       ].map(({ label, value, set, placeholder }) => (
         <div key={label} style={{ marginBottom: '16px' }}>
           <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>{label}</p>
@@ -130,6 +134,19 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
             style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }} />
         </div>
       ))}
+
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <p style={{ color: subText, fontSize: '12px', fontWeight: '600' }}>{isEn ? 'Pitch' : 'Pitch'}</p>
+          {charCount(bio, BIO_MAX)}
+        </div>
+        <input
+          value={bio}
+          onChange={e => e.target.value.length <= BIO_MAX && setBio(e.target.value)}
+          placeholder={isEn ? 'Current project...' : 'Ton projet en cours...'}
+          style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+        />
+      </div>
 
       <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{isEn ? 'ROLE *' : 'RÔLE *'}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
