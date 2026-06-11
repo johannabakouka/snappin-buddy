@@ -12,6 +12,89 @@ function translateTag(tag, isEn) {
   return idx >= 0 ? UNIVERS_EN[idx] : tag;
 }
 
+function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
+  const steps = [
+    { key: 'avatar', label: isEn ? 'Profile photo' : 'Photo de profil', done: !!profile?.avatar_url, pts: 25 },
+    { key: 'role', label: isEn ? 'Role' : 'Rôle', done: !!profile?.role, pts: 25 },
+    { key: 'bio', label: isEn ? 'Pitch' : 'Pitch', done: !!profile?.bio, pts: 20 },
+    { key: 'univers', label: isEn ? 'Universe' : 'Univers', done: (profile?.styles || '').trim().length > 0, pts: 20 },
+    { key: 'zone', label: isEn ? 'Area' : 'Zone', done: !!profile?.zone, pts: 10 },
+  ];
+
+  const score = steps.filter(s => s.done).reduce((acc, s) => acc + s.pts, 0);
+  const missing = steps.filter(s => !s.done);
+
+  let message, messageColor;
+  if (score < 50) {
+    message = isEn ? 'Complete your profile to be found more easily!' : 'Complète ton profil pour être trouvé plus facilement !';
+    messageColor = '#FF4D4D';
+  } else if (score < 80) {
+    message = isEn ? 'Good start! The more complete, the more you match' : 'Bon début ! Plus ton profil est riche, plus tu matches';
+    messageColor = '#FFD700';
+  } else if (score < 100) {
+    message = isEn ? 'Almost perfect!' : 'Presque parfait !';
+    messageColor = '#FFD700';
+  } else {
+    message = isEn ? 'Complete profile 🔥 Ready to be found!' : 'Profil complet 🔥 Prêt à être trouvé !';
+    messageColor = '#2ECC71';
+  }
+
+  const barColor = score < 50 ? '#FF4D4D' : score < 80 ? '#FFD700' : '#2ECC71';
+
+  return (
+    <div style={{
+      background: darkMode ? '#1A1A1A' : '#E8E8E8',
+      borderRadius: '16px', padding: '16px', marginBottom: '16px',
+      border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <span style={{ fontSize: '12px', fontWeight: '700', color: theme.color }}>
+          {isEn ? 'Profile strength' : 'Force du profil'}
+        </span>
+        <span style={{ fontSize: '13px', fontWeight: '900', color: barColor }}>{score}%</span>
+      </div>
+
+      <div style={{ height: '6px', background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${score}%`, background: barColor, borderRadius: '3px', transition: 'width 0.5s ease' }} />
+      </div>
+
+      <p style={{ fontSize: '12px', color: messageColor, fontWeight: '600', marginBottom: missing.length > 0 ? '10px' : '0' }}>
+        {message}
+      </p>
+
+      {missing.length > 0 && score < 100 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {missing.map(s => (
+            <button key={s.key} onClick={onEdit} style={{
+              fontSize: '11px', color: subText,
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              borderRadius: '20px', padding: '3px 10px',
+              background: 'transparent', cursor: 'pointer',
+            }}>
+              + {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(profile?.portfolio_urls?.length > 0 || profile?.video_url) && (
+        <div style={{ marginTop: '10px', display: 'flex', gap: '6px' }}>
+          {profile?.portfolio_urls?.length > 0 && (
+            <span style={{ fontSize: '10px', color: '#2ECC71', border: '1px solid rgba(46,204,113,0.3)', borderRadius: '20px', padding: '2px 8px', fontWeight: '700' }}>
+              🖼 Portfolio
+            </span>
+          )}
+          {profile?.video_url && (
+            <span style={{ fontSize: '10px', color: '#2ECC71', border: '1px solid rgba(46,204,113,0.3)', borderRadius: '20px', padding: '2px 8px', fontWeight: '700' }}>
+              🎬 {isEn ? 'Video' : 'Vidéo'}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
   const t = useT();
   const ROLES = useRoles();
@@ -38,7 +121,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const tagBorder = darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
   const subText = darkMode ? '#666' : '#888';
 
-  // Traduire le rôle
   const roleObj = ROLES.find(r => r.id === profile?.role?.toLowerCase());
   const roleLabel = roleObj?.label || profile?.role || '';
 
@@ -147,6 +229,15 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             ))}
           </div>
         </div>
+
+        <ProfileScore
+          profile={{ ...profile, avatar_url: avatarUrl }}
+          isEn={isEn}
+          darkMode={darkMode}
+          theme={theme}
+          subText={subText}
+          onEdit={() => setEditing(true)}
+        />
 
         {profile?.bio && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
