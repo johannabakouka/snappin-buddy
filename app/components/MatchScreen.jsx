@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
 import OfferForm from './OfferForm';
+import BuddyProfileScreen from './BuddyProfileScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 
 export default function MatchScreen({ theme, setScreen }) {
@@ -31,6 +32,8 @@ export default function MatchScreen({ theme, setScreen }) {
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [offerCandidates, setOfferCandidates] = useState([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [appliedOffers, setAppliedOffers] = useState(new Set());
+  const [viewingBuddy, setViewingBuddy] = useState(null);
 
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
@@ -43,10 +46,22 @@ export default function MatchScreen({ theme, setScreen }) {
         setUser(data.user);
         loadCollabs(data.user.id);
         loadOffers(data.user.id);
+        loadApplied(data.user.id);
         supabase.from('profiles').select('*').eq('user_id', data.user.id).single().then(({ data: p }) => setMyProfile(p));
       }
     });
   }, []);
+
+  async function loadApplied(userId) {
+    const { data } = await supabase.from('collabs').select('message').eq('sender_id', userId);
+    if (data) {
+      const titles = data.map(c => {
+        const match = c.message?.match(/: (.+)$/);
+        return match ? match[1] : null;
+      }).filter(Boolean);
+      setAppliedOffers(new Set(titles));
+    }
+  }
 
   async function loadCollabs(userId) {
     const { data: recv } = await supabase.from('collabs').select('*').eq('receiver_id', userId).order('created_at', { ascending: false });
@@ -80,7 +95,7 @@ export default function MatchScreen({ theme, setScreen }) {
     const { data: collabs } = await supabase.from('collabs').select('*').eq('receiver_id', user.id).ilike('message', `%${offer.title}%`).order('created_at', { ascending: false });
     if (collabs && collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio').in('user_id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
     } else setOfferCandidates([]);
     setLoadingCandidates(false);
@@ -114,6 +129,18 @@ export default function MatchScreen({ theme, setScreen }) {
       setShowNewOffer(false);
     }
     loadOffers(user.id);
+  }
+
+  async function applyToOffer(o) {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u) return;
+    await supabase.from('collabs').insert({
+      sender_id: u.id,
+      receiver_id: o.user_id,
+      message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`,
+      status: 'pending'
+    });
+    setAppliedOffers(prev => new Set([...prev, o.title]));
   }
 
   function getMatchScore(offer) {
@@ -176,19 +203,26 @@ export default function MatchScreen({ theme, setScreen }) {
     fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap',
   });
 
-  function MiniProfile({ profile }) {
+  function MiniProfile({ profile, onViewFull }) {
     if (!profile) return null;
     const portfolio = profile.portfolio_urls || [];
     return (
       <div style={{ marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+          <div
+            onClick={onViewFull ? () => onViewFull(profile) : undefined}
+            style={{ width: '40px', height: '40px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', cursor: onViewFull ? 'pointer' : 'default' }}>
             {profile.avatar_url ? <img src={profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{profile.username}</p>
             <p style={{ fontSize: '11px', color: subText }}>{profile.role}{profile.zone ? ` · ${profile.zone}` : ''}</p>
           </div>
+          {onViewFull && (
+            <button onClick={() => onViewFull(profile)} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', flexShrink: 0 }}>
+              {isEn ? 'View profile' : 'Voir profil'}
+            </button>
+          )}
         </div>
         {profile.bio && <p style={{ fontSize: '12px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.4 }}>« {profile.bio} »</p>}
         {profile.styles && (
@@ -209,28 +243,22 @@ export default function MatchScreen({ theme, setScreen }) {
     );
   }
 
-  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
-
-  if (showNewOffer) return (
-    <OfferForm
+  if (viewingBuddy) return (
+    <BuddyProfileScreen
+      buddy={viewingBuddy}
+      onBack={() => setViewingBuddy(null)}
       theme={theme}
-      isEdit={false}
-      editingOffer={null}
-      onClose={() => setShowNewOffer(false)}
-      onSave={handleSaveOffer}
-      onCloseOffer={null}
     />
   );
 
+  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
+
+  if (showNewOffer) return (
+    <OfferForm theme={theme} isEdit={false} editingOffer={null} onClose={() => setShowNewOffer(false)} onSave={handleSaveOffer} onCloseOffer={null} />
+  );
+
   if (editingOffer) return (
-    <OfferForm
-      theme={theme}
-      isEdit={true}
-      editingOffer={editingOffer}
-      onClose={() => setEditingOffer(null)}
-      onSave={handleSaveOffer}
-      onCloseOffer={async () => { await closeOffer(editingOffer.id); setEditingOffer(null); }}
-    />
+    <OfferForm theme={theme} isEdit={true} editingOffer={editingOffer} onClose={() => setEditingOffer(null)} onSave={handleSaveOffer} onCloseOffer={async () => { await closeOffer(editingOffer.id); setEditingOffer(null); }} />
   );
 
   if (selectedOffer) return (
@@ -258,7 +286,7 @@ export default function MatchScreen({ theme, setScreen }) {
                 <span style={{ fontSize: '11px', color: statusBadge(c.status).color, fontWeight: '700' }}>{statusBadge(c.status).label}</span>
                 <span style={{ fontSize: '10px', color: subText }}>{new Date(c.created_at).toLocaleDateString()}</span>
               </div>
-              <MiniProfile profile={c.senderProfile} />
+              <MiniProfile profile={c.senderProfile} onViewFull={(p) => setViewingBuddy(p)} />
               {c.message && (
                 <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px', marginBottom: '12px' }}>{c.message}</p>
               )}
@@ -323,11 +351,7 @@ export default function MatchScreen({ theme, setScreen }) {
                           <span style={{ fontSize: '10px', color: subText }}>
                             {isEn ? 'See applications →' : 'Voir candidatures →'}
                           </span>
-                          <button onClick={e => { e.stopPropagation(); setEditingOffer(o); }} style={{
-                            background: 'none', border: `1px solid ${cardBorder}`,
-                            color: theme?.color, borderRadius: '12px', padding: '3px 8px',
-                            fontSize: '10px', fontWeight: '700', cursor: 'pointer',
-                          }}>
+                          <button onClick={e => { e.stopPropagation(); setEditingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: theme?.color, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                             ✏️ {isEn ? 'Edit' : 'Modifier'}
                           </button>
                           {o.status === 'open' && !isBoosted && (
@@ -376,6 +400,7 @@ export default function MatchScreen({ theme, setScreen }) {
                 {displayedOffers.map(o => {
                   const score = getMatchScore(o);
                   const isBoosted = o.boosted_until && new Date(o.boosted_until) > new Date();
+                  const hasApplied = appliedOffers.has(o.title);
                   return (
                     <div key={o.id} style={{ background: card, border: `1px solid ${isBoosted ? '#F0B429' : score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
@@ -409,15 +434,15 @@ export default function MatchScreen({ theme, setScreen }) {
                         {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
                       </div>
                       {o.status === 'open' ? (
-                        <button onClick={async () => {
-                          const { data: { user: u } } = await supabase.auth.getUser();
-                          if (u) {
-                            await supabase.from('collabs').insert({ sender_id: u.id, receiver_id: o.user_id, message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`, status: 'pending' });
-                            alert(isEn ? 'Application sent!' : 'Candidature envoyée !');
-                          }
-                        }} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-                          {t.applyOffer}
-                        </button>
+                        hasApplied ? (
+                          <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(46,204,113,0.1)' : 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>
+                            ✓ {isEn ? 'Applied' : 'Déjà postulé'}
+                          </div>
+                        ) : (
+                          <button onClick={() => applyToOffer(o)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                            {t.applyOffer}
+                          </button>
+                        )
                       ) : (
                         <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>
                           🔒 {isEn ? 'No longer accepting applications' : "N'accepte plus de candidatures"}
@@ -447,7 +472,7 @@ export default function MatchScreen({ theme, setScreen }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <span style={{ fontSize: '11px', color: statusBadge(c.status).color, fontWeight: '700' }}>{statusBadge(c.status).label}</span>
                     </div>
-                    <MiniProfile profile={c.senderProfile} />
+                    <MiniProfile profile={c.senderProfile} onViewFull={(p) => setViewingBuddy(p)} />
                     <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'pending' || c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (isEn ? 'No message' : 'Pas de message')}</p>
                     {c.status === 'pending' && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
