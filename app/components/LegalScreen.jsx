@@ -18,7 +18,6 @@ export default function LegalScreen({ theme, onBack }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      // Supprimer les données de l'utilisateur
       await supabase.from('messages').delete().eq('sender_id', user.id);
       await supabase.from('messages').delete().eq('receiver_id', user.id);
       await supabase.from('collabs').delete().eq('sender_id', user.id);
@@ -38,15 +37,19 @@ export default function LegalScreen({ theme, onBack }) {
 
   const sections = [
     {
-      title: '📋 Éditeur',
-      content: `Snappin'Buddy est une application développée par Ateliers 777, agence de communication créative fondée par Johanna Bakouka.
+      title: '📋 Mentions légales',
+      content: `Éditeur de l'application :
+Ateliers 777
+Entreprise individuelle
+SIRET : 995 320 264 00014
+Siège social : Paris, France
 
-Ateliers 777 regroupe :
-· Ateliers 777 — photo & vidéo pop culture
-· Super 8 Memories — photo & vidéo mariage
-· Snappin'Buddy — mise en contact des créatifs visuels
+Directrice de la publication : Johanna Bakouka
+Contact : ateliers777.contact@gmail.com
 
-Contact : ateliers777.contact@gmail.com`,
+Hébergeur :
+Vercel Inc. — 340 Pine Street, Suite 701, San Francisco, CA 94104, USA
+Base de données : Supabase (infrastructure AWS, région Europe)`,
     },
     {
       title: '📍 Données collectées',
@@ -57,7 +60,8 @@ Contact : ateliers777.contact@gmail.com`,
 · Position géographique approximative (±400m)
 · Messages échangés entre utilisateurs
 
-Aucune donnée n'est vendue à des tiers.`,
+Aucune donnée n'est vendue à des tiers.
+Aucune publicité ciblée n'est utilisée.`,
     },
     {
       title: '🔒 Utilisation des données',
@@ -65,8 +69,20 @@ Aucune donnée n'est vendue à des tiers.`,
 · Afficher ton profil aux autres créatifs
 · Te mettre en contact avec des collaborateurs
 · Améliorer l'expérience de l'application
+· Envoyer des notifications par email (candidatures, offres)
 
-Ta position est volontairement floutée de ~400m pour protéger ta vie privée. Elle n'est jamais partagée avec précision.`,
+Ta position est volontairement floutée de ~400m pour protéger ta vie privée. Elle n'est jamais partagée avec précision.
+
+Base légale du traitement : exécution du contrat (CGU acceptées à l'inscription) et intérêt légitime.`,
+    },
+    {
+      title: '🍪 Cookies',
+      content: `Snappin'Buddy utilise des cookies techniques strictement nécessaires au fonctionnement de l'application :
+· Cookie de session (authentification Supabase)
+· Préférences locales (mode sombre, langue)
+
+Aucun cookie publicitaire ou de tracking tiers n'est utilisé.
+Ces cookies sont indispensables — l'app ne peut pas fonctionner sans eux.`,
     },
     {
       title: '🗺 Géolocalisation',
@@ -77,6 +93,31 @@ Ta position exacte n'est jamais stockée ni partagée. Seule une position approx
 Tu peux refuser la géolocalisation — certaines fonctionnalités de la carte seront alors limitées.`,
     },
     {
+      title: '🇪🇺 RGPD & Droits',
+      content: `Conformément au Règlement Général sur la Protection des Données (RGPD — UE 2016/679), tu disposes des droits suivants :
+· Droit d'accès à tes données
+· Droit de rectification
+· Droit à l'effacement ("droit à l'oubli")
+· Droit à la portabilité
+· Droit d'opposition au traitement
+· Droit de retirer ton consentement à tout moment
+
+Pour exercer ces droits : ateliers777.contact@gmail.com
+Délai de réponse : 30 jours maximum.
+
+Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
+
+Durée de conservation des données : jusqu'à suppression du compte + 30 jours de sauvegarde.`,
+    },
+    {
+      title: '⏰ Durée de vie des offres',
+      content: `Les offres publiées sur Snappin'Buddy expirent automatiquement après 30 jours.
+
+Une offre expirée reste visible avec le badge "N'accepte plus de candidatures" mais n'apparaît plus dans le feed actif. Tu peux la rouvrir gratuitement à tout moment.
+
+Le Boost (payant) est une option de visibilité distincte : il remet ton offre en tête du feed pendant 1 ou 7 jours, indépendamment de la date d'expiration.`,
+    },
+    {
       title: '🤝 Responsabilité des rencontres',
       content: `Snappin'Buddy facilite la mise en contact entre créatifs mais n'est pas responsable des rencontres physiques organisées via la plateforme.
 
@@ -85,26 +126,27 @@ Nous recommandons de :
 · Partager son itinéraire à un proche
 · Utiliser le QR de session avant chaque rencontre
 
-L'utilisation du QR code de session est fortement conseillée pour confirmer l'identité de votre interlocuteur.`,
+L'utilisation du QR code de session est fortement conseillée pour confirmer l'identité de votre interlocuteur.
+
+Snappin'Buddy et Ateliers 777 ne sauraient être tenus responsables des dommages directs ou indirects résultant d'une rencontre organisée via la plateforme.`,
     },
     {
-      title: '🇪🇺 RGPD & Droits',
-      content: `Conformément au Règlement Général sur la Protection des Données (RGPD), tu disposes des droits suivants :
-· Droit d'accès à tes données
-· Droit de rectification
-· Droit à l'effacement ("droit à l'oubli")
-· Droit à la portabilité
-· Droit d'opposition
+      title: '💳 Paiements',
+      content: `Les paiements sont traités par Stripe Inc. (stripe.com), prestataire de paiement sécurisé certifié PCI-DSS.
 
-Pour exercer ces droits : ateliers777.contact@gmail.com
+Snappin'Buddy ne stocke jamais tes données bancaires. Toutes les transactions sont chiffrées et sécurisées par Stripe.
 
-Tes données sont hébergées sur des serveurs sécurisés (Supabase/AWS) dans l'Union Européenne.`,
+Les achats (boost d'offre) sont non remboursables une fois activés, sauf défaut technique avéré.`,
     },
     {
       title: '📝 Modification des CGU',
       content: `Ces conditions peuvent être modifiées à tout moment. Les utilisateurs seront informés par email en cas de changement majeur.
 
-Dernière mise à jour : juin 2026`,
+L'utilisation continue de l'application après modification vaut acceptation des nouvelles conditions.
+
+Dernière mise à jour : juin 2026
+Droit applicable : droit français
+Juridiction compétente : Tribunaux de Paris`,
     },
   ];
 
@@ -142,7 +184,7 @@ Dernière mise à jour : juin 2026`,
         <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid rgba(255,77,77,0.2)` }}>
           <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>🗑 Supprimer mon compte</p>
           <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6, marginBottom: '14px' }}>
-            La suppression est immédiate et irréversible. Toutes tes données (profil, messages, offres, candidatures) seront définitivement effacées.
+            La suppression est immédiate et irréversible. Toutes tes données (profil, messages, offres, candidatures) seront définitivement effacées conformément au RGPD.
           </p>
           {!confirm ? (
             <button onClick={() => setConfirm(true)} style={{
@@ -177,8 +219,8 @@ Dernière mise à jour : juin 2026`,
           )}
         </div>
 
-        <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginTop: '8px' }}>
-          Snappin&apos;Buddy · Ateliers 777 · Paris 🗺
+        <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginTop: '8px', lineHeight: 1.6 }}>
+          Snappin&apos;Buddy · Ateliers 777 · SIRET 995 320 264 00014 · Paris 🗺
         </p>
       </div>
     </div>
