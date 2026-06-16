@@ -42,7 +42,7 @@ export default function LegalScreen({ theme, onBack }) {
 Ateliers 777
 Entreprise individuelle
 SIRET : 995 320 264 00014
-Siège social : Paris, France
+Siège social : 59 rue de Ponthieu, 75008 Paris, France
 
 Directrice de la publication : Johanna Bakouka
 Contact : ateliers777.contact@gmail.com
