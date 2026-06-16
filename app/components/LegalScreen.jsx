@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+import { supabase } from '../supabase';
 
 export default function LegalScreen({ theme, onBack }) {
   const darkMode = theme?.dark ?? true;
@@ -7,6 +9,32 @@ export default function LegalScreen({ theme, onBack }) {
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardBorder = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
   const subText = darkMode ? '#666' : '#888';
+  const [deleting, setDeleting] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+
+  async function deleteAccount() {
+    setDeleting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Supprimer les données de l'utilisateur
+      await supabase.from('messages').delete().eq('sender_id', user.id);
+      await supabase.from('messages').delete().eq('receiver_id', user.id);
+      await supabase.from('collabs').delete().eq('sender_id', user.id);
+      await supabase.from('collabs').delete().eq('receiver_id', user.id);
+      await supabase.from('offers').delete().eq('user_id', user.id);
+      await supabase.from('follows').delete().eq('follower_id', user.id);
+      await supabase.from('follows').delete().eq('following_id', user.id);
+      await supabase.from('profiles').delete().eq('user_id', user.id);
+      await supabase.auth.signOut();
+      setDeleted(true);
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+    setDeleting(false);
+  }
 
   const sections = [
     {
@@ -60,39 +88,49 @@ Nous recommandons de :
 L'utilisation du QR code de session est fortement conseillée pour confirmer l'identité de votre interlocuteur.`,
     },
     {
-      title: '🗑 Suppression du compte',
-      content: `Tu peux demander la suppression de ton compte et de toutes tes données à tout moment en contactant :
+      title: '🇪🇺 RGPD & Droits',
+      content: `Conformément au Règlement Général sur la Protection des Données (RGPD), tu disposes des droits suivants :
+· Droit d'accès à tes données
+· Droit de rectification
+· Droit à l'effacement ("droit à l'oubli")
+· Droit à la portabilité
+· Droit d'opposition
 
-ateliers777.contact@gmail.com
+Pour exercer ces droits : ateliers777.contact@gmail.com
 
-La suppression est effective sous 30 jours.`,
+Tes données sont hébergées sur des serveurs sécurisés (Supabase/AWS) dans l'Union Européenne.`,
     },
     {
       title: '📝 Modification des CGU',
       content: `Ces conditions peuvent être modifiées à tout moment. Les utilisateurs seront informés par email en cas de changement majeur.
 
-Dernière mise à jour : mai 2026`,
+Dernière mise à jour : juin 2026`,
     },
   ];
+
+  if (deleted) return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+      <p style={{ fontSize: '48px' }}>✓</p>
+      <p style={{ color, fontWeight: '800', fontSize: '20px' }}>Compte supprimé</p>
+      <p style={{ color: subText, fontSize: '14px' }}>À bientôt 👋</p>
+    </div>
+  );
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: '24px 16px 60px' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>CGU & Mentions légales</h2>
         </div>
 
-        {/* Intro */}
         <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '16px', border: `1px solid ${cardBorder}` }}>
           <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6 }}>
             En utilisant Snappin&apos;Buddy, tu acceptes les conditions suivantes. Ces mentions légales ont été rédigées dans un souci de transparence et de respect de ta vie privée.
           </p>
         </div>
 
-        {/* Sections */}
         {sections.map((s, i) => (
           <div key={i} style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid ${cardBorder}` }}>
             <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>{s.title}</p>
@@ -100,7 +138,45 @@ Dernière mise à jour : mai 2026`,
           </div>
         ))}
 
-        {/* Footer */}
+        {/* Suppression de compte */}
+        <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid rgba(255,77,77,0.2)` }}>
+          <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>🗑 Supprimer mon compte</p>
+          <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6, marginBottom: '14px' }}>
+            La suppression est immédiate et irréversible. Toutes tes données (profil, messages, offres, candidatures) seront définitivement effacées.
+          </p>
+          {!confirm ? (
+            <button onClick={() => setConfirm(true)} style={{
+              width: '100%', padding: '12px', borderRadius: '20px',
+              border: '1px solid rgba(255,77,77,0.4)', background: 'transparent',
+              color: '#FF4D4D', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+            }}>
+              Supprimer mon compte
+            </button>
+          ) : (
+            <div>
+              <p style={{ color: '#FF4D4D', fontSize: '13px', fontWeight: '700', marginBottom: '10px', textAlign: 'center' }}>
+                ⚠️ Cette action est irréversible !
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => setConfirm(false)} style={{
+                  flex: 1, padding: '12px', borderRadius: '20px',
+                  border: `1px solid ${cardBorder}`, background: 'transparent',
+                  color: subText, fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                }}>
+                  Annuler
+                </button>
+                <button onClick={deleteAccount} disabled={deleting} style={{
+                  flex: 1, padding: '12px', borderRadius: '20px',
+                  border: 'none', background: '#FF4D4D',
+                  color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                }}>
+                  {deleting ? 'Suppression...' : 'Confirmer'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginTop: '8px' }}>
           Snappin&apos;Buddy · Ateliers 777 · Paris 🗺
         </p>
