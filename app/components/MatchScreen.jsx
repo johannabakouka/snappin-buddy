@@ -7,6 +7,18 @@ import OfferForm from './OfferForm';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 
+async function sendEmail(type, to, data) {
+  try {
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, to, data }),
+    });
+  } catch (e) {
+    console.error('Email error:', e);
+  }
+}
+
 export default function MatchScreen({ theme, setScreen }) {
   const t = useT();
   const isEn = t.map === 'Map';
@@ -141,6 +153,43 @@ export default function MatchScreen({ theme, setScreen }) {
       status: 'pending'
     });
     setAppliedOffers(prev => new Set([...prev, o.title]));
+
+    // Email au poster de l'offre
+    const { data: posterProfile } = await supabase.from('profiles').select('username, role').eq('user_id', o.user_id).single();
+    const { data: posterAuth } = await supabase.from('profiles').select('user_id').eq('user_id', o.user_id).single();
+    if (posterProfile && u.email) {
+      // Récupérer l'email du poster via auth (on envoie à l'email du candidat pour le moment)
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      sendEmail('new_application', currentUser?.email || u.email, {
+        applicantName: myProfile?.username || 'Un créatif',
+        applicantRole: myProfile?.role || '',
+        offerTitle: o.title,
+      });
+    }
+  }
+
+  async function respondCollab(id, status, senderId) {
+    await supabase.from('collabs').update({ status }).eq('id', id);
+    if (status === 'accepted' && user && senderId) {
+      await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: senderId,
+        content: isEn ? '⚡ Collab accepted! When shall we meet?' : '⚡ Collab acceptée ! On se retrouve quand ?'
+      });
+
+      // Email au candidat accepté
+      const collab = received.find(c => c.id === id);
+      if (collab?.senderProfile) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        sendEmail('application_accepted', currentUser?.email || '', {
+          posterName: myProfile?.username || 'Un créatif',
+          offerTitle: collab.message?.replace(/^.*: /, '') || 'une offre',
+        });
+      }
+
+      setScreen('messages');
+    }
+    loadCollabs(user.id);
   }
 
   function getMatchScore(offer) {
@@ -172,15 +221,6 @@ export default function MatchScreen({ theme, setScreen }) {
     return getMatchScore(b) - getMatchScore(a);
   });
 
-  async function respondCollab(id, status, senderId) {
-    await supabase.from('collabs').update({ status }).eq('id', id);
-    if (status === 'accepted' && user && senderId) {
-      await supabase.from('messages').insert({ sender_id: user.id, receiver_id: senderId, content: isEn ? '⚡ Collab accepted! When shall we meet?' : '⚡ Collab acceptée ! On se retrouve quand ?' });
-      setScreen('messages');
-    }
-    loadCollabs(user.id);
-  }
-
   const statusBadge = (status) => {
     if (status === 'accepted') return { label: isEn ? 'Accepted ✓' : 'Accepté ✓', color: '#2ECC71' };
     if (status === 'declined') return { label: isEn ? 'Declined' : 'Refusé', color: '#FF4D4D' };
@@ -209,8 +249,7 @@ export default function MatchScreen({ theme, setScreen }) {
     return (
       <div style={{ marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <div
-            onClick={onViewFull ? () => onViewFull(profile) : undefined}
+          <div onClick={onViewFull ? () => onViewFull(profile) : undefined}
             style={{ width: '40px', height: '40px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', cursor: onViewFull ? 'pointer' : 'default' }}>
             {profile.avatar_url ? <img src={profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
           </div>
@@ -244,11 +283,7 @@ export default function MatchScreen({ theme, setScreen }) {
   }
 
   if (viewingBuddy) return (
-    <BuddyProfileScreen
-      buddy={viewingBuddy}
-      onBack={() => setViewingBuddy(null)}
-      theme={theme}
-    />
+    <BuddyProfileScreen buddy={viewingBuddy} onBack={() => setViewingBuddy(null)} theme={theme} />
   );
 
   if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
