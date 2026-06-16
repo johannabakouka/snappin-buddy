@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/expire-offers",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
