@@ -37,7 +37,7 @@ export default function MapComponent({ theme }) {
   });
 
   const STATUS_FILTERS = [
-    { id: 'all', label: isEn ? 'All' : t.map === 'Mapa' ? 'Todos' : t.map === 'Karte' ? 'Alle' : t.map === 'Mapa' ? 'Todos' : 'Tous' },
+    { id: 'all', label: isEn ? 'All' : t.map === 'Mapa' ? 'Todos' : t.map === 'Karte' ? 'Alle' : t.map === 'Mappa' ? 'Tutti' : 'Tous' },
     { id: 'dispo', label: `🟢 ${isEn ? 'Available' : t.map === 'Mapa' ? 'Disponible' : t.map === 'Karte' ? 'Verfügbar' : 'Dispo'}` },
     { id: 'shoot', label: `🟡 ${isEn ? 'On shoot' : t.map === 'Karte' ? 'Am Drehen' : 'En shoot'}` },
     { id: 'indispo', label: `🔴 ${isEn ? 'Unavailable' : t.map === 'Mapa' ? 'No disponible' : t.map === 'Karte' ? 'Nicht verfügbar' : 'Indispo'}` },
@@ -194,8 +194,8 @@ export default function MapComponent({ theme }) {
             </h3>
             <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', lineHeight: 1.6, marginBottom: '24px' }}>
               {isEn
-                ? "Snappin'Buddy uses your location to show buddies in your area. Your exact position is never shared — it's blurred to ~400m."
-                : "Snappin'Buddy utilise ta position pour afficher les buddies dans ton quartier. Ta position exacte n'est jamais partagée — elle est floutée à ~400m."
+                ? "Snappin'Buddy uses your location to show creatives in your area. Your exact position is never shared — it's blurred to ~400m."
+                : "Snappin'Buddy utilise ta position pour afficher les créatifs dans ton quartier. Ta position exacte n'est jamais partagée — elle est floutée à ~400m."
               }
             </p>
             <button onClick={handleAllow} style={{
@@ -328,7 +328,7 @@ export default function MapComponent({ theme }) {
               fontSize: '13px', fontWeight: '700', cursor: 'pointer',
             }}
           >
-            {isEn ? 'View profile →' : 'Voir le profil →'}
+            {isEn ? 'See profile & create together →' : 'Voir le profil & créer ensemble →'}
           </button>
         </div>
       )}

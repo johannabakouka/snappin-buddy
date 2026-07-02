@@ -57,10 +57,13 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
   const portfolio = buddy?.portfolio_urls || [];
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
-  const statusLabel = buddy?.status === 'shoot' ? (isEn ? 'On shoot' : 'En shoot') : buddy?.status === 'indispo' ? (isEn ? 'Unavailable' : 'Indisponible') : (isEn ? 'Available' : 'Disponible');
+  const statusLabel = buddy?.status === 'shoot'
+    ? (isEn ? 'On shoot' : 'En shoot')
+    : buddy?.status === 'indispo'
+    ? (isEn ? 'Unavailable' : 'Indisponible')
+    : (isEn ? 'Available' : 'Disponible');
   const embedUrl = getVideoEmbed(buddy?.video_url);
 
-  // Traduire le rôle
   const roleObj = ROLES.find(r => r.id === buddy?.role?.toLowerCase());
   const roleLabel = roleObj?.label || buddy?.role || '';
 
@@ -162,20 +165,20 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {sent ? (
           <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#2ECC71', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
-            {isEn ? '✓ Proposal sent!' : '✓ Proposition envoyée !'}
+            {isEn ? '✓ Proposal sent! Let\'s create something beautiful 🎨' : '✓ Proposition envoyée ! Créez quelque chose de beau 🎨'}
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
             <input value={message} onChange={e => setMessage(e.target.value)}
-              placeholder={isEn ? 'Describe your project in a few words...' : 'Décris ton projet en quelques mots...'}
+              placeholder={isEn ? 'Tell them about your project...' : 'Parle-lui de ton projet...'}
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
             <button onClick={sendCollab} disabled={sending} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              {sending ? (isEn ? 'Sending...' : 'Envoi...') : (isEn ? '⚡ Send' : '⚡ Envoyer')}
+              {sending ? (isEn ? 'Sending...' : 'Envoi...') : (isEn ? '⚡ Send proposal' : '⚡ Envoyer ma proposition')}
             </button>
           </div>
         ) : (
           <button onClick={() => setShowInput(true)} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-            {isEn ? '⚡ Propose a collab' : '⚡ Proposer une collab'}
+            {isEn ? '⚡ Propose a collab' : '⚡ Proposer une création ensemble'}
           </button>
         )}
       </div>
