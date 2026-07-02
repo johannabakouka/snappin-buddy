@@ -4,110 +4,110 @@ import { useT } from '../i18n';
 
 export default function WelcomeScreen({ onStart }) {
   const t = useT();
-  const [slide, setSlide] = useState(0);
+  const [current, setCurrent] = useState(0);
   const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
 
-  const SLIDES = [
-    { emoji: '📸', title: t.slide1Title, subtitle: t.slide1Sub, color: '#2ECC71' },
-    { emoji: '🎬', title: t.slide2Title, subtitle: t.slide2Sub, color: '#F0B429' },
-    { emoji: '🤝', title: t.slide3Title, subtitle: t.slide3Sub, color: '#4A9EFF' },
-    { emoji: '✨', title: t.slide4Title, subtitle: t.slide4Sub, color: '#FF6B6B' },
+  const slides = [
+    {
+      emoji: '✨',
+      title: t.slide1Title,
+      sub: t.slide1Sub,
+    },
+    {
+      emoji: '🎨',
+      title: t.slide2Title,
+      sub: t.slide2Sub,
+    },
+    {
+      emoji: '🔒',
+      title: t.slide3Title,
+      sub: t.slide3Sub,
+    },
+    {
+      emoji: '🤝',
+      title: t.slide4Title,
+      sub: t.slide4Sub,
+    },
   ];
 
   function next() {
-    if (slide < SLIDES.length - 1) setSlide(s => s + 1);
+    if (current < slides.length - 1) setCurrent(c => c + 1);
     else onStart();
-  }
-
-  function prev() {
-    if (slide > 0) setSlide(s => s - 1);
   }
 
   function handleTouchStart(e) {
     touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
   }
 
   function handleTouchEnd(e) {
     if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    // Swipe horizontal seulement (pas vertical)
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-      if (dx < 0) next();
-      else prev();
-    }
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (diff > 50) next();
+    else if (diff < -50 && current > 0) setCurrent(c => c - 1);
     touchStartX.current = null;
-    touchStartY.current = null;
   }
 
-  const current = SLIDES[slide];
-
-  const getRgb = (color) => {
-    if (color === '#2ECC71') return '46,204,113';
-    if (color === '#F0B429') return '240,180,41';
-    if (color === '#4A9EFF') return '74,158,255';
-    if (color === '#FF6B6B') return '255,107,107';
-    return '255,255,255';
-  };
+  const slide = slides[current];
+  const isLast = current === slides.length - 1;
 
   return (
     <div
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      style={{ height: '100vh', background: '#0A0A0A', color: 'white', display: 'flex', flexDirection: 'column', padding: '0 0 40px', userSelect: 'none' }}
+      style={{
+        height: '100vh', background: '#0A0A0A', display: 'flex',
+        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '40px 32px', color: 'white', position: 'relative',
+        userSelect: 'none',
+      }}
     >
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px 24px 0' }}>
-        <button onClick={onStart} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
-          {t.skip}
-        </button>
+      <button onClick={onStart} style={{
+        position: 'absolute', top: '24px', right: '24px',
+        background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)',
+        fontSize: '14px', cursor: 'pointer', fontWeight: '600',
+      }}>
+        {t.skip}
+      </button>
+
+      <div style={{ fontSize: '72px', marginBottom: '32px', textAlign: 'center' }}>
+        {slide.emoji}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px', textAlign: 'center' }}>
-        <div style={{ marginBottom: '40px' }}>
-          <img src="/logo.png" alt="Snappin'Buddy" style={{ width: '120px', height: '120px', objectFit: 'contain', marginBottom: '12px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', letterSpacing: '3px', fontWeight: '700' }}>SNAPPIN&apos;BUDDY</p>
-        </div>
+      <h2 style={{
+        fontFamily: 'var(--font-nunito)', fontSize: '26px', fontWeight: '900',
+        textAlign: 'center', marginBottom: '16px', lineHeight: 1.2,
+        color: 'white',
+      }}>
+        {slide.title}
+      </h2>
 
-        <div style={{
-          width: '100px', height: '100px', borderRadius: '28px',
-          background: `rgba(${getRgb(current.color)},0.1)`,
-          border: `1.5px solid ${current.color}33`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '48px', marginBottom: '32px', transition: 'all 0.4s ease',
-        }}>
-          {current.emoji}
-        </div>
+      <p style={{
+        fontSize: '15px', color: 'rgba(255,255,255,0.55)',
+        textAlign: 'center', lineHeight: 1.7, marginBottom: '48px',
+        maxWidth: '300px',
+      }}>
+        {slide.sub}
+      </p>
 
-        <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px', fontFamily: 'var(--font-nunito)', lineHeight: 1.2, color: 'white' }}>
-          {current.title}
-        </h2>
-
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: '300px' }}>
-          {current.subtitle}
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '32px' }}>
-        {SLIDES.map((_, i) => (
-          <div key={i} onClick={() => setSlide(i)} style={{
-            width: i === slide ? '24px' : '8px', height: '8px', borderRadius: '4px',
-            background: i === slide ? current.color : 'rgba(255,255,255,0.2)',
-            transition: 'all 0.3s ease', cursor: 'pointer',
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '40px' }}>
+        {slides.map((_, i) => (
+          <div key={i} onClick={() => setCurrent(i)} style={{
+            width: i === current ? '24px' : '8px', height: '8px',
+            borderRadius: '4px',
+            background: i === current ? 'white' : 'rgba(255,255,255,0.25)',
+            transition: 'all 0.3s', cursor: 'pointer',
           }} />
         ))}
       </div>
 
-      <div style={{ padding: '0 24px' }}>
-        <button onClick={next} style={{
-          width: '100%', padding: '16px', borderRadius: '24px', border: 'none',
-          background: current.color, color: slide === 3 ? 'white' : '#000',
-          fontSize: '15px', fontWeight: '800', cursor: 'pointer', transition: 'background 0.3s ease',
-        }}>
-          {slide < SLIDES.length - 1 ? t.continue : t.join}
-        </button>
-      </div>
+      <button onClick={next} style={{
+        background: 'white', color: 'black', border: 'none',
+        borderRadius: '24px', padding: '16px 40px',
+        fontSize: '15px', fontWeight: '700', cursor: 'pointer',
+        width: '100%', maxWidth: '300px',
+      }}>
+        {isLast ? t.join : t.continue}
+      </button>
     </div>
   );
 }
