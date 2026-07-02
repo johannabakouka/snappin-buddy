@@ -27,10 +27,10 @@ function BoostSuccessContent() {
     <div style={{ height: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '24px', textAlign: 'center' }}>
       <div style={{ fontSize: '64px' }}>🚀</div>
       <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '900' }}>
-        {done ? 'Offre boostée !' : 'Activation...'}
+        {done ? 'Projet boosté !' : 'Activation...'}
       </h1>
       <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
-        {done ? `Votre offre est en tête du feed pendant ${days} jour${days > 1 ? 's' : ''} 🎉` : ''}
+        {done ? `Ton projet est en tête du feed pendant ${days} jour${days > 1 ? 's' : ''} 🎨` : ''}
       </p>
       {done && <p style={{ color: '#2ECC71', fontSize: '13px' }}>Redirection automatique...</p>}
     </div>
