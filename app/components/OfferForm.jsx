@@ -101,7 +101,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>
-            {isEdit ? (isEn ? 'Edit brief' : "Modifier l'offre") : (isEn ? 'New brief' : 'Nouvelle offre')}
+            {isEdit ? (isEn ? 'Edit project' : 'Modifier le projet') : (isEn ? 'New project' : 'Nouveau projet')}
           </h2>
         </div>
 
@@ -112,7 +112,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
         <input
           value={offerTitle}
           onChange={e => e.target.value.length <= TITLE_MAX && setOfferTitle(e.target.value)}
-          placeholder={isEn ? 'Brief title *' : "Titre de l'offre *"}
+          placeholder={isEn ? 'Project title *' : 'Titre du projet *'}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', outline: 'none' }}
         />
 
@@ -123,13 +123,13 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
         <textarea
           value={offerDesc}
           onChange={e => e.target.value.length <= DESC_MAX && setOfferDesc(e.target.value)}
-          placeholder={isEn ? 'Project description...' : 'Description du projet...'}
+          placeholder={isEn ? 'Describe your project...' : 'Décris ton projet...'}
           rows={3}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none', outline: 'none' }}
         />
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-          {isEn ? 'ROLES NEEDED *' : 'RÔLES RECHERCHÉS *'}
+          {isEn ? 'WHO ARE YOU LOOKING FOR? *' : 'QUI CHERCHES-TU ? *'}
           {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
         </p>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
@@ -207,7 +207,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           disabled={offerLoading || !offerTitle || offerRoles.length === 0}
           style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}
         >
-          {offerLoading ? (isEn ? 'Saving...' : 'Sauvegarde...') : isEdit ? (isEn ? '✓ Save changes' : '✓ Enregistrer') : (isEn ? '⚡ Publish brief' : "⚡ Publier l'offre")}
+          {offerLoading ? (isEn ? 'Launching...' : 'Lancement...') : isEdit ? (isEn ? '✓ Save changes' : '✓ Enregistrer') : (isEn ? '⚡ Launch project' : '⚡ Lancer le projet')}
         </button>
 
         {isEdit && (
@@ -215,7 +215,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
             onClick={onCloseOffer}
             style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(255,77,77,0.4)', background: 'transparent', color: '#FF4D4D', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
           >
-            🔒 {isEn ? 'Close this brief' : 'Fermer cette offre'}
+            🔒 {isEn ? 'Close project' : 'Fermer le projet'}
           </button>
         )}
       </div>

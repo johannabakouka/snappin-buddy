@@ -149,23 +149,17 @@ export default function MatchScreen({ theme, setScreen }) {
     await supabase.from('collabs').insert({
       sender_id: u.id,
       receiver_id: o.user_id,
-      message: `${isEn ? 'Application for' : 'Candidature pour'} : ${o.title}`,
+      message: `Je me propose pour : ${o.title}`,
       status: 'pending'
     });
     setAppliedOffers(prev => new Set([...prev, o.title]));
 
-    // Email au poster de l'offre
-    const { data: posterProfile } = await supabase.from('profiles').select('username, role').eq('user_id', o.user_id).single();
-    const { data: posterAuth } = await supabase.from('profiles').select('user_id').eq('user_id', o.user_id).single();
-    if (posterProfile && u.email) {
-      // Récupérer l'email du poster via auth (on envoie à l'email du candidat pour le moment)
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      sendEmail('new_application', currentUser?.email || u.email, {
-        applicantName: myProfile?.username || 'Un créatif',
-        applicantRole: myProfile?.role || '',
-        offerTitle: o.title,
-      });
-    }
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    sendEmail('new_application', currentUser?.email || u.email, {
+      applicantName: myProfile?.username || 'Un créatif',
+      applicantRole: myProfile?.role || '',
+      offerTitle: o.title,
+    });
   }
 
   async function respondCollab(id, status, senderId) {
@@ -174,16 +168,15 @@ export default function MatchScreen({ theme, setScreen }) {
       await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: senderId,
-        content: isEn ? '⚡ Collab accepted! When shall we meet?' : '⚡ Collab acceptée ! On se retrouve quand ?'
+        content: isEn ? '⚡ Let\'s create something beautiful together! When shall we meet?' : '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?'
       });
 
-      // Email au candidat accepté
       const collab = received.find(c => c.id === id);
       if (collab?.senderProfile) {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         sendEmail('application_accepted', currentUser?.email || '', {
           posterName: myProfile?.username || 'Un créatif',
-          offerTitle: collab.message?.replace(/^.*: /, '') || 'une offre',
+          offerTitle: collab.message?.replace(/^.*: /, '') || 'un projet',
         });
       }
 
@@ -302,7 +295,7 @@ export default function MatchScreen({ theme, setScreen }) {
         <button onClick={() => setSelectedOffer(null)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color }}>{selectedOffer.title}</p>
-          <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {isEn ? 'application(s)' : 'candidature(s)'}</p>
+          <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {isEn ? 'proposal(s)' : 'proposition(s)'}</p>
         </div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
@@ -311,8 +304,8 @@ export default function MatchScreen({ theme, setScreen }) {
         ) : offerCandidates.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: '60px' }}>
             <p style={{ fontSize: '32px', marginBottom: '12px' }}>📭</p>
-            <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'No applications yet' : 'Pas encore de candidatures'}</p>
-            <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Share your offer to get applications!' : 'Partage ton offre pour recevoir des candidatures !'}</p>
+            <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'No proposals yet' : 'Pas encore de propositions'}</p>
+            <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Share your project to get proposals!' : 'Partage ton projet pour recevoir des propositions !'}</p>
           </div>
         ) : (
           offerCandidates.map(c => (
@@ -365,7 +358,7 @@ export default function MatchScreen({ theme, setScreen }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '1px 6px', fontWeight: '700' }}>🚀 Boostée</span>}
+                            {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '1px 6px', fontWeight: '700' }}>🚀 Boosté</span>}
                             <p style={{ fontWeight: '800', color: theme?.color }}>{o.title}</p>
                           </div>
                           {o.role_needed && (
@@ -381,10 +374,10 @@ export default function MatchScreen({ theme, setScreen }) {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                           <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
-                            {o.status === 'open' ? (isEn ? 'Open' : 'Ouverte') : (isEn ? 'Closed' : 'Fermée')}
+                            {o.status === 'open' ? (isEn ? 'Open' : 'Ouvert') : (isEn ? 'Closed' : 'Fermé')}
                           </span>
                           <span style={{ fontSize: '10px', color: subText }}>
-                            {isEn ? 'See applications →' : 'Voir candidatures →'}
+                            {isEn ? 'See proposals →' : 'Voir propositions →'}
                           </span>
                           <button onClick={e => { e.stopPropagation(); setEditingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: theme?.color, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                             ✏️ {isEn ? 'Edit' : 'Modifier'}
@@ -430,7 +423,7 @@ export default function MatchScreen({ theme, setScreen }) {
             {displayedOffers.length > 0 ? (
               <>
                 <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>
-                  {sortBy === 'match' ? (isEn ? 'MATCHING YOUR PROFILE' : 'CORRESPOND À TON PROFIL') : t.offersNow}
+                  {sortBy === 'match' ? (isEn ? 'MATCHING YOUR PROFILE' : 'CORRESPOND À TON UNIVERS') : t.offersNow}
                 </p>
                 {displayedOffers.map(o => {
                   const score = getMatchScore(o);
@@ -471,7 +464,7 @@ export default function MatchScreen({ theme, setScreen }) {
                       {o.status === 'open' ? (
                         hasApplied ? (
                           <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(46,204,113,0.1)' : 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>
-                            ✓ {isEn ? 'Applied' : 'Déjà postulé'}
+                            {t.alreadyApplied}
                           </div>
                         ) : (
                           <button onClick={() => applyToOffer(o)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
@@ -480,7 +473,7 @@ export default function MatchScreen({ theme, setScreen }) {
                         )
                       ) : (
                         <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>
-                          🔒 {isEn ? 'No longer accepting applications' : "N'accepte plus de candidatures"}
+                          {t.projectFull}
                         </div>
                       )}
                     </div>
@@ -489,7 +482,7 @@ export default function MatchScreen({ theme, setScreen }) {
               </>
             ) : (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
-                <p style={{ fontSize: '32px', marginBottom: '12px' }}>📋</p>
+                <p style={{ fontSize: '32px', marginBottom: '12px' }}>🎨</p>
                 <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{t.noOffers}</p>
                 <p style={{ color: subText, fontSize: '13px' }}>{t.beFirst}</p>
               </div>
