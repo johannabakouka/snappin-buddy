@@ -9,6 +9,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [user, setUser] = useState(null);
+  const [buddyStatus, setBuddyStatus] = useState(buddy?.status || 'dispo');
   const [showQRReminder, setShowQRReminder] = useState(false);
   const bottomRef = useRef(null);
   const channelRef = useRef(null);
@@ -16,12 +17,20 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
   const buddyUserId = buddy?.user_id || buddy?.id;
 
+  const statusColor = buddyStatus === 'shoot' ? '#FFD700' : buddyStatus === 'indispo' ? '#FF4D4D' : '#2ECC71';
+  const statusLabel = buddyStatus === 'shoot'
+    ? (isEn ? 'On shoot' : 'En shoot')
+    : buddyStatus === 'indispo'
+    ? (isEn ? 'Unavailable' : 'Indisponible')
+    : (isEn ? 'Available' : 'Disponible');
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
       if (data.user && buddyUserId) {
         loadMessages(data.user.id, buddyUserId);
         subscribeToMessages(data.user.id, buddyUserId);
+        loadBuddyStatus();
       }
     });
     return () => {
@@ -32,6 +41,12 @@ export default function ChatScreen({ buddy, onBack, theme }) {
     };
   }, [buddy]);
 
+  async function loadBuddyStatus() {
+    if (!buddyUserId) return;
+    const { data } = await supabase.from('profiles').select('status').eq('user_id', buddyUserId).single();
+    if (data?.status) setBuddyStatus(data.status);
+  }
+
   async function loadMessages(myId, buddyId) {
     const { data } = await supabase
       .from('messages')
@@ -40,7 +55,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
       .order('created_at', { ascending: true });
     if (data) {
       setMessages(data);
-      if (data.length === 1 && (data[0].content.includes('Collab acceptée') || data[0].content.includes('Collab accepted'))) {
+      if (data.length === 1 && (data[0].content.includes('Collab acceptée') || data[0].content.includes('Collab accepted') || data[0].content.includes('Créons'))) {
         setShowQRReminder(true);
       }
     }
@@ -63,7 +78,6 @@ export default function ChatScreen({ buddy, onBack, theme }) {
           (msg.sender_id === buddyId && msg.receiver_id === myId)
         ) {
           setMessages(prev => {
-            // Éviter les doublons
             if (prev.find(m => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
@@ -98,12 +112,14 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
       <div style={{ padding: '16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}` }}>
           {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: '700', fontSize: '15px', color }}>{buddy?.username}</div>
-          <div style={{ color: '#2ECC71', fontSize: '11px', fontWeight: '600' }}>● {isEn ? 'Online' : 'En ligne'}</div>
+          <div style={{ color: statusColor, fontSize: '11px', fontWeight: '600' }}>
+            ● {statusLabel}
+          </div>
         </div>
       </div>
 
@@ -129,14 +145,19 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         )}
 
         {messages.length === 0 && (
-          <p style={{ color: subText, textAlign: 'center', marginTop: '40px' }}>
-            {isEn ? 'Start the conversation!' : 'Commence la conversation !'}
-          </p>
+          <div style={{ textAlign: 'center', marginTop: '60px' }}>
+            <p style={{ fontSize: '32px', marginBottom: '12px' }}>🎨</p>
+            <p style={{ color: subText, fontSize: '14px', lineHeight: 1.6 }}>
+              {isEn
+                ? "It all starts here... let's create something beautiful!"
+                : 'Tout commence ici... créez quelque chose de beau !'}
+            </p>
+          </div>
         )}
 
         {messages.map(m => {
           const isMe = m.sender_id === user?.id;
-          const isSystem = m.content.includes('Collab acceptée') || m.content.includes('Collab accepted');
+          const isSystem = m.content.includes('Collab acceptée') || m.content.includes('Collab accepted') || m.content.includes('Créons');
           if (isSystem) return (
             <div key={m.id} style={{ textAlign: 'center', margin: '8px 0' }}>
               <span style={{ fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(46,204,113,0.08)' : 'rgba(46,204,113,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(46,204,113,0.2)' }}>
