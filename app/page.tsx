@@ -11,6 +11,54 @@ import AuthScreen from './components/AuthScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
 
+function LoadingScreen() {
+  const [dots, setDots] = useState('');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(d => d.length >= 3 ? '' : d + '.');
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{
+      height: '100vh', background: '#0A0A0A',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: '20px',
+    }}>
+      <div style={{
+        width: '72px', height: '72px', borderRadius: '50%',
+        background: 'white', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontSize: '28px', fontWeight: '900',
+        color: 'black', boxShadow: '0 0 40px rgba(255,255,255,0.15)',
+        animation: 'pulse 2s ease-in-out infinite',
+      }}>
+        S
+      </div>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{
+          fontFamily: 'var(--font-nunito)', fontSize: '22px',
+          fontWeight: '900', color: 'white', letterSpacing: '-0.3px',
+          marginBottom: '8px',
+        }}>
+          Snappin&apos;Buddy
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>
+          créez quelque chose de beau{dots}
+        </p>
+      </div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.85; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function Home() {
   const [screen, setScreen] = useState(() => {
     if (typeof window === 'undefined') return 'map';
@@ -69,7 +117,11 @@ export default function Home() {
     });
   }, []);
 
-  if (loading) return <div style={{ height: '100vh', background: '#0A0A0A' }}/>;
+  if (loading) return (
+    <div style={{ maxWidth: '390px', margin: '0 auto' }}>
+      <LoadingScreen />
+    </div>
+  );
 
   if (!user) {
     if (showWelcome) return (
