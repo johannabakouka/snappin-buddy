@@ -5,6 +5,7 @@ import Header from './Header';
 import QRScreen from './QRScreen';
 import OfferForm from './OfferForm';
 import BuddyProfileScreen from './BuddyProfileScreen';
+import ShareCard from './ShareCard';
 import { useT, useRoles, useUnivers } from '../i18n';
 
 async function sendEmail(type, to, data) {
@@ -46,6 +47,7 @@ export default function MatchScreen({ theme, setScreen }) {
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [appliedOffers, setAppliedOffers] = useState(new Set());
   const [viewingBuddy, setViewingBuddy] = useState(null);
+  const [sharingOffer, setSharingOffer] = useState(null);
 
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
@@ -168,7 +170,7 @@ export default function MatchScreen({ theme, setScreen }) {
       await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: senderId,
-        content: isEn ? '⚡ Let\'s create something beautiful together! When shall we meet?' : '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?'
+        content: isEn ? "⚡ Let's create something beautiful together! When shall we meet?" : '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?'
       });
 
       const collab = received.find(c => c.id === id);
@@ -274,6 +276,8 @@ export default function MatchScreen({ theme, setScreen }) {
       </div>
     );
   }
+
+  if (sharingOffer) return <ShareCard offer={sharingOffer} onClose={() => setSharingOffer(null)} />;
 
   if (viewingBuddy) return (
     <BuddyProfileScreen buddy={viewingBuddy} onBack={() => setViewingBuddy(null)} theme={theme} />
@@ -382,6 +386,9 @@ export default function MatchScreen({ theme, setScreen }) {
                           <button onClick={e => { e.stopPropagation(); setEditingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: theme?.color, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                             ✏️ {isEn ? 'Edit' : 'Modifier'}
                           </button>
+                          <button onClick={e => { e.stopPropagation(); setSharingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}>
+                            📸 {isEn ? 'Share' : 'Partager'}
+                          </button>
                           {o.status === 'open' && !isBoosted && (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button onClick={e => { e.stopPropagation(); boostOffer(o, 1, 199); }} style={{ background: 'linear-gradient(135deg, #F0B429, #FF6B35)', border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
@@ -462,15 +469,20 @@ export default function MatchScreen({ theme, setScreen }) {
                         {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
                       </div>
                       {o.status === 'open' ? (
-                        hasApplied ? (
-                          <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(46,204,113,0.1)' : 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>
-                            {t.alreadyApplied}
-                          </div>
-                        ) : (
-                          <button onClick={() => applyToOffer(o)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-                            {t.applyOffer}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {hasApplied ? (
+                            <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(46,204,113,0.1)' : 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>
+                              {t.alreadyApplied}
+                            </div>
+                          ) : (
+                            <button onClick={() => applyToOffer(o)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                              {t.applyOffer}
+                            </button>
+                          )}
+                          <button onClick={() => setSharingOffer(o)} style={{ width: '100%', padding: '8px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, background: 'transparent', color: subText, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                            📸 {isEn ? 'Share on story' : 'Partager en story'}
                           </button>
-                        )
+                        </div>
                       ) : (
                         <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>
                           {t.projectFull}
