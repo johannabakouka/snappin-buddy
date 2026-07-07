@@ -16,7 +16,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   const steps = [
     { key: 'avatar', label: isEn ? 'Profile photo' : 'Photo de profil', done: !!profile?.avatar_url, pts: 25 },
     { key: 'role', label: isEn ? 'Role' : 'Rôle', done: !!profile?.role, pts: 25 },
-    { key: 'bio', label: isEn ? 'Pitch' : 'Pitch', done: !!profile?.bio, pts: 20 },
+    { key: 'bio', label: 'Pitch', done: !!profile?.bio, pts: 20 },
     { key: 'univers', label: isEn ? 'Universe' : 'Univers', done: (profile?.styles || '').trim().length > 0, pts: 20 },
     { key: 'zone', label: isEn ? 'Area' : 'Zone', done: !!profile?.zone, pts: 10 },
   ];
@@ -26,20 +26,28 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
 
   let message, messageColor;
   if (score < 50) {
-    message = isEn ? 'Complete your profile to be found more easily!' : 'Complète ton profil pour être trouvé plus facilement !';
+    message = isEn
+      ? 'Complete your profile to be found more easily!'
+      : 'Complète ton profil pour être trouvé plus facilement !';
     messageColor = '#FF4D4D';
   } else if (score < 80) {
-    message = isEn ? 'Good start! The more complete, the more you match' : 'Bon début ! Plus ton profil est riche, plus tu matches';
+    message = isEn
+      ? 'Good start! The more complete, the more you match'
+      : 'Bon début ! Plus ton profil est riche, plus tu matches';
     messageColor = '#FFD700';
   } else if (score < 100) {
     message = isEn ? 'Almost perfect!' : 'Presque parfait !';
     messageColor = '#FFD700';
   } else {
-    message = isEn ? 'Complete profile 🔥 Ready to be found!' : 'Profil complet 🔥 Prêt à être trouvé !';
+    message = isEn
+      ? 'Complete profile 🔥 Ready to create something beautiful!'
+      : 'Profil complet 🔥 Prêt à créer quelque chose de beau !';
     messageColor = '#2ECC71';
   }
 
   const barColor = score < 50 ? '#FF4D4D' : score < 80 ? '#FFD700' : '#2ECC71';
+
+  const scoreLabel = isEn ? 'Profile strength' : 'Force du profil';
 
   return (
     <div style={{
@@ -48,9 +56,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
       border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <span style={{ fontSize: '12px', fontWeight: '700', color: theme.color }}>
-          {isEn ? 'Profile strength' : 'Force du profil'}
-        </span>
+        <span style={{ fontSize: '12px', fontWeight: '700', color: theme.color }}>{scoreLabel}</span>
         <span style={{ fontSize: '13px', fontWeight: '900', color: barColor }}>{score}%</span>
       </div>
 
