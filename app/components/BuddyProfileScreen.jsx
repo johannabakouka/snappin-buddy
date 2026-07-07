@@ -52,6 +52,9 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const [sent, setSent] = useState(false);
   const [message, setMessage] = useState('');
   const [showInput, setShowInput] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSent, setReportSent] = useState(false);
 
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
@@ -80,6 +83,29 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
       setSent(true);
     }
     setSending(false);
+  }
+
+  async function sendReport() {
+    if (!reportReason.trim()) return;
+    try {
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'report',
+          to: 'ateliers777.contact@gmail.com',
+          data: {
+            reportedUser: buddy?.username,
+            reportedHandle: buddy?.handle,
+            reportedId: buddy?.user_id,
+            reason: reportReason,
+          },
+        }),
+      });
+      setReportSent(true);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   return (
@@ -165,7 +191,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {sent ? (
           <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#2ECC71', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
-            {isEn ? '✓ Proposal sent! Let\'s create something beautiful 🎨' : '✓ Proposition envoyée ! Créez quelque chose de beau 🎨'}
+            {isEn ? "✓ Proposal sent! Let's create something beautiful 🎨" : '✓ Proposition envoyée ! Créez quelque chose de beau 🎨'}
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
@@ -181,6 +207,52 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
             {isEn ? '⚡ Propose a collab' : '⚡ Proposer une création ensemble'}
           </button>
         )}
+
+        {/* Signalement */}
+        <div style={{ marginTop: '24px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px' }}>
+          {!showReport ? (
+            <button onClick={() => setShowReport(true)} style={{ background: 'none', border: 'none', color: subText, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 auto' }}>
+              🚩 {isEn ? 'Report this user' : 'Signaler cet utilisateur'}
+            </button>
+          ) : reportSent ? (
+            <p style={{ color: '#2ECC71', fontSize: '13px', textAlign: 'center', fontWeight: '600' }}>
+              ✓ {isEn ? 'Report sent, thank you.' : 'Signalement envoyé, merci.'}
+            </p>
+          ) : (
+            <div>
+              <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', textAlign: 'center' }}>
+                {isEn ? 'Why are you reporting this user?' : 'Pourquoi tu signales cet utilisateur ?'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                {[
+                  isEn ? 'Inappropriate behavior' : 'Comportement inapproprié',
+                  isEn ? 'Fake profile' : 'Faux profil',
+                  isEn ? 'Spam' : 'Spam',
+                  isEn ? 'Harassment' : 'Harcèlement',
+                  isEn ? 'Other' : 'Autre',
+                ].map(reason => (
+                  <button key={reason} onClick={() => setReportReason(reason)} style={{
+                    padding: '10px 14px', borderRadius: '12px', textAlign: 'left',
+                    border: `1px solid ${reportReason === reason ? '#FF4D4D' : (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                    background: reportReason === reason ? 'rgba(255,77,77,0.1)' : 'transparent',
+                    color: reportReason === reason ? '#FF4D4D' : subText,
+                    fontSize: '13px', cursor: 'pointer', fontWeight: reportReason === reason ? '700' : '400',
+                  }}>
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => { setShowReport(false); setReportReason(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: subText, fontSize: '13px', cursor: 'pointer' }}>
+                  {isEn ? 'Cancel' : 'Annuler'}
+                </button>
+                <button onClick={sendReport} disabled={!reportReason} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: reportReason ? '#FF4D4D' : 'rgba(255,77,77,0.3)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: reportReason ? 'pointer' : 'default' }}>
+                  {isEn ? 'Send report' : 'Envoyer'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

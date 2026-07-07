@@ -102,6 +102,21 @@ export async function POST(req: NextRequest) {
       `;
     }
 
+    else if (type === 'report') {
+      subject = `🚩 Signalement : ${data.reportedUser} (${data.reportedHandle})`;
+      html = `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #0A0A0A; color: white; border-radius: 16px;">
+          <h1 style="font-size: 24px; font-weight: 900; margin-bottom: 8px;">🚩 Nouveau signalement</h1>
+          <div style="background: #1A1A1A; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+            <p style="color: white; font-weight: 700; margin-bottom: 4px;">${data.reportedUser} (${data.reportedHandle})</p>
+            <p style="color: #888; font-size: 13px;">ID : ${data.reportedId}</p>
+          </div>
+          <p style="font-size: 14px; color: #FF4D4D; font-weight: 700; margin-bottom: 24px;">Raison : ${data.reason}</p>
+          <p style="color: #444; font-size: 11px; text-align: center; margin-top: 24px;">Snappin'Buddy · Ateliers 777 · Paris</p>
+        </div>
+      `;
+    }
+
     if (!subject) return NextResponse.json({ error: 'Unknown email type' }, { status: 400 });
 
     const { data: result, error } = await resend.emails.send({
