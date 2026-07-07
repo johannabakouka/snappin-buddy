@@ -69,7 +69,7 @@ Aucune publicité ciblée n'est utilisée.`,
 · Afficher ton profil aux autres créatifs
 · Te mettre en contact avec des collaborateurs
 · Améliorer l'expérience de l'application
-· Envoyer des notifications par email (candidatures, offres)
+· Envoyer des notifications par email (propositions, projets)
 
 Ta position est volontairement floutée de ~400m pour protéger ta vie privée. Elle n'est jamais partagée avec précision.
 
@@ -110,12 +110,12 @@ Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
 Durée de conservation des données : jusqu'à suppression du compte + 30 jours de sauvegarde.`,
     },
     {
-      title: '⏰ Durée de vie des offres',
-      content: `Les offres publiées sur Snappin'Buddy expirent automatiquement après 30 jours.
+      title: '⏰ Durée de vie des projets',
+      content: `Les projets publiés sur Snappin'Buddy expirent automatiquement après 30 jours.
 
-Une offre expirée reste visible avec le badge "N'accepte plus de candidatures" mais n'apparaît plus dans le feed actif. Tu peux la rouvrir gratuitement à tout moment.
+Un projet expiré reste visible avec le badge "Projet complet" mais n'apparaît plus dans le feed actif. Tu peux le rouvrir gratuitement à tout moment.
 
-Le Boost (payant) est une option de visibilité distincte : il remet ton offre en tête du feed pendant 1 ou 7 jours, indépendamment de la date d'expiration.`,
+Le Boost (payant) est une option de visibilité distincte : il remet ton projet en tête du feed pendant 1 ou 7 jours, indépendamment de la date d'expiration.`,
     },
     {
       title: '🤝 Responsabilité des rencontres',
@@ -136,7 +136,7 @@ Snappin'Buddy et Ateliers 777 ne sauraient être tenus responsables des dommages
 
 Snappin'Buddy ne stocke jamais tes données bancaires. Toutes les transactions sont chiffrées et sécurisées par Stripe.
 
-Les achats (boost d'offre) sont non remboursables une fois activés, sauf défaut technique avéré.`,
+Les achats (boost de projet) sont non remboursables une fois activés, sauf défaut technique avéré.`,
     },
     {
       title: '📝 Modification des CGU',
@@ -180,11 +180,10 @@ Juridiction compétente : Tribunaux de Paris`,
           </div>
         ))}
 
-        {/* Suppression de compte */}
         <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid rgba(255,77,77,0.2)` }}>
           <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>🗑 Supprimer mon compte</p>
           <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6, marginBottom: '14px' }}>
-            La suppression est immédiate et irréversible. Toutes tes données (profil, messages, offres, candidatures) seront définitivement effacées conformément au RGPD.
+            La suppression est immédiate et irréversible. Toutes tes données (profil, messages, projets, propositions) seront définitivement effacées conformément au RGPD.
           </p>
           {!confirm ? (
             <button onClick={() => setConfirm(true)} style={{
@@ -220,7 +219,7 @@ Juridiction compétente : Tribunaux de Paris`,
         </div>
 
         <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginTop: '8px', lineHeight: 1.6 }}>
-          Snappin&apos;Buddy · Ateliers 777 · SIRET 995 320 264 00014 · Paris 🗺
+          Snappin&apos;Buddy · Ateliers 777 · SIRET 995 320 264 00014 · 59 rue de Ponthieu, 75008 Paris 🗺
         </p>
       </div>
     </div>
