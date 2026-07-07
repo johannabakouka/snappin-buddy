@@ -58,7 +58,7 @@ export default function OnboardingScreen({ user, onComplete }) {
     setLoading(true);
     setError('');
 
-    const { UNIVERS_FR, UNIVERS_EN } = await import('./constants').catch(() => import('../constants'));
+    const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const universToSave = selectedUnivers.map(label => {
       if (!isEn) return label;
       const idx = UNIVERS_EN.indexOf(label);
@@ -112,7 +112,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             <input
               value={username}
               onChange={e => handleUsernameChange(e.target.value)}
-              placeholder={isEn ? 'Sofia, Alex, Luca...' : 'Sofia, Alex, Luca...'}
+              placeholder='Sofia, Alex, Luca...'
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '15px', boxSizing: 'border-box', outline: 'none' }}
             />
           </div>
@@ -146,7 +146,10 @@ export default function OnboardingScreen({ user, onComplete }) {
           {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
           <button
-            onClick={() => { if (username && handle) { setError(''); setStep(2); } else setError(isEn ? 'Fill in your name and handle first.' : 'Remplis ton prénom et ton handle d\'abord.'); }}
+            onClick={() => {
+              if (username && handle) { setError(''); setStep(2); }
+              else setError(isEn ? 'Fill in your name and handle first.' : "Remplis ton prénom et ton handle d'abord.");
+            }}
             style={{ width: '100%', padding: '16px', borderRadius: '24px', border: 'none', background: username && handle ? 'white' : 'rgba(255,255,255,0.15)', color: username && handle ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: 'auto' }}
           >
             {t.continue}
@@ -183,7 +186,10 @@ export default function OnboardingScreen({ user, onComplete }) {
           <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
             <button onClick={() => setStep(1)} style={{ padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>
             <button
-              onClick={() => { if (selectedRole) { setError(''); setStep(3); } else setError(isEn ? 'Choose a role.' : 'Choisis un rôle.'); }}
+              onClick={() => {
+                if (selectedRole) { setError(''); setStep(3); }
+                else setError(isEn ? 'Choose a role.' : 'Choisis un rôle.');
+              }}
               style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: selectedRole ? 'white' : 'rgba(255,255,255,0.15)', color: selectedRole ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
             >
               {t.continue}
