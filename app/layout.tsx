@@ -45,6 +45,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="SnappinBuddy" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="manifest" href="/manifest.json" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js');
+            });
+          }
+        `}} />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
