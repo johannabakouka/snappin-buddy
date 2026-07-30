@@ -28,15 +28,16 @@ function LoadingScreen() {
       alignItems: 'center', justifyContent: 'center',
       gap: '20px',
     }}>
-      <div style={{
-        width: '72px', height: '72px', borderRadius: '50%',
-        background: 'white', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', fontSize: '28px', fontWeight: '900',
-        color: 'black', boxShadow: '0 0 40px rgba(255,255,255,0.15)',
-        animation: 'pulse 2s ease-in-out infinite',
-      }}>
-        S
-      </div>
+      <img
+        src="/logo.png"
+        alt="Snappin'Buddy"
+        style={{
+          width: '100px', height: '100px',
+          borderRadius: '24px', objectFit: 'cover',
+          boxShadow: '0 0 40px rgba(255,255,255,0.1)',
+          animation: 'pulse 2s ease-in-out infinite',
+        }}
+      />
       <div style={{ textAlign: 'center' }}>
         <p style={{
           fontFamily: 'var(--font-nunito)', fontSize: '22px',
