@@ -1,6 +1,6 @@
 {
-  "name": "Snappin'Buddy",
-  "short_name": "SnappinBuddy",
+  "name": "Snappin\u2019Buddy",
+  "short_name": "Snappin\u2019Buddy",
   "description": "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
   "start_url": "/",
   "display": "standalone",
