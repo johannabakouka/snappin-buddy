@@ -93,32 +93,59 @@ export default function Home() {
   };
 
   useEffect(() => {
+    // Essaie de récupérer la session depuis le cache local d'abord
+    const cachedUser = localStorage.getItem('sb_user');
+    if (cachedUser) {
+      try {
+        const parsed = JSON.parse(cachedUser);
+        setUser(parsed);
+      } catch (e) {}
+    }
+
     supabase.auth.getSession().then(async ({ data }) => {
       const u: any = data.session?.user ?? null;
       setUser(u);
       if (u) {
+        // Cache l'user pour la prochaine ouverture
+        localStorage.setItem('sb_user', JSON.stringify(u));
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
         setProfile(p);
+        if (p) localStorage.setItem('sb_profile', JSON.stringify(p));
+      } else {
+        localStorage.removeItem('sb_user');
+        localStorage.removeItem('sb_profile');
       }
       setLoading(false);
     });
+
+    // Cache le profil aussi
+    const cachedProfile = localStorage.getItem('sb_profile');
+    if (cachedProfile) {
+      try {
+        setProfile(JSON.parse(cachedProfile));
+        setLoading(false);
+      } catch (e) {}
+    }
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       const u: any = session?.user ?? null;
       setUser(u);
       if (u) {
-        setLoading(true);
+        localStorage.setItem('sb_user', JSON.stringify(u));
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
         setProfile(p);
+        if (p) localStorage.setItem('sb_profile', JSON.stringify(p));
         setLoading(false);
       } else {
+        localStorage.removeItem('sb_user');
+        localStorage.removeItem('sb_profile');
         setProfile(null);
         setLoading(false);
       }
     });
   }, []);
 
-  if (loading) return (
+  if (loading && !localStorage.getItem('sb_user')) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
     </div>
@@ -142,7 +169,10 @@ export default function Home() {
 
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
-      <OnboardingScreen user={user} onComplete={() => window.location.reload()} />
+      <OnboardingScreen user={user} onComplete={() => {
+        localStorage.removeItem('sb_profile');
+        window.location.reload();
+      }} />
     </div>
   );
 
@@ -152,7 +182,10 @@ export default function Home() {
       {screen === 'explore' && <ExploreScreen theme={theme} />}
       {screen === 'match' && <MatchScreen theme={theme} setScreen={setScreen} />}
       {screen === 'messages' && <MessagesScreen theme={theme} />}
-      {screen === 'profile' && <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={() => window.location.reload()} />}
+      {screen === 'profile' && <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={() => {
+        localStorage.removeItem('sb_profile');
+        window.location.reload();
+      }} />}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />
     </div>
   );
