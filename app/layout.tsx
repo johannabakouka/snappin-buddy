@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Snappin'Buddy",
+  title: "Snappin\u2019Buddy",
   description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     icon: "/logo.png",
   },
   openGraph: {
-    title: "Snappin'Buddy",
+    title: "Snappin\u2019Buddy",
     description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
     type: "website",
     url: "https://snappin-buddy.vercel.app",
@@ -49,7 +49,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Snappin'Buddy" />
+        <meta name="apple-mobile-web-app-title" content="Snappin&#8217;Buddy" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="manifest" href="/manifest.json" />
         <script dangerouslySetInnerHTML={{ __html: `
