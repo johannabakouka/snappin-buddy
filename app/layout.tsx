@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Nunito } from "next/font/google";
 import "./globals.css";
 
@@ -8,11 +8,19 @@ const nunito = Nunito({
   weight: ["400", "700", "900"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0A0A0A",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Snappin'Buddy",
   description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
   manifest: "/manifest.json",
-  themeColor: "#0A0A0A",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -38,7 +46,6 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${nunito.variable} h-full antialiased`}>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

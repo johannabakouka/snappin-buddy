@@ -61,64 +61,25 @@ function LoadingScreen() {
 }
 
 export default function Home() {
-  const [screen, setScreen] = useState(() => {
-    if (typeof window === 'undefined') return 'map';
-    return localStorage.getItem('lastScreen') || 'map';
-  });
+  const [screen, setScreen] = useState('map');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !localStorage.getItem('welcomeSeen');
-  });
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem('darkMode');
-    return saved !== null ? saved === 'true' : true;
-  });
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('darkMode', String(darkMode));
-  }, [darkMode]);
+    // Init depuis localStorage côté client uniquement
+    const savedScreen = localStorage.getItem('lastScreen') || 'map';
+    const savedDark = localStorage.getItem('darkMode');
+    const savedWelcome = !localStorage.getItem('welcomeSeen');
 
-  useEffect(() => {
-    localStorage.setItem('lastScreen', screen);
-  }, [screen]);
+    setScreen(savedScreen);
+    setDarkMode(savedDark !== null ? savedDark === 'true' : true);
+    setShowWelcome(savedWelcome);
 
-  const theme = {
-    bg: darkMode ? '#0A0A0A' : '#F5F5F5',
-    color: darkMode ? 'white' : '#111',
-    dark: darkMode,
-  };
-
-  useEffect(() => {
-    // Essaie de récupérer la session depuis le cache local d'abord
-    const cachedUser = localStorage.getItem('sb_user');
-    if (cachedUser) {
-      try {
-        const parsed = JSON.parse(cachedUser);
-        setUser(parsed);
-      } catch (e) {}
-    }
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      const u: any = data.session?.user ?? null;
-      setUser(u);
-      if (u) {
-        // Cache l'user pour la prochaine ouverture
-        localStorage.setItem('sb_user', JSON.stringify(u));
-        const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
-        setProfile(p);
-        if (p) localStorage.setItem('sb_profile', JSON.stringify(p));
-      } else {
-        localStorage.removeItem('sb_user');
-        localStorage.removeItem('sb_profile');
-      }
-      setLoading(false);
-    });
-
-    // Cache le profil aussi
+    // Cache rapide
     const cachedProfile = localStorage.getItem('sb_profile');
     if (cachedProfile) {
       try {
@@ -126,6 +87,33 @@ export default function Home() {
         setLoading(false);
       } catch (e) {}
     }
+
+    const cachedUser = localStorage.getItem('sb_user');
+    if (cachedUser) {
+      try {
+        setUser(JSON.parse(cachedUser));
+      } catch (e) {}
+    }
+
+    setInitialized(true);
+
+    // Vérification Supabase en arrière-plan
+    supabase.auth.getSession().then(async ({ data }) => {
+      const u: any = data.session?.user ?? null;
+      if (u) {
+        setUser(u);
+        localStorage.setItem('sb_user', JSON.stringify(u));
+        const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
+        setProfile(p);
+        if (p) localStorage.setItem('sb_profile', JSON.stringify(p));
+      } else {
+        setUser(null);
+        setProfile(null);
+        localStorage.removeItem('sb_user');
+        localStorage.removeItem('sb_profile');
+      }
+      setLoading(false);
+    });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       const u: any = session?.user ?? null;
@@ -145,7 +133,21 @@ export default function Home() {
     });
   }, []);
 
-  if (loading && !localStorage.getItem('sb_user')) return (
+  useEffect(() => {
+    if (initialized) localStorage.setItem('darkMode', String(darkMode));
+  }, [darkMode, initialized]);
+
+  useEffect(() => {
+    if (initialized) localStorage.setItem('lastScreen', screen);
+  }, [screen, initialized]);
+
+  const theme = {
+    bg: darkMode ? '#0A0A0A' : '#F5F5F5',
+    color: darkMode ? 'white' : '#111',
+    dark: darkMode,
+  };
+
+  if (loading) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
     </div>
