@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snappin-buddy-v1';
+const CACHE_NAME = 'snappin-buddy-v2';
 const STATIC_ASSETS = [
   '/',
   '/logo.png',
@@ -26,11 +26,12 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Ne pas intercepter les requêtes API et Supabase
   if (
     event.request.url.includes('/api/') ||
     event.request.url.includes('supabase') ||
-    event.request.url.includes('stripe')
+    event.request.url.includes('stripe') ||
+    event.request.url.includes('openstreetmap') ||
+    event.request.url.includes('tile.')
   ) {
     return;
   }
