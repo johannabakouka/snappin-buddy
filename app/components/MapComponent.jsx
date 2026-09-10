@@ -50,13 +50,13 @@ export default function MapComponent({ theme }) {
       const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], 13);
       mapInstance.current = map;
 
-      // OpenStreetMap standard — gratuit, sans clé API
+      // Stadia Maps — thème sombre gratuit sans clé API
       LeafletModule.tileLayer(
         darkMode
-          ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+          : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
         {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>, © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 20,
         }
       ).addTo(map);
@@ -131,7 +131,7 @@ export default function MapComponent({ theme }) {
             <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;">
               ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : 'MOI'}
             </div>
-            <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${isEn ? 'Me' : 'Moi'}</span>
+            <span style="font-size:10px;font-weight:700;color:white;background:rgba(10,10,10,0.7);padding:1px 6px;border-radius:8px;white-space:nowrap;">${isEn ? 'Me' : 'Moi'}</span>
           </div>`,
           iconSize: [44, 60], iconAnchor: [22, 22],
         });
@@ -142,10 +142,10 @@ export default function MapComponent({ theme }) {
         const buddyIcon = L.divIcon({
           className: '',
           html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
-            <div style="width:44px;height:44px;border-radius:50%;background:${darkMode ? '#1A1A1A' : '#fff'};border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);overflow:hidden;">
+            <div style="width:44px;height:44px;border-radius:50%;background:#1A1A1A;border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);overflow:hidden;">
               ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : '◉'}
             </div>
-            <span style="font-size:10px;font-weight:700;color:${darkMode ? 'white' : '#111'};background:${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(245,245,245,0.8)'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${(p.username || '').toUpperCase()}</span>
+            <span style="font-size:10px;font-weight:700;color:white;background:rgba(10,10,10,0.7);padding:1px 6px;border-radius:8px;white-space:nowrap;">${(p.username || '').toUpperCase()}</span>
           </div>`,
           iconSize: [44, 64], iconAnchor: [22, 22],
         });
@@ -231,7 +231,7 @@ export default function MapComponent({ theme }) {
         paddingTop: 'env(safe-area-inset-top)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 8px', pointerEvents: 'none' }}>
-          <img src={darkMode ? '/logo.png' : '/logo.png'} alt="Snappin'Buddy"
+          <img src="/logo.png" alt="Snappin'Buddy"
             style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
           <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: darkMode ? 'white' : '#111', letterSpacing: '-0.3px' }}>
             Snappin&apos;Buddy
