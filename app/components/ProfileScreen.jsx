@@ -26,27 +26,20 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
 
   let message, messageColor;
   if (score < 50) {
-    message = isEn
-      ? 'Complete your profile to be found more easily!'
-      : 'Complète ton profil pour être trouvé plus facilement !';
+    message = isEn ? 'Complete your profile to be found more easily!' : 'Complète ton profil pour être trouvé plus facilement !';
     messageColor = '#FF4D4D';
   } else if (score < 80) {
-    message = isEn
-      ? 'Good start! The more complete, the more you match'
-      : 'Bon début ! Plus ton profil est riche, plus tu matches';
+    message = isEn ? 'Good start! The more complete, the more you match' : 'Bon début ! Plus ton profil est riche, plus tu matches';
     messageColor = '#FFD700';
   } else if (score < 100) {
     message = isEn ? 'Almost perfect!' : 'Presque parfait !';
     messageColor = '#FFD700';
   } else {
-    message = isEn
-      ? 'Complete profile 🔥 Ready to create something beautiful!'
-      : 'Profil complet 🔥 Prêt à créer quelque chose de beau !';
+    message = isEn ? 'Complete profile 🔥 Ready to create something beautiful!' : 'Profil complet 🔥 Prêt à créer quelque chose de beau !';
     messageColor = '#2ECC71';
   }
 
   const barColor = score < 50 ? '#FF4D4D' : score < 80 ? '#FFD700' : '#2ECC71';
-
   const scoreLabel = isEn ? 'Profile strength' : 'Force du profil';
 
   return (
@@ -59,15 +52,12 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
         <span style={{ fontSize: '12px', fontWeight: '700', color: theme.color }}>{scoreLabel}</span>
         <span style={{ fontSize: '13px', fontWeight: '900', color: barColor }}>{score}%</span>
       </div>
-
       <div style={{ height: '6px', background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${score}%`, background: barColor, borderRadius: '3px', transition: 'width 0.5s ease' }} />
       </div>
-
       <p style={{ fontSize: '12px', color: messageColor, fontWeight: '600', marginBottom: missing.length > 0 ? '10px' : '0' }}>
         {message}
       </p>
-
       {missing.length > 0 && score < 100 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {missing.map(s => (
@@ -82,7 +72,6 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
           ))}
         </div>
       )}
-
       {(profile?.portfolio_urls?.length > 0 || profile?.video_url) && (
         <div style={{ marginTop: '10px', display: 'flex', gap: '6px' }}>
           {profile?.portfolio_urls?.length > 0 && (
@@ -109,6 +98,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const fileInputRef = useRef(null);
 
   const isEn = t.map === 'Map';
@@ -155,6 +145,20 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
       await onProfileUpdate();
     }
     setUploading(false);
+  }
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('sb_user');
+      localStorage.removeItem('sb_profile');
+      localStorage.removeItem('lastScreen');
+      window.location.href = '/';
+    } catch (e) {
+      console.error(e);
+      setLoggingOut(false);
+    }
   }
 
   if (editing) return (
@@ -284,8 +288,12 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           {t.legal}
         </button>
 
-        <button onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }} style={{ width: '100%', background: 'transparent', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-          {t.logout}
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          style={{ width: '100%', background: 'transparent', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px', opacity: loggingOut ? 0.6 : 1 }}
+        >
+          {loggingOut ? '...' : t.logout}
         </button>
       </div>
     </div>

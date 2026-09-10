@@ -68,6 +68,7 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
     // Init depuis localStorage côté client uniquement
@@ -78,34 +79,36 @@ export default function Home() {
     setScreen(savedScreen);
     setDarkMode(savedDark !== null ? savedDark === 'true' : true);
     setShowWelcome(savedWelcome);
-
-    // Cache rapide
-    const cachedProfile = localStorage.getItem('sb_profile');
-    if (cachedProfile) {
-      try {
-        setProfile(JSON.parse(cachedProfile));
-        setLoading(false);
-      } catch (e) {}
-    }
-
-    const cachedUser = localStorage.getItem('sb_user');
-    if (cachedUser) {
-      try {
-        setUser(JSON.parse(cachedUser));
-      } catch (e) {}
-    }
-
     setInitialized(true);
 
-    // Vérification Supabase en arrière-plan
+    // Vérification Supabase — source de vérité
     supabase.auth.getSession().then(async ({ data }) => {
       const u: any = data.session?.user ?? null;
+      setUser(u);
+
       if (u) {
-        setUser(u);
         localStorage.setItem('sb_user', JSON.stringify(u));
+        // Charger le profil depuis cache d'abord
+        const cachedProfile = localStorage.getItem('sb_profile');
+        if (cachedProfile) {
+          try {
+            const parsed = JSON.parse(cachedProfile);
+            if (parsed.user_id === u.id) {
+              setProfile(parsed);
+              setLoading(false);
+            }
+          } catch (e) {}
+        }
+        // Puis rafraîchir depuis Supabase en arrière-plan
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
-        setProfile(p);
-        if (p) localStorage.setItem('sb_profile', JSON.stringify(p));
+        if (p) {
+          setProfile(p);
+          localStorage.setItem('sb_profile', JSON.stringify(p));
+        } else {
+          // Pas de profil = onboarding
+          setProfile(null);
+          localStorage.removeItem('sb_profile');
+        }
       } else {
         setUser(null);
         setProfile(null);
@@ -113,6 +116,7 @@ export default function Home() {
         localStorage.removeItem('sb_profile');
       }
       setLoading(false);
+      setSessionChecked(true);
     });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -121,13 +125,19 @@ export default function Home() {
       if (u) {
         localStorage.setItem('sb_user', JSON.stringify(u));
         const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
-        setProfile(p);
-        if (p) localStorage.setItem('sb_profile', JSON.stringify(p));
+        if (p) {
+          setProfile(p);
+          localStorage.setItem('sb_profile', JSON.stringify(p));
+        } else {
+          setProfile(null);
+          localStorage.removeItem('sb_profile');
+        }
         setLoading(false);
       } else {
         localStorage.removeItem('sb_user');
         localStorage.removeItem('sb_profile');
         setProfile(null);
+        setUser(null);
         setLoading(false);
       }
     });
@@ -147,6 +157,7 @@ export default function Home() {
     dark: darkMode,
   };
 
+  // Affiche loading screen uniquement si pas encore vérifié la session
   if (loading) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
@@ -169,7 +180,15 @@ export default function Home() {
     );
   }
 
-  if (!profile) return (
+  // Si user connecté mais profil pas encore chargé — attendre
+  if (user && !profile && !sessionChecked) return (
+    <div style={{ maxWidth: '390px', margin: '0 auto' }}>
+      <LoadingScreen />
+    </div>
+  );
+
+  // Si user connecté, session vérifiée, mais pas de profil = onboarding
+  if (user && !profile && sessionChecked) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
       <OnboardingScreen user={user} onComplete={() => {
         localStorage.removeItem('sb_profile');
@@ -179,7 +198,14 @@ export default function Home() {
   );
 
   return (
-    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color, position: 'relative', overflow: 'hidden' }}>
+    <div style={{
+      maxWidth: '390px', margin: '0 auto', height: '100vh',
+      background: theme.bg, color: theme.color,
+      position: 'relative', overflow: 'hidden',
+      paddingTop: 'env(safe-area-inset-top)',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      boxSizing: 'border-box',
+    }}>
       {screen === 'map' && <MapScreen theme={theme} />}
       {screen === 'explore' && <ExploreScreen theme={theme} />}
       {screen === 'match' && <MatchScreen theme={theme} setScreen={setScreen} />}

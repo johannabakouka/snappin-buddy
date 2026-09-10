@@ -37,10 +37,10 @@ export default function MapComponent({ theme }) {
   });
 
   const STATUS_FILTERS = [
-    { id: 'all', label: isEn ? 'All' : t.map === 'Mapa' ? 'Todos' : t.map === 'Karte' ? 'Alle' : t.map === 'Mappa' ? 'Tutti' : 'Tous' },
-    { id: 'dispo', label: `🟢 ${isEn ? 'Available' : t.map === 'Mapa' ? 'Disponible' : t.map === 'Karte' ? 'Verfügbar' : 'Dispo'}` },
-    { id: 'shoot', label: `🟡 ${isEn ? 'On shoot' : t.map === 'Karte' ? 'Am Drehen' : 'En shoot'}` },
-    { id: 'indispo', label: `🔴 ${isEn ? 'Unavailable' : t.map === 'Mapa' ? 'No disponible' : t.map === 'Karte' ? 'Nicht verfügbar' : 'Indispo'}` },
+    { id: 'all', label: isEn ? 'All' : 'Tous' },
+    { id: 'dispo', label: `🟢 ${isEn ? 'Available' : 'Dispo'}` },
+    { id: 'shoot', label: `🟡 ${isEn ? 'On shoot' : 'En shoot'}` },
+    { id: 'indispo', label: `🔴 ${isEn ? 'Unavailable' : 'Indispo'}` },
   ];
 
   async function initMap(askGeo = false) {
@@ -50,11 +50,15 @@ export default function MapComponent({ theme }) {
       const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], 13);
       mapInstance.current = map;
 
+      // OpenStreetMap standard — gratuit, sans clé API
       LeafletModule.tileLayer(
         darkMode
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        { attribution: '© OpenStreetMap, © CARTO', maxZoom: 20 }
+          ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+          : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 20,
+        }
       ).addTo(map);
 
       LeafletModule.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -224,9 +228,10 @@ export default function MapComponent({ theme }) {
           ? 'linear-gradient(to bottom, rgba(10,10,10,0.98) 0%, rgba(10,10,10,0.0) 100%)'
           : 'linear-gradient(to bottom, rgba(245,245,245,0.98) 0%, rgba(245,245,245,0.0) 100%)',
         paddingBottom: '12px',
+        paddingTop: 'env(safe-area-inset-top)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 0 8px', pointerEvents: 'none' }}>
-          <img src={darkMode ? '/logo.png' : '/logo-dark.png'} alt="Snappin'Buddy"
+          <img src={darkMode ? '/logo.png' : '/logo.png'} alt="Snappin'Buddy"
             style={{ height: '36px', objectFit: 'contain', marginRight: '8px' }} />
           <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: darkMode ? 'white' : '#111', letterSpacing: '-0.3px' }}>
             Snappin&apos;Buddy
