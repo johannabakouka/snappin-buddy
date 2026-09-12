@@ -50,13 +50,10 @@ export default function MapComponent({ theme }) {
       const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], 13);
       mapInstance.current = map;
 
-      // Stadia Maps — thème sombre gratuit sans clé API
       LeafletModule.tileLayer(
-        darkMode
-          ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-          : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         {
-          attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>, © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 20,
         }
       ).addTo(map);
@@ -178,6 +175,13 @@ export default function MapComponent({ theme }) {
 
   return (
     <div style={{ position: 'relative', height: '100vh' }}>
+      {/* Filtre CSS pour rendre la carte sombre */}
+      <style>{`
+        .leaflet-tile-pane {
+          filter: ${darkMode ? 'invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9)' : 'none'};
+        }
+      `}</style>
+
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
 
       {showGeoPrompt && (
