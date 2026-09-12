@@ -111,7 +111,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
 
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.font = '24px Arial';
-    ctx.fillText('snappin-buddy.vercel.app', 540, 1760);
+    ctx.fillText('snappinbuddy.com', 540, 1760);
 
     const link = document.createElement('a');
     link.download = `snappin-buddy-collab-${Date.now()}.png`;

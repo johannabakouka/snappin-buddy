@@ -145,7 +145,7 @@ export default function ShareCard({ offer, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', lineHeight: 1.4 }}>
               {isEn ? 'Join on' : 'Rejoins sur'}{'\n'}
-              <span style={{ color: 'white', fontWeight: '700' }}>snappin-buddy.vercel.app</span>
+              <span style={{ color: 'white', fontWeight: '700' }}>snappinbuddy.com</span>
             </p>
             <div style={{
               background: 'white', color: 'black',

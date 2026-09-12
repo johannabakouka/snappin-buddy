@@ -44,7 +44,7 @@ export default function AuthScreen({ onLogin, theme }) {
     if (!email) { setMessage(t.enterEmailFirst); return; }
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://snappin-buddy.vercel.app',
+      redirectTo: 'https://snappinbuddy.com',
     });
     if (error) setMessage(error.message);
     else setMessage(t.resetSent);

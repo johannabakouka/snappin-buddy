@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     title: "Snappin\u2019Buddy",
     description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
     type: "website",
-    url: "https://snappin-buddy.vercel.app",
+    url: "https://snappinbuddy.com",
   },
 };
 
