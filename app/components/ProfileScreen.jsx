@@ -31,7 +31,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   } else if (score < 80) {
     message = isEn ? 'Good start! The more complete, the more you match' : 'Bon début ! Plus ton profil est riche, plus tu matches';
     messageColor = '#FFD700';
-  } else if (score < 100) {
+  } else if (score < 80) {
     message = isEn ? 'Almost perfect!' : 'Presque parfait !';
     messageColor = '#FFD700';
   } else {
@@ -151,13 +151,11 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     setLoggingOut(true);
     try {
       await supabase.auth.signOut();
-      localStorage.removeItem('sb_user');
-      localStorage.removeItem('sb_profile');
-      localStorage.removeItem('lastScreen');
-      window.location.href = '/';
     } catch (e) {
       console.error(e);
-      setLoggingOut(false);
+    } finally {
+      localStorage.clear();
+      window.location.href = '/';
     }
   }
 
@@ -174,7 +172,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
   return (
     <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
-
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
