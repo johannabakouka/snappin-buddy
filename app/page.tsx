@@ -58,6 +58,10 @@ export default function Home() {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    // Nettoyer tout l'ancien cache qui cause des bugs
+    localStorage.removeItem('sb_user');
+    localStorage.removeItem('sb_profile');
+
     const savedScreen = localStorage.getItem('lastScreen') || 'map';
     const savedDark = localStorage.getItem('darkMode');
     const savedWelcome = !localStorage.getItem('welcomeSeen');
@@ -66,8 +70,7 @@ export default function Home() {
     setShowWelcome(savedWelcome);
     setInitialized(true);
 
-    // On attend TOUJOURS Supabase — pas de cache profil
-    // Pour éviter le flash "Qui es-tu"
+    // Toujours attendre Supabase — source de vérité unique
     supabase.auth.getSession().then(async ({ data }) => {
       const u: any = data.session?.user ?? null;
 
@@ -79,8 +82,6 @@ export default function Home() {
       }
 
       setUser(u);
-
-      // Charger le profil depuis Supabase — toujours
       const { data: p } = await supabase.from('profiles')
         .select('*')
         .eq('user_id', u.id)
@@ -122,7 +123,6 @@ export default function Home() {
     dark: darkMode,
   };
 
-  // On affiche le loading JUSQU'À ce que Supabase réponde
   if (loading) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
@@ -145,7 +145,6 @@ export default function Home() {
     );
   }
 
-  // User connecté mais pas de profil = onboarding
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
       <OnboardingScreen user={user} onComplete={() => window.location.reload()} />
