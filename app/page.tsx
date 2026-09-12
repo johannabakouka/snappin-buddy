@@ -53,12 +53,12 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [profileChecked, setProfileChecked] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // Nettoyer tout l'ancien cache qui cause des bugs
     localStorage.removeItem('sb_user');
     localStorage.removeItem('sb_profile');
 
@@ -70,13 +70,13 @@ export default function Home() {
     setShowWelcome(savedWelcome);
     setInitialized(true);
 
-    // Toujours attendre Supabase — source de vérité unique
     supabase.auth.getSession().then(async ({ data }) => {
       const u: any = data.session?.user ?? null;
 
       if (!u) {
         setUser(null);
         setProfile(null);
+        setProfileChecked(true);
         setLoading(false);
         return;
       }
@@ -88,6 +88,7 @@ export default function Home() {
         .single();
 
       setProfile(p || null);
+      setProfileChecked(true);
       setLoading(false);
     });
 
@@ -95,15 +96,18 @@ export default function Home() {
       const u: any = session?.user ?? null;
       if (u) {
         setUser(u);
+        setProfileChecked(false); // Reset pendant le chargement
         const { data: p } = await supabase.from('profiles')
           .select('*')
           .eq('user_id', u.id)
           .single();
         setProfile(p || null);
+        setProfileChecked(true);
         setLoading(false);
       } else {
         setUser(null);
         setProfile(null);
+        setProfileChecked(true);
         setLoading(false);
       }
     });
@@ -123,7 +127,8 @@ export default function Home() {
     dark: darkMode,
   };
 
-  if (loading) return (
+  // Affiche loading tant que Supabase n'a pas répondu
+  if (loading || !profileChecked) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
     </div>
@@ -145,6 +150,14 @@ export default function Home() {
     );
   }
 
+  // User connecté mais profil pas encore vérifié = loading
+  if (!profileChecked) return (
+    <div style={{ maxWidth: '390px', margin: '0 auto' }}>
+      <LoadingScreen />
+    </div>
+  );
+
+  // User connecté, profil vérifié, pas de profil = onboarding
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
       <OnboardingScreen user={user} onComplete={() => window.location.reload()} />
