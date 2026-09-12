@@ -13,37 +13,25 @@ import WelcomeScreen from './components/WelcomeScreen';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
-
   useEffect(() => {
     const interval = setInterval(() => {
       setDots(d => d.length >= 3 ? '' : d + '.');
     }, 400);
     return () => clearInterval(interval);
   }, []);
-
   return (
     <div style={{
       height: '100vh', background: '#0A0A0A',
       display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      gap: '20px',
+      alignItems: 'center', justifyContent: 'center', gap: '20px',
     }}>
-      <img
-        src="/logo.png"
-        alt="Snappin'Buddy"
-        style={{
-          width: '100px', height: '100px',
-          borderRadius: '24px', objectFit: 'cover',
-          boxShadow: '0 0 40px rgba(255,255,255,0.1)',
-          animation: 'pulse 2s ease-in-out infinite',
-        }}
-      />
+      <img src="/logo.png" alt="Snappin'Buddy" style={{
+        width: '100px', height: '100px', borderRadius: '24px', objectFit: 'cover',
+        boxShadow: '0 0 40px rgba(255,255,255,0.1)',
+        animation: 'pulse 2s ease-in-out infinite',
+      }} />
       <div style={{ textAlign: 'center' }}>
-        <p style={{
-          fontFamily: 'var(--font-nunito)', fontSize: '22px',
-          fontWeight: '900', color: 'white', letterSpacing: '-0.3px',
-          marginBottom: '8px',
-        }}>
+        <p style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: 'white', letterSpacing: '-0.3px', marginBottom: '8px' }}>
           Snappin&apos;Buddy
         </p>
         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>
@@ -68,76 +56,53 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [initialized, setInitialized] = useState(false);
-  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
-    // Init depuis localStorage côté client uniquement
     const savedScreen = localStorage.getItem('lastScreen') || 'map';
     const savedDark = localStorage.getItem('darkMode');
     const savedWelcome = !localStorage.getItem('welcomeSeen');
-
     setScreen(savedScreen);
     setDarkMode(savedDark !== null ? savedDark === 'true' : true);
     setShowWelcome(savedWelcome);
     setInitialized(true);
 
-    // Vérification Supabase — source de vérité
+    // On attend TOUJOURS Supabase — pas de cache profil
+    // Pour éviter le flash "Qui es-tu"
     supabase.auth.getSession().then(async ({ data }) => {
       const u: any = data.session?.user ?? null;
-      setUser(u);
 
-      if (u) {
-        localStorage.setItem('sb_user', JSON.stringify(u));
-        // Charger le profil depuis cache d'abord
-        const cachedProfile = localStorage.getItem('sb_profile');
-        if (cachedProfile) {
-          try {
-            const parsed = JSON.parse(cachedProfile);
-            if (parsed.user_id === u.id) {
-              setProfile(parsed);
-              setLoading(false);
-            }
-          } catch (e) {}
-        }
-        // Puis rafraîchir depuis Supabase en arrière-plan
-        const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
-        if (p) {
-          setProfile(p);
-          localStorage.setItem('sb_profile', JSON.stringify(p));
-        } else {
-          // Pas de profil = onboarding
-          setProfile(null);
-          localStorage.removeItem('sb_profile');
-        }
-      } else {
+      if (!u) {
         setUser(null);
         setProfile(null);
-        localStorage.removeItem('sb_user');
-        localStorage.removeItem('sb_profile');
+        setLoading(false);
+        return;
       }
+
+      setUser(u);
+
+      // Charger le profil depuis Supabase — toujours
+      const { data: p } = await supabase.from('profiles')
+        .select('*')
+        .eq('user_id', u.id)
+        .single();
+
+      setProfile(p || null);
       setLoading(false);
-      setSessionChecked(true);
     });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       const u: any = session?.user ?? null;
-      setUser(u);
       if (u) {
-        localStorage.setItem('sb_user', JSON.stringify(u));
-        const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
-        if (p) {
-          setProfile(p);
-          localStorage.setItem('sb_profile', JSON.stringify(p));
-        } else {
-          setProfile(null);
-          localStorage.removeItem('sb_profile');
-        }
+        setUser(u);
+        const { data: p } = await supabase.from('profiles')
+          .select('*')
+          .eq('user_id', u.id)
+          .single();
+        setProfile(p || null);
         setLoading(false);
       } else {
-        localStorage.removeItem('sb_user');
-        localStorage.removeItem('sb_profile');
-        setProfile(null);
         setUser(null);
+        setProfile(null);
         setLoading(false);
       }
     });
@@ -157,7 +122,7 @@ export default function Home() {
     dark: darkMode,
   };
 
-  // Affiche loading screen uniquement si pas encore vérifié la session
+  // On affiche le loading JUSQU'À ce que Supabase réponde
   if (loading) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
@@ -180,20 +145,10 @@ export default function Home() {
     );
   }
 
-  // Si user connecté mais profil pas encore chargé — attendre
-  if (user && !profile && !sessionChecked) return (
-    <div style={{ maxWidth: '390px', margin: '0 auto' }}>
-      <LoadingScreen />
-    </div>
-  );
-
-  // Si user connecté, session vérifiée, mais pas de profil = onboarding
-  if (user && !profile && sessionChecked) return (
+  // User connecté mais pas de profil = onboarding
+  if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
-      <OnboardingScreen user={user} onComplete={() => {
-        localStorage.removeItem('sb_profile');
-        window.location.reload();
-      }} />
+      <OnboardingScreen user={user} onComplete={() => window.location.reload()} />
     </div>
   );
 
@@ -202,18 +157,13 @@ export default function Home() {
       maxWidth: '390px', margin: '0 auto', height: '100vh',
       background: theme.bg, color: theme.color,
       position: 'relative', overflow: 'hidden',
-      paddingTop: 'env(safe-area-inset-top)',
-      paddingBottom: 'env(safe-area-inset-bottom)',
       boxSizing: 'border-box',
     }}>
       {screen === 'map' && <MapScreen theme={theme} />}
       {screen === 'explore' && <ExploreScreen theme={theme} />}
       {screen === 'match' && <MatchScreen theme={theme} setScreen={setScreen} />}
       {screen === 'messages' && <MessagesScreen theme={theme} />}
-      {screen === 'profile' && <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={() => {
-        localStorage.removeItem('sb_profile');
-        window.location.reload();
-      }} />}
+      {screen === 'profile' && <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={() => window.location.reload()} />}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />
     </div>
   );
