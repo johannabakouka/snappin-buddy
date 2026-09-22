@@ -346,7 +346,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     <BuddyProfileScreen buddy={viewingBuddy} onBack={() => setViewingBuddy(null)} theme={theme} />
   );
 
-  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={received.find(c => c.id === qrCollab.id)?.senderProfile || sent.find(c => c.id === qrCollab.id)?.receiverProfile} theme={theme} onBack={() => setQrCollab(null)} />;
+  if (qrCollab) return <QRScreen collab={qrCollab} user={user} myProfile={myProfile} theme={theme} onBack={() => setQrCollab(null)} />;
 
   if (showNewOffer) return (
     <OfferForm theme={theme} isEdit={false} editingOffer={null} onClose={() => setShowNewOffer(false)} onSave={handleSaveOffer} onCloseOffer={null} />

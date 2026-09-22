@@ -143,6 +143,9 @@ const TX = {
     'Tap again to delete for good': 'Pulsa otra vez para eliminarlo definitivamente',
     'Delete project': 'Eliminar el proyecto',
     'Could not delete the project, try again.': 'No se pudo eliminar el proyecto, inténtalo de nuevo.',
+    'Save the card': 'Guardar la tarjeta',
+    'Press and hold the image to save it, then share it on your story!': 'Mantén pulsada la imagen para guardarla y compártela en tu story.',
+    '✓ Collab done': '✓ Collab realizada',
   },
 
   pt: {
@@ -286,6 +289,9 @@ const TX = {
     'Tap again to delete for good': 'Toque de novo para excluir de vez',
     'Delete project': 'Excluir o projeto',
     'Could not delete the project, try again.': 'Não foi possível excluir o projeto, tente de novo.',
+    'Save the card': 'Salvar o card',
+    'Press and hold the image to save it, then share it on your story!': 'Toque e segure a imagem para salvar e depois compartilhe no seu story!',
+    '✓ Collab done': '✓ Collab realizada',
   },
 
   de: {
@@ -429,6 +435,9 @@ const TX = {
     'Tap again to delete for good': 'Tippe nochmal, um endgültig zu löschen',
     'Delete project': 'Projekt löschen',
     'Could not delete the project, try again.': 'Projekt konnte nicht gelöscht werden, versuch es nochmal.',
+    'Save the card': 'Karte speichern',
+    'Press and hold the image to save it, then share it on your story!': 'Halte das Bild gedrückt, um es zu speichern, und teile es dann in deiner Story!',
+    '✓ Collab done': '✓ Collab umgesetzt',
   },
 
   it: {
@@ -572,6 +581,9 @@ const TX = {
     'Tap again to delete for good': 'Tocca di nuovo per eliminarlo definitivamente',
     'Delete project': 'Elimina il progetto',
     'Could not delete the project, try again.': 'Impossibile eliminare il progetto, riprova.',
+    'Save the card': 'Salva la card',
+    'Press and hold the image to save it, then share it on your story!': 'Tieni premuta l’immagine per salvarla, poi condividila nella tua storia!',
+    '✓ Collab done': '✓ Collab realizzata',
   },
 };
 

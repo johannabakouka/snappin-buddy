@@ -87,9 +87,11 @@ type Mail = { to: string; subject: string; titleFr: string; bodyFr: string; titl
 function layout(m: Mail): string {
   const button = m.cta === undefined ? '' : `
     <a href="${APP_URL}" style="display:inline-block;margin-top:24px;padding:12px 22px;border-radius:24px;background:#F2E050;color:#0A0A0A;font-weight:800;text-decoration:none">${m.cta || "Ouvrir Snappin'Buddy · Open"}</a>`;
-  return `<!doctype html><html><body style="margin:0;background:#0A0A0A;font-family:Helvetica,Arial,sans-serif;color:#fff">
+  return `<!doctype html><html><body bgcolor="#0A0A0A" style="margin:0;background:#0A0A0A;font-family:Helvetica,Arial,sans-serif;color:#fff">
   <div style="max-width:520px;margin:0 auto;padding:32px 24px">
-    <div style="font-size:22px;font-weight:900;margin-bottom:24px">Snappin'Buddy</div>
+    <a href="${APP_URL}" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none">
+      <img src="${APP_URL}/logo-email.png" width="120" height="120" alt="Snappin'Buddy" style="display:inline-block;width:120px;height:120px;border:0">
+    </a>
     <h1 style="font-size:20px;margin:0 0 12px">${m.titleFr}</h1>
     <p style="font-size:15px;line-height:1.6;color:rgba(255,255,255,.8);margin:0">${m.bodyFr}</p>
     <hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:24px 0">

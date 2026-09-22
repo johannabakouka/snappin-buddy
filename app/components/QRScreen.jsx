@@ -1,6 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { tx } from '../tx';
+
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
 
 export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const darkMode = theme?.dark ?? true;
@@ -30,8 +40,14 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${sessionId}&bgcolor=${darkMode ? '1A1A1A' : 'FFFFFF'}&color=${darkMode ? 'FFFFFF' : '0A0A0A'}`
     : null;
 
-  const buddyName = collab.senderProfile?.username || collab.receiverProfile?.username || 'Buddy';
-  const myHandle = myProfile?.handle || myProfile?.username || user?.email?.split('@')[0] || 'moi';
+  // L'autre personne de la collab : l'expéditeur si j'ai reçu la proposition, sinon le destinataire
+  const buddyProfile = collab.sender_id === user?.id ? collab.receiverProfile : collab.senderProfile;
+  const cleanHandle = (p) => (p?.handle || p?.username || '').replace(/^@+/, '').trim();
+  const buddyName = buddyProfile?.username || 'Buddy';
+  const buddyHandle = cleanHandle(buddyProfile) || 'buddy';
+  const myHandle = cleanHandle(myProfile) || user?.email?.split('@')[0] || 'moi';
+  // Image générée, affichée pour l'enregistrer (appui long) quand le partage direct n'est pas possible
+  const [cardImage, setCardImage] = useState(null);
   const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   async function downloadShareCard() {
@@ -52,58 +68,72 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
     }
 
     ctx.beginPath();
-    ctx.arc(540, 200, 300, 0, Math.PI * 2);
-    const radial = ctx.createRadialGradient(540, 200, 0, 540, 200, 300);
-    radial.addColorStop(0, 'rgba(61,255,143,0.06)');
-    radial.addColorStop(1, 'rgba(61,255,143,0)');
+    ctx.arc(540, 320, 360, 0, Math.PI * 2);
+    const radial = ctx.createRadialGradient(540, 320, 0, 540, 320, 360);
+    radial.addColorStop(0, 'rgba(242,224,80,0.07)');
+    radial.addColorStop(1, 'rgba(242,224,80,0)');
     ctx.fillStyle = radial;
     ctx.fill();
 
-    ctx.font = '52px Arial';
+    // Logo Snappin'Buddy (même fond noir que la carte)
+    const logo = await loadImage('/logo.png');
+    if (logo) {
+      // « screen » rend le fond noir du logo transparent
+      ctx.globalCompositeOperation = 'screen';
+      ctx.drawImage(logo, 290, 70, 500, 500);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    else {
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 72px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText("Snappin'Buddy", 540, 380);
+    }
+
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'white';
-    ctx.fillText('🗺 📸', 540, 280);
-
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 72px Arial';
-    ctx.fillText("Snappin'Buddy", 540, 380);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '28px Arial';
-    ctx.fillText('MATCH AND CREATE', 540, 440);
+    ctx.fillStyle = '#F2E050';
+    ctx.font = 'bold 30px Arial';
+    ctx.fillText('MATCH AND CREATE', 540, 540);
 
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(160, 520);
-    ctx.lineTo(920, 520);
+    ctx.moveTo(160, 640);
+    ctx.lineTo(920, 640);
     ctx.stroke();
 
     ctx.fillStyle = '#2ECC71';
-    ctx.font = 'bold 32px Arial';
-    ctx.fillText('✓ Collab réalisée', 540, 630);
+    ctx.font = 'bold 34px Arial';
+    ctx.fillText(tx('✓ Collab done', '✓ Collab réalisée'), 540, 800);
 
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 76px Arial';
-    ctx.fillText(`@${myHandle}`, 540, 820);
+    // Pseudo réduit si trop long pour tenir sur la carte
+    const drawName = (text, y) => {
+      let size = 76;
+      ctx.font = `bold ${size}px Arial`;
+      while (ctx.measureText(text).width > 900 && size > 40) {
+        size -= 4;
+        ctx.font = `bold ${size}px Arial`;
+      }
+      ctx.fillStyle = 'white';
+      ctx.fillText(text, 540, y);
+    };
+    drawName(`@${myHandle}`, 970);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.font = '44px Arial';
-    ctx.fillText('×', 540, 930);
+    ctx.fillStyle = '#F2E050';
+    ctx.font = '48px Arial';
+    ctx.fillText('×', 540, 1080);
 
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 76px Arial';
-    ctx.fillText(`@${buddyName}`, 540, 1040);
+    drawName(`@${buddyHandle}`, 1190);
 
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.moveTo(160, 1120);
-    ctx.lineTo(920, 1120);
+    ctx.moveTo(160, 1280);
+    ctx.lineTo(920, 1280);
     ctx.stroke();
 
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = '34px Arial';
-    ctx.fillText(today, 540, 1200);
+    ctx.fillText(today, 540, 1360);
 
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.font = '28px Arial';
@@ -113,10 +143,30 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
     ctx.font = '24px Arial';
     ctx.fillText('snappinbuddy.com', 540, 1760);
 
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) return;
+    const fileName = `snappin-buddy-collab-${Date.now()}.png`;
+    const file = new File([blob], fileName, { type: 'image/png' });
+
+    // Téléphone : ouvre le menu de partage (Enregistrer l'image, Instagram…)
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: "Snappin'Buddy" });
+        return;
+      } catch (e) {
+        if (e?.name === 'AbortError') return; // partage annulé par l'utilisateur
+      }
+    }
+
+    // Sinon : on affiche l'image (appui long pour l'enregistrer) et on tente le téléchargement (ordinateur)
+    const url = URL.createObjectURL(blob);
+    setCardImage(url);
     const link = document.createElement('a');
-    link.download = `snappin-buddy-collab-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.download = fileName;
+    link.href = url;
+    document.body.appendChild(link);
     link.click();
+    link.remove();
   }
 
   return (
@@ -181,11 +231,10 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             textAlign: 'center', marginBottom: '14px',
             border: '1px solid rgba(255,255,255,0.08)',
           }}>
-            <p style={{ fontSize: '18px', marginBottom: '4px' }}>🗺 📸</p>
-            <p style={{ color: 'white', fontWeight: '900', fontSize: '16px', marginBottom: '2px' }}>Snappin&apos;Buddy</p>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', marginBottom: '10px', letterSpacing: '3px' }}>MATCH AND CREATE</p>
-            <p style={{ color: '#2ECC71', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>✓ Collab réalisée</p>
-            <p style={{ color: 'white', fontWeight: '800', fontSize: '13px' }}>@{myHandle} × @{buddyName}</p>
+            <img src="/logo.png" alt="Snappin'Buddy" style={{ width: '96px', height: '96px', display: 'block', margin: '0 auto 2px', mixBlendMode: 'screen' }} />
+            <p style={{ color: '#F2E050', fontSize: '9px', fontWeight: '700', marginBottom: '10px', letterSpacing: '3px' }}>MATCH AND CREATE</p>
+            <p style={{ color: '#2ECC71', fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>{tx('✓ Collab done', '✓ Collab réalisée')}</p>
+            <p style={{ color: 'white', fontWeight: '800', fontSize: '13px' }}>@{myHandle} × @{buddyHandle}</p>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', marginTop: '8px' }}>{today}</p>
             <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px', marginTop: '4px' }}>#snappinbuddy</p>
           </div>
@@ -196,7 +245,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             color: '#000', fontSize: '14px', fontWeight: '800', cursor: 'pointer',
             marginBottom: '10px',
           }}>
-            ⬇️ Télécharger la carte
+            ⬇️ {tx('Save the card', 'Enregistrer la carte')}
           </button>
 
           <p style={{ color: subText, fontSize: '11px', textAlign: 'center', lineHeight: 1.5 }}>
@@ -205,6 +254,18 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
         </div>
 
       </div>
+
+      {cardImage && (
+        <div onClick={() => setCardImage(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '14px' }}>
+          <img src={cardImage} alt="Snappin'Buddy collab" onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh', maxWidth: '100%', borderRadius: '14px', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }} />
+          <p style={{ color: 'white', fontSize: '14px', fontWeight: '700', textAlign: 'center', lineHeight: 1.5 }}>
+            {tx('Press and hold the image to save it, then share it on your story!', 'Appuie longuement sur l’image pour l’enregistrer, puis partage-la en story !')}
+          </p>
+          <button onClick={() => setCardImage(null)} style={{ background: 'white', color: '#000', border: 'none', borderRadius: '24px', padding: '10px 24px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+            {tx('Close', 'Fermer')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
