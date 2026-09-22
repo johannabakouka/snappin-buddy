@@ -1,98 +1,70 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } from '../../lib/server';
 
-const supabase = createClient(
-  'https://jfzdrccnzzwhvzbxgtjo.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+const DAY = 24 * 60 * 60 * 1000;
 
-export async function GET() {
+// Lancée chaque jour à 9h par Vercel (vercel.json à la racine).
+// Si CRON_SECRET est défini dans Vercel, seul Vercel peut l'appeler.
+export async function GET(request: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (secret && request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return Response.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
   try {
-    const now = new Date();
+    const db = supabaseAdmin();
+    const now = Date.now();
+    const thirtyDaysAgo = new Date(now - 30 * DAY).toISOString();
+    const twentyThreeDaysAgo = new Date(now - 23 * DAY).toISOString();
+    const twentyFourDaysAgo = new Date(now - 24 * DAY).toISOString();
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(now.getDate() - 30);
-
-    const twentyThreeDaysAgo = new Date();
-    twentyThreeDaysAgo.setDate(now.getDate() - 23);
-
-    const twentyFourDaysAgo = new Date();
-    twentyFourDaysAgo.setDate(now.getDate() - 24);
-
-    // 1. Offres à fermer (+ de 30 jours)
-    const { data: expiredOffers } = await supabase
+    // 1. Projets à fermer (plus de 30 jours)
+    const { data: expiredOffers, error: e1 } = await db
       .from('offers')
       .select('id, title, user_id, created_at')
       .eq('status', 'open')
-      .lt('created_at', thirtyDaysAgo.toISOString());
+      .lt('created_at', thirtyDaysAgo);
+    if (e1) throw e1;
 
-    // 2. Offres à rappeler (entre J+23 et J+24 — fenêtre de 24h)
-    const { data: expiringOffers } = await supabase
+    // 2. Projets à rappeler (7 jours avant la fin, fenêtre de 24h)
+    const { data: expiringOffers, error: e2 } = await db
       .from('offers')
       .select('id, title, user_id, created_at')
       .eq('status', 'open')
-      .lt('created_at', twentyThreeDaysAgo.toISOString())
-      .gt('created_at', twentyFourDaysAgo.toISOString());
+      .lt('created_at', twentyThreeDaysAgo)
+      .gt('created_at', twentyFourDaysAgo);
+    if (e2) throw e2;
 
-    // Fermer les offres expirées
-    if (expiredOffers && expiredOffers.length > 0) {
-      const ids = expiredOffers.map(o => o.id);
-      await supabase.from('offers').update({ status: 'closed' }).in('id', ids);
-
-      for (const offer of expiredOffers) {
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'offer_expiring',
-              to: 'ateliers777.contact@gmail.com',
-              data: {
-                offerTitle: offer.title,
-                expiryDate: new Date().toLocaleDateString('fr-FR'),
-                expired: true,
-              },
-            }),
-          });
-        } catch (e) {
-          console.error('Email error:', e);
-        }
-      }
+    if (expiredOffers?.length) {
+      const { error } = await db.from('offers').update({ status: 'closed' }).in('id', expiredOffers.map(o => o.id));
+      if (error) throw error;
     }
 
-    // Envoyer rappel 7 jours avant expiration
-    if (expiringOffers && expiringOffers.length > 0) {
-      for (const offer of expiringOffers) {
-        const expiryDate = new Date(offer.created_at);
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'offer_expiring',
-              to: 'ateliers777.contact@gmail.com',
-              data: {
-                offerTitle: offer.title,
-                expiryDate: expiryDate.toLocaleDateString('fr-FR'),
-              },
-            }),
-          });
-        } catch (e) {
-          console.error('Email error:', e);
-        }
+    let emailsSent = 0;
+    const notify = async (offer: { title: string; user_id: string; created_at: string }, expired: boolean) => {
+      try {
+        const to = await getUserEmail(offer.user_id);
+        if (!to) return;
+        const expiry = new Date(new Date(offer.created_at).getTime() + 30 * DAY).toLocaleDateString('fr-FR');
+        await sendMail(offerExpiringMail(to, offer.title, expiry, expired));
+        emailsSent++;
+      } catch (e) {
+        console.error('Email error:', e);
       }
-    }
+    };
 
-    return NextResponse.json({
+    for (const offer of expiredOffers || []) await notify(offer, true);
+    for (const offer of expiringOffers || []) await notify(offer, false);
+
+    return Response.json({
       message: 'Cron OK',
       expired: expiredOffers?.length || 0,
       reminders: expiringOffers?.length || 0,
+      emailsSent,
     });
-
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    console.error('expire-offers', err);
+    return Response.json({ error: (err as Error).message }, { status: 500 });
   }
 }

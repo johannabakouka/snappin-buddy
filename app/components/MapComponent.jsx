@@ -2,11 +2,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
+import CityPicker from './CityPicker';
 import { ROLE_FILTERS, UNIVERS } from '../constants';
 import { useT } from '../i18n';
 
-function fuzzPosition(lat, lng) {
-  const r = 0.004;
+// ~400 m pour une position GPS, ~2 km pour une ville choisie (répartit les pins dans la ville)
+const GPS_FUZZ = 0.004;
+const CITY_FUZZ = 0.02;
+
+// localStorage 'geoMode' : 'gps' | 'city' | 'none'
+function getGeoMode() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('geoMode');
+}
+
+function fuzzPosition(lat, lng, r = GPS_FUZZ) {
   const angle = Math.random() * 2 * Math.PI;
   const dist = Math.random() * r;
   return {
@@ -35,6 +45,9 @@ export default function MapComponent({ theme }) {
     if (typeof window === 'undefined') return false;
     return !localStorage.getItem('geoAsked');
   });
+  // null | 'choose' | 'denied' : panneau de choix de ville
+  const [cityOverlay, setCityOverlay] = useState(null);
+  const [savingCity, setSavingCity] = useState(false);
 
   const STATUS_FILTERS = [
     { id: 'all', label: isEn ? 'All' : 'Tous' },
@@ -43,7 +56,7 @@ export default function MapComponent({ theme }) {
     { id: 'indispo', label: `🔴 ${isEn ? 'Unavailable' : 'Indispo'}` },
   ];
 
-  async function initMap(askGeo = false) {
+  async function initMap(askGeo = false, onGeoError = null) {
     if (mapInstance.current) return;
     import('leaflet').then(async (LeafletModule) => {
       import('leaflet/dist/leaflet.css');
@@ -68,21 +81,29 @@ export default function MapComponent({ theme }) {
         setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
       }
 
-      if (askGeo && navigator.geolocation) {
+      if (askGeo) {
+        if (!navigator.geolocation) {
+          onGeoError?.();
+          return;
+        }
         navigator.geolocation.getCurrentPosition(async pos => {
           const { latitude, longitude } = pos.coords;
           map.setView([latitude, longitude], 14);
           if (user) {
             const fuzzed = fuzzPosition(latitude, longitude);
             await supabase.from('profiles').update({ lat: fuzzed.lat, lng: fuzzed.lng }).eq('user_id', user.id);
+            setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng } : p));
           }
-        });
+        }, () => onGeoError?.(), { timeout: 15000 });
       }
     });
   }
 
   useEffect(() => {
-    if (!showGeoPrompt) initMap(true);
+    // Ceux qui ont choisi une ville ou refusé ne se voient plus redemander le GPS à chaque visite.
+    // Sans geoMode enregistré (anciens utilisateurs), on garde le comportement d'avant.
+    const mode = getGeoMode();
+    if (!showGeoPrompt) initMap(mode === 'city' || mode === 'none' ? false : true);
     return () => {
       if (mapInstance.current) {
         mapInstance.current.remove();
@@ -93,15 +114,50 @@ export default function MapComponent({ theme }) {
 
   function handleAllow() {
     localStorage.setItem('geoAsked', 'true');
+    localStorage.setItem('geoMode', 'gps');
     setShowGeoPrompt(false);
-    initMap(true);
+    // Si le navigateur refuse ou échoue, on propose directement de choisir sa ville
+    initMap(true, () => setCityOverlay('denied'));
   }
 
   function handleDeny() {
     localStorage.setItem('geoAsked', 'true');
+    localStorage.setItem('geoMode', 'none');
     setShowGeoPrompt(false);
     initMap(false);
   }
+
+  function handleChooseCity() {
+    localStorage.setItem('geoAsked', 'true');
+    setShowGeoPrompt(false);
+    setCityOverlay('choose');
+    initMap(false);
+  }
+
+  async function handleCitySelected(city) {
+    if (savingCity) return;
+    setSavingCity(true);
+    const fuzzed = fuzzPosition(city.lat, city.lng, CITY_FUZZ);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error } = await supabase.from('profiles')
+        .update({ lat: fuzzed.lat, lng: fuzzed.lng })
+        .eq('user_id', user.id);
+      if (error) {
+        console.error('City save failed', error);
+        setSavingCity(false);
+        return;
+      }
+      setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng } : p));
+    }
+    localStorage.setItem('geoMode', 'city');
+    mapInstance.current?.setView([city.lat, city.lng], 12);
+    setCityOverlay(null);
+    setSavingCity(false);
+  }
+
+  const me = profiles.find(p => p._isMe);
+  const notOnMap = !!L && !!me && (!me.lat || !me.lng);
 
   useEffect(() => {
     if (!L || !mapInstance.current || profiles.length === 0) return;
@@ -198,32 +254,101 @@ export default function MapComponent({ theme }) {
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺</div>
             <h3 style={{ fontSize: '18px', fontWeight: '900', color: darkMode ? 'white' : '#111', marginBottom: '12px', fontFamily: 'var(--font-nunito)' }}>
-              {isEn ? 'Find creatives around you' : 'Trouve les créatifs autour de toi'}
+              {t.geoTitle}
             </h3>
             <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', lineHeight: 1.6, marginBottom: '24px' }}>
-              {isEn
-                ? "Snappin'Buddy uses your location to show creatives in your area. Your exact position is never shared — it's blurred to ~400m."
-                : "Snappin'Buddy utilise ta position pour afficher les créatifs dans ton quartier. Ta position exacte n'est jamais partagée — elle est floutée à ~400m."
-              }
+              {t.geoText}
             </p>
             <button onClick={handleAllow} style={{
               width: '100%', padding: '14px', borderRadius: '24px', border: 'none',
               background: darkMode ? 'white' : '#111', color: darkMode ? 'black' : 'white',
               fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px',
             }}>
-              📍 {isEn ? 'Allow location' : 'Autoriser la localisation'}
+              {t.geoAllow}
+            </button>
+            <button onClick={handleChooseCity} style={{
+              width: '100%', padding: '14px', borderRadius: '24px',
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'}`,
+              background: 'transparent', color: darkMode ? 'white' : '#111',
+              fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px',
+            }}>
+              {t.geoChooseCity}
             </button>
             <button onClick={handleDeny} style={{
-              width: '100%', padding: '14px', borderRadius: '24px',
-              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              width: '100%', padding: '10px', borderRadius: '24px', border: 'none',
               background: 'transparent',
               color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
-              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              fontSize: '13px', fontWeight: '600', cursor: 'pointer',
             }}>
-              {isEn ? 'Not now' : 'Pas maintenant'}
+              {t.geoNotNow}
             </button>
           </div>
         </div>
+      )}
+
+      {cityOverlay && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          zIndex: 3000, background: darkMode ? 'rgba(10,10,10,0.96)' : 'rgba(245,245,245,0.96)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          padding: 'calc(env(safe-area-inset-top) + 72px) 24px 24px',
+        }}>
+          <div style={{
+            background: darkMode ? '#1A1A1A' : '#FFFFFF',
+            borderRadius: '24px', padding: '28px 20px 20px', maxWidth: '340px', width: '100%',
+            border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+            textAlign: 'center', opacity: savingCity ? 0.6 : 1,
+            pointerEvents: savingCity ? 'none' : 'auto',
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏙️</div>
+            <h3 style={{ fontSize: '18px', fontWeight: '900', color: darkMode ? 'white' : '#111', marginBottom: '8px', fontFamily: 'var(--font-nunito)' }}>
+              {t.cityTitle}
+            </h3>
+            <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', lineHeight: 1.5, marginBottom: '18px' }}>
+              {cityOverlay === 'denied' ? t.geoDenied : t.cityHint}
+            </p>
+            <CityPicker theme={theme} onSelect={handleCitySelected} />
+            <button onClick={() => setCityOverlay(null)} style={{
+              marginTop: '14px', padding: '8px 12px', border: 'none', background: 'transparent',
+              color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+              fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+            }}>
+              {t.cityBack}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {notOnMap && !showGeoPrompt && !cityOverlay && !popupBuddy && (
+        <button onClick={() => setCityOverlay('choose')} style={{
+          position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '140px',
+          zIndex: 450, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          width: 'max-content', maxWidth: 'calc(100% - 32px)',
+          padding: '10px 18px', borderRadius: '18px', border: 'none', cursor: 'pointer',
+          background: darkMode ? 'white' : '#111', color: darkMode ? '#111' : 'white',
+          boxShadow: '0 6px 24px rgba(0,0,0,0.35)', textAlign: 'center',
+          fontSize: '13px', fontWeight: '600',
+        }}>
+          <span>{t.notOnMap}</span>
+          <span style={{ fontWeight: '800', textDecoration: 'underline' }}>{t.notOnMapCta} →</span>
+        </button>
+      )}
+
+      {!!L && !showGeoPrompt && !cityOverlay && (
+        <button
+          onClick={() => setCityOverlay('choose')}
+          aria-label={t.changeCity}
+          title={t.changeCity}
+          style={{
+            position: 'absolute', right: '12px', bottom: '150px', zIndex: 450,
+            width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer',
+            border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+            background: darkMode ? 'rgba(26,26,26,0.92)' : 'rgba(255,255,255,0.95)',
+            fontSize: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+          }}
+        >
+          🏙️
+        </button>
       )}
 
       <div style={{

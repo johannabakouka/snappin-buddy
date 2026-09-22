@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snappin-buddy-v2';
+const CACHE_NAME = 'snappin-buddy-v3';
 const STATIC_ASSETS = [
   '/',
   '/logo.png',
@@ -33,6 +33,21 @@ self.addEventListener('fetch', event => {
     event.request.url.includes('openstreetmap') ||
     event.request.url.includes('tile.')
   ) {
+    return;
+  }
+
+  // Pages : réseau d'abord, pour que chaque déploiement arrive chez les utilisateurs.
+  // Le cache ne sert que hors connexion.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('/')))
+    );
     return;
   }
 

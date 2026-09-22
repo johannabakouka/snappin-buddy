@@ -1,38 +1,52 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '../supabase';
+import Link from 'next/link';
 
 function BoostSuccessContent() {
   const searchParams = useSearchParams();
-  const offerId = searchParams.get('offer_id');
-  const days = parseInt(searchParams.get('days') || '1');
-  const [done, setDone] = useState(false);
+  const sessionId = searchParams.get('session_id');
+  const [state, setState] = useState<'loading' | 'done' | 'error'>('loading');
+  const [days, setDays] = useState(0);
 
   useEffect(() => {
-    async function activateBoost() {
-      if (!offerId) return;
-      const boostedUntil = new Date();
-      boostedUntil.setDate(boostedUntil.getDate() + days);
-      await supabase.from('offers').update({
-        boosted_until: boostedUntil.toISOString()
-      }).eq('id', offerId);
-      setDone(true);
-      setTimeout(() => { window.location.href = '/'; }, 3000);
+    async function confirmBoost() {
+      if (!sessionId) { setState('error'); return; }
+      try {
+        // Le serveur vérifie auprès de Stripe que le paiement est bien passé avant d'activer le boost
+        const res = await fetch('/api/confirm-boost', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) { setState('error'); return; }
+        setDays(data.days);
+        setState('done');
+        setTimeout(() => { window.location.href = '/'; }, 3000);
+      } catch {
+        setState('error');
+      }
     }
-    activateBoost();
-  }, [offerId, days]);
+    confirmBoost();
+  }, [sessionId]);
 
   return (
     <div style={{ height: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '24px', textAlign: 'center' }}>
-      <div style={{ fontSize: '64px' }}>🚀</div>
+      <div style={{ fontSize: '64px' }}>{state === 'error' ? '⚠️' : '🚀'}</div>
       <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '900' }}>
-        {done ? 'Projet boosté !' : 'Activation...'}
+        {state === 'done' ? 'Projet boosté !' : state === 'error' ? 'Boost non activé' : 'Activation...'}
       </h1>
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
-        {done ? `Ton projet est en tête du feed pendant ${days} jour${days > 1 ? 's' : ''} 🎨` : ''}
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', maxWidth: '320px' }}>
+        {state === 'done' && `Ton projet est en tête du feed pendant ${days} jour${days > 1 ? 's' : ''} 🎨`}
+        {state === 'error' && "Le paiement n'a pas pu être confirmé. Si tu as été débité, écris-nous à contact@snappinbuddy.com."}
       </p>
-      {done && <p style={{ color: '#2ECC71', fontSize: '13px' }}>Redirection automatique...</p>}
+      {state === 'done' && <p style={{ color: '#2ECC71', fontSize: '13px' }}>Redirection automatique...</p>}
+      {state === 'error' && (
+        <Link href="/" style={{ color: '#0A0A0A', background: 'white', padding: '12px 20px', borderRadius: '24px', fontWeight: 700, textDecoration: 'none' }}>
+          Retour à l&apos;app
+        </Link>
+      )}
     </div>
   );
 }

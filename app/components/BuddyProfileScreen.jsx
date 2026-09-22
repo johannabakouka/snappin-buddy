@@ -88,20 +88,18 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   async function sendReport() {
     if (!reportReason.trim()) return;
     try {
-      await fetch('/api/send-email', {
+      // Le serveur envoie le signalement à l'adresse admin ; l'app ne choisit plus le destinataire
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({
           type: 'report',
-          to: 'ateliers777.contact@gmail.com',
-          data: {
-            reportedUser: buddy?.username,
-            reportedHandle: buddy?.handle,
-            reportedId: buddy?.user_id,
-            reason: reportReason,
-          },
+          reportedUserId: buddy?.user_id,
+          reason: reportReason,
         }),
       });
+      if (!res.ok) throw new Error('report failed');
       setReportSent(true);
     } catch (e) {
       console.error(e);

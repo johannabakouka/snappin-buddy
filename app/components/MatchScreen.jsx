@@ -8,12 +8,15 @@ import BuddyProfileScreen from './BuddyProfileScreen';
 import ShareCard from './ShareCard';
 import { useT, useRoles, useUnivers } from '../i18n';
 
-async function sendEmail(type, to, data) {
+// Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
+async function sendEmail(type, payload) {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     await fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, to, data }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ type, ...payload }),
     });
   } catch (e) {
     console.error('Email error:', e);
@@ -120,15 +123,18 @@ export default function MatchScreen({ theme, setScreen }) {
     loadOffers(user.id);
   }
 
-  async function boostOffer(offer, days, priceInCents) {
+  // Le prix est fixé par le serveur (1 jour · 1,99 € / 7 jours · 4,99 €)
+  async function boostOffer(offer, days) {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId: offer.id, offerTitle: offer.title, boostDays: days, price: priceInCents }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ offerId: offer.id, boostDays: days }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
+      else throw new Error(data.error || 'checkout');
     } catch (err) {
       alert(isEn ? 'Payment error, try again.' : 'Erreur de paiement, réessaie.');
     }
@@ -148,20 +154,16 @@ export default function MatchScreen({ theme, setScreen }) {
   async function applyToOffer(o) {
     const { data: { user: u } } = await supabase.auth.getUser();
     if (!u) return;
-    await supabase.from('collabs').insert({
+    const { data: collab } = await supabase.from('collabs').insert({
       sender_id: u.id,
       receiver_id: o.user_id,
       message: `Je me propose pour : ${o.title}`,
       status: 'pending'
-    });
+    }).select('id').single();
     setAppliedOffers(prev => new Set([...prev, o.title]));
 
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    sendEmail('new_application', currentUser?.email || u.email, {
-      applicantName: myProfile?.username || 'Un créatif',
-      applicantRole: myProfile?.role || '',
-      offerTitle: o.title,
-    });
+    // Prévient le porteur du projet (et non plus le candidat lui-même)
+    if (collab?.id) sendEmail('new_application', { collabId: collab.id });
   }
 
   async function respondCollab(id, status, senderId) {
@@ -173,14 +175,8 @@ export default function MatchScreen({ theme, setScreen }) {
         content: isEn ? "⚡ Let's create something beautiful together! When shall we meet?" : '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?'
       });
 
-      const collab = received.find(c => c.id === id);
-      if (collab?.senderProfile) {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        sendEmail('application_accepted', currentUser?.email || '', {
-          posterName: myProfile?.username || 'Un créatif',
-          offerTitle: collab.message?.replace(/^.*: /, '') || 'un projet',
-        });
-      }
+      // Prévient le candidat accepté (et non plus la personne qui accepte)
+      sendEmail('application_accepted', { collabId: id });
 
       setScreen('messages');
     }
