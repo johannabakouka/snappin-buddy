@@ -78,10 +78,6 @@ export default function MapComponent({ theme, active = true }) {
   });
   // null | 'choose' | 'denied' : panneau de choix de ville
   const [cityOverlay, setCityOverlay] = useState(null);
-  // Filtre d'inversion : seulement si on doit revenir au fond OpenStreetMap
-  const [useFilter, setUseFilter] = useState(false);
-  const fallbackRef = useRef(false);
-  const tilesRef = useRef(null);
   const [savingCity, setSavingCity] = useState(false);
 
   const STATUS_FILTERS = [
@@ -98,32 +94,13 @@ export default function MapComponent({ theme, active = true }) {
       const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], MAP_ZOOM);
       mapInstance.current = map;
 
-      // Fond de carte : vraie carte sombre (CARTO) au lieu d'OpenStreetMap inversé par un filtre.
-      // Si ces tuiles ne se chargent pas, on repasse automatiquement sur OpenStreetMap.
-      const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      const CARTO_URL = darkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-      const ATTRIB = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>';
-
-      const tiles = LeafletModule.tileLayer(CARTO_URL, {
-        attribution: ATTRIB,
-        subdomains: 'abcd',
-        maxZoom: 20,
-        detectRetina: true,
-      }).addTo(map);
-
-      tilesRef.current = tiles;
-
-      let tileErrors = 0;
-      tiles.on('tileerror', () => {
-        tileErrors += 1;
-        if (tileErrors === 6 && !fallbackRef.current) {
-          fallbackRef.current = true;
-          setUseFilter(true);
-          tiles.setUrl(OSM_URL);
+      LeafletModule.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 20,
         }
-      });
+      ).addTo(map);
 
       LeafletModule.control.zoom({ position: 'bottomright' }).addTo(map);
       setL(LeafletModule);
@@ -157,14 +134,6 @@ export default function MapComponent({ theme, active = true }) {
       }
     });
   }
-
-  // Bascule clair / sombre : on change le fond de carte sans recharger la carte
-  useEffect(() => {
-    if (!tilesRef.current || fallbackRef.current) return;
-    tilesRef.current.setUrl(darkMode
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
-  }, [darkMode]);
 
   useEffect(() => {
     // Ceux qui ont choisi une ville ou refusé ne se voient plus redemander le GPS à chaque visite.
@@ -318,14 +287,8 @@ export default function MapComponent({ theme, active = true }) {
       {/* Filtre CSS pour rendre la carte sombre */}
       <style>{`
         .leaflet-tile-pane {
-          filter: ${useFilter && darkMode ? 'invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9)' : 'none'};
+          filter: ${darkMode ? 'invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9)' : 'none'};
         }
-        .leaflet-control-attribution {
-          background: ${darkMode ? 'rgba(10,10,10,0.7)' : 'rgba(255,255,255,0.7)'} !important;
-          color: ${darkMode ? '#777' : '#666'} !important;
-          font-size: 9px !important;
-        }
-        .leaflet-control-attribution a { color: ${darkMode ? '#999' : '#555'} !important; }
       `}</style>
 
       <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
