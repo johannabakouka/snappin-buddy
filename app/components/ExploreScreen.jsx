@@ -5,6 +5,7 @@ import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
 import { ROLE_ICONS } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 function getMatchScore(myStyles, theirStyles) {
   if (!myStyles || !theirStyles) return 0;
@@ -13,7 +14,7 @@ function getMatchScore(myStyles, theirStyles) {
   return mine.filter(s => theirs.includes(s)).length;
 }
 
-export default function ExploreScreen({ theme }) {
+export default function ExploreScreen({ theme, active = true }) {
   const t = useT();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
@@ -35,20 +36,28 @@ export default function ExploreScreen({ theme }) {
   const tagColor = darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
   const tagBorder = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
+
+  async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: me } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+      setMyProfile(me);
+    }
+    const { data } = await supabase.from('profiles').select('*');
+    if (data) setProfiles(data);
+  }
 
   useEffect(() => {
-    async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: me } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-        setMyProfile(me);
-      }
-      const { data } = await supabase.from('profiles').select('*');
-      if (data) setProfiles(data);
-    }
-    loadData();
+    Promise.resolve().then(loadData);
   }, []);
+
+  // Retour sur l'onglet : mise à jour silencieuse des profils
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current) Promise.resolve().then(loadData);
+    wasActive.current = active;
+  }, [active]);
 
   function handleSearchChange(val) {
     setSearch(val);
@@ -115,9 +124,9 @@ export default function ExploreScreen({ theme }) {
   });
 
   const statusLabel = (status) => {
-    if (status === 'dispo') return isEn ? 'Available' : 'Dispo';
-    if (status === 'shoot') return isEn ? 'On shoot' : 'En shoot';
-    return isEn ? 'Unavailable' : 'Indispo';
+    if (status === 'dispo') return tx('Available', 'Dispo');
+    if (status === 'shoot') return tx('On shoot', 'En shoot');
+    return tx('Unavailable', 'Indispo');
   };
 
   return (
@@ -133,7 +142,7 @@ export default function ExploreScreen({ theme }) {
             onChange={e => handleSearchChange(e.target.value)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             onFocus={() => search.length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder={isEn ? '🔍 Search by username, role...' : '🔍 Rechercher par username, rôle...'}
+            placeholder={tx('🔍 Search by username, role...', '🔍 Rechercher par username, rôle...')}
             style={{
               width: '100%', padding: '11px 16px', borderRadius: '24px',
               border: `1px solid ${cardBorder}`,
@@ -182,8 +191,8 @@ export default function ExploreScreen({ theme }) {
           <>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
               <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
-              <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {isEn ? 'Available' : 'Dispo'}</button>
-              <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{isEn ? 'All' : 'Tous'}</button>
+              <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {tx('Available', 'Dispo')}</button>
+              <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{tx('All', 'Tous')}</button>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
               {ROLES.map(r => (
@@ -203,7 +212,7 @@ export default function ExploreScreen({ theme }) {
         )}
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
-          {displayed.length} {isEn ? 'CREATIVE' : 'CRÉATIF'}{displayed.length > 1 ? 'S' : ''}
+          {displayed.length} {tx('CREATIVE', 'CRÉATIF')}{displayed.length > 1 ? 'S' : ''}
           {!search.trim() && filter === 'match' && myProfile?.styles ? t.sortedByMatch : ''}
           {!search.trim() && roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
           {!search.trim() && universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
@@ -269,7 +278,7 @@ export default function ExploreScreen({ theme }) {
                     </div>
                   </div>
                   <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
-                    {isEn ? 'View' : 'Voir'}
+                    {tx('View', 'Voir')}
                   </button>
                 </div>
 
@@ -291,10 +300,10 @@ export default function ExploreScreen({ theme }) {
             <div style={{ textAlign: 'center', marginTop: '40px' }}>
               <p style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</p>
               <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>
-                {isEn ? 'No results' : 'Aucun résultat'}
+                {tx('No results', 'Aucun résultat')}
               </p>
               <p style={{ color: subText, fontSize: '13px' }}>
-                {isEn ? 'Try a different search' : 'Essaie une autre recherche'}
+                {tx('Try a different search', 'Essaie une autre recherche')}
               </p>
             </div>
           )}

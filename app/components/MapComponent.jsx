@@ -5,10 +5,13 @@ import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
 import { ROLE_FILTERS, UNIVERS } from '../constants';
 import { useT } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 // ~400 m pour une position GPS, ~2 km pour une ville choisie (répartit les pins dans la ville)
 const GPS_FUZZ = 0.004;
 const CITY_FUZZ = 0.02;
+// Zoom d'ouverture assez large pour voir les créatifs des villes alentour (on peut zoomer à la main)
+const MAP_ZOOM = 10;
 
 // localStorage 'geoMode' : 'gps' | 'city' | 'none'
 function getGeoMode() {
@@ -25,11 +28,23 @@ function fuzzPosition(lat, lng, r = GPS_FUZZ) {
   };
 }
 
+// Même flou d'affichage à chaque rendu pour un même utilisateur : les pins ne sautent plus
+// quand on change de filtre (avant, la position était retirée au hasard à chaque fois).
+function stableFuzz(lat, lng, seed, r = GPS_FUZZ) {
+  let h = 2166136261;
+  for (const ch of String(seed || '')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const a = ((h >>> 0) % 3600) / 3600;
+  const b = ((Math.imul(h, 2654435761) >>> 0) % 1000) / 1000;
+  const angle = a * 2 * Math.PI;
+  const dist = b * r;
+  return { lat: lat + dist * Math.cos(angle), lng: lng + dist * Math.sin(angle) };
+}
+
 const MAP_ROLE_FILTERS = ROLE_FILTERS.map(r => ({ id: r.id, label: r.icon }));
 
-export default function MapComponent({ theme }) {
+export default function MapComponent({ theme, active = true }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
@@ -50,17 +65,17 @@ export default function MapComponent({ theme }) {
   const [savingCity, setSavingCity] = useState(false);
 
   const STATUS_FILTERS = [
-    { id: 'all', label: isEn ? 'All' : 'Tous' },
-    { id: 'dispo', label: `🟢 ${isEn ? 'Available' : 'Dispo'}` },
-    { id: 'shoot', label: `🟡 ${isEn ? 'On shoot' : 'En shoot'}` },
-    { id: 'indispo', label: `🔴 ${isEn ? 'Unavailable' : 'Indispo'}` },
+    { id: 'all', label: tx('All', 'Tous') },
+    { id: 'dispo', label: `🟢 ${tx('Available', 'Dispo')}` },
+    { id: 'shoot', label: `🟡 ${tx('On shoot', 'En shoot')}` },
+    { id: 'indispo', label: `🔴 ${tx('Unavailable', 'Indispo')}` },
   ];
 
   async function initMap(askGeo = false, onGeoError = null) {
     if (mapInstance.current) return;
     import('leaflet').then(async (LeafletModule) => {
       import('leaflet/dist/leaflet.css');
-      const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], 13);
+      const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], MAP_ZOOM);
       mapInstance.current = map;
 
       LeafletModule.tileLayer(
@@ -79,6 +94,9 @@ export default function MapComponent({ theme }) {
 
       if (profileData) {
         setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
+        // Centre la carte sur sa propre position enregistrée (ville choisie ou dernière position)
+        const me = user && profileData.find(p => p.user_id === user.id);
+        if (me?.lat && me?.lng) map.setView([me.lat, me.lng], MAP_ZOOM);
       }
 
       if (askGeo) {
@@ -88,7 +106,7 @@ export default function MapComponent({ theme }) {
         }
         navigator.geolocation.getCurrentPosition(async pos => {
           const { latitude, longitude } = pos.coords;
-          map.setView([latitude, longitude], 14);
+          map.setView([latitude, longitude], MAP_ZOOM);
           if (user) {
             const fuzzed = fuzzPosition(latitude, longitude);
             await supabase.from('profiles').update({ lat: fuzzed.lat, lng: fuzzed.lng }).eq('user_id', user.id);
@@ -111,6 +129,23 @@ export default function MapComponent({ theme }) {
       }
     };
   }, []);
+
+  // Retour sur l'onglet Carte : la carte est restée en mémoire, on la redimensionne
+  // et on met à jour les créatifs en arrière-plan, sans tout recharger.
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && mapInstance.current) {
+      setTimeout(() => mapInstance.current?.invalidateSize(), 60);
+      (async () => {
+        const [{ data: profileData }, { data: { user } }] = await Promise.all([
+          supabase.from('profiles').select('*'),
+          supabase.auth.getUser(),
+        ]);
+        if (profileData) setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
+      })();
+    }
+    wasActive.current = active;
+  }, [active]);
 
   function handleAllow() {
     localStorage.setItem('geoAsked', 'true');
@@ -151,7 +186,7 @@ export default function MapComponent({ theme }) {
       setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng } : p));
     }
     localStorage.setItem('geoMode', 'city');
-    mapInstance.current?.setView([city.lat, city.lng], 12);
+    mapInstance.current?.setView([city.lat, city.lng], MAP_ZOOM);
     setCityOverlay(null);
     setSavingCity(false);
   }
@@ -184,14 +219,14 @@ export default function MapComponent({ theme }) {
             <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;">
               ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : 'MOI'}
             </div>
-            <span style="font-size:10px;font-weight:700;color:white;background:rgba(10,10,10,0.7);padding:1px 6px;border-radius:8px;white-space:nowrap;">${isEn ? 'Me' : 'Moi'}</span>
+            <span style="font-size:10px;font-weight:700;color:white;background:rgba(10,10,10,0.7);padding:1px 6px;border-radius:8px;white-space:nowrap;">${tx('Me', 'Moi')}</span>
           </div>`,
           iconSize: [44, 60], iconAnchor: [22, 22],
         });
         const m = L.marker([p.lat, p.lng], { icon: meIcon }).addTo(mapInstance.current);
         markersRef.current.push(m);
       } else {
-        const fuzzed = fuzzPosition(p.lat, p.lng);
+        const fuzzed = stableFuzz(p.lat, p.lng, p.user_id);
         const buddyIcon = L.divIcon({
           className: '',
           html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
@@ -211,10 +246,10 @@ export default function MapComponent({ theme }) {
 
   const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = popupBuddy?.status === 'shoot'
-    ? (isEn ? 'On shoot' : 'En shoot')
+    ? (tx('On shoot', 'En shoot'))
     : popupBuddy?.status === 'indispo'
-    ? (isEn ? 'Unavailable' : 'Indisponible')
-    : (isEn ? 'Available' : 'Disponible');
+    ? (tx('Unavailable', 'Indisponible'))
+    : (tx('Available', 'Disponible'));
 
   const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -394,9 +429,9 @@ export default function MapComponent({ theme }) {
         borderRadius: '10px', padding: '8px 12px', fontSize: '12px',
         color: darkMode ? '#666' : '#999', zIndex: 400,
       }}>
-        <span style={{ color: '#2ECC71' }}>●</span> {isEn ? 'Available' : 'Dispo'} ·{' '}
-        <span style={{ color: '#FFD700' }}>●</span> {isEn ? 'On shoot' : 'En shoot'} ·{' '}
-        <span style={{ color: '#FF4D4D' }}>●</span> {isEn ? 'Unavailable' : 'Indispo'}
+        <span style={{ color: '#2ECC71' }}>●</span> {tx('Available', 'Dispo')} ·{' '}
+        <span style={{ color: '#FFD700' }}>●</span> {tx('On shoot', 'En shoot')} ·{' '}
+        <span style={{ color: '#FF4D4D' }}>●</span> {tx('Unavailable', 'Indispo')}
       </div>
 
       {popupBuddy && (
@@ -462,7 +497,7 @@ export default function MapComponent({ theme }) {
               fontSize: '13px', fontWeight: '700', cursor: 'pointer',
             }}
           >
-            {isEn ? 'See profile & create together →' : 'Voir le profil & créer ensemble →'}
+            {tx('See profile & create together →', 'Voir le profil & créer ensemble →')}
           </button>
         </div>
       )}

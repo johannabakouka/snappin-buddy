@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
 import { useT, useRoles, useUnivers } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 export default function OnboardingScreen({ user, onComplete }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
 
@@ -52,7 +53,7 @@ export default function OnboardingScreen({ user, onComplete }) {
 
   async function handleCreate() {
     if (!username || !handle || !selectedRole) {
-      setError(isEn ? 'Please fill in all required fields.' : 'Remplis tous les champs obligatoires.');
+      setError(tx('Please fill in all required fields.', 'Remplis tous les champs obligatoires.'));
       return;
     }
     setLoading(true);
@@ -107,7 +108,7 @@ export default function OnboardingScreen({ user, onComplete }) {
 
           <div style={{ marginBottom: '16px' }}>
             <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>
-              {isEn ? 'NAME OR USERNAME *' : 'PRÉNOM OU PSEUDO *'}
+              {tx('NAME OR USERNAME *', 'PRÉNOM OU PSEUDO *')}
             </p>
             <input
               value={username}
@@ -148,7 +149,7 @@ export default function OnboardingScreen({ user, onComplete }) {
           <button
             onClick={() => {
               if (username && handle) { setError(''); setStep(2); }
-              else setError(isEn ? 'Fill in your name and handle first.' : "Remplis ton prénom et ton handle d'abord.");
+              else setError(tx('Fill in your name and handle first.', "Remplis ton prénom et ton handle d'abord."));
             }}
             style={{ width: '100%', padding: '16px', borderRadius: '24px', border: 'none', background: username && handle ? 'white' : 'rgba(255,255,255,0.15)', color: username && handle ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: 'auto' }}
           >
@@ -188,7 +189,7 @@ export default function OnboardingScreen({ user, onComplete }) {
             <button
               onClick={() => {
                 if (selectedRole) { setError(''); setStep(3); }
-                else setError(isEn ? 'Choose a role.' : 'Choisis un rôle.');
+                else setError(tx('Choose a role.', 'Choisis un rôle.'));
               }}
               style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: selectedRole ? 'white' : 'rgba(255,255,255,0.15)', color: selectedRole ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
             >

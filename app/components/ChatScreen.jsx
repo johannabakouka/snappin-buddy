@@ -2,10 +2,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 export default function ChatScreen({ buddy, onBack, theme }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [user, setUser] = useState(null);
@@ -19,10 +20,10 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
   const statusColor = buddyStatus === 'shoot' ? '#FFD700' : buddyStatus === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = buddyStatus === 'shoot'
-    ? (isEn ? 'On shoot' : 'En shoot')
+    ? (tx('On shoot', 'En shoot'))
     : buddyStatus === 'indispo'
-    ? (isEn ? 'Unavailable' : 'Indisponible')
-    : (isEn ? 'Available' : 'Disponible');
+    ? (tx('Unavailable', 'Indisponible'))
+    : (tx('Available', 'Disponible'));
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -133,7 +134,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
           }}>
             <button onClick={() => setShowQRReminder(false)} style={{ position: 'absolute', top: '8px', right: '10px', background: 'none', border: 'none', color: subText, fontSize: '14px', cursor: 'pointer' }}>✕</button>
             <p style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,154,61,0.9)', marginBottom: '4px' }}>
-              🔒 {isEn ? 'Before you meet' : 'Avant de vous retrouver'}
+              🔒 {tx('Before you meet', 'Avant de vous retrouver')}
             </p>
             <p style={{ fontSize: '12px', color: subText, lineHeight: 1.5 }}>
               {isEn
@@ -148,9 +149,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
           <div style={{ textAlign: 'center', marginTop: '60px' }}>
             <p style={{ fontSize: '32px', marginBottom: '12px' }}>🎨</p>
             <p style={{ color: subText, fontSize: '14px', lineHeight: 1.6 }}>
-              {isEn
-                ? "It all starts here... let's create something beautiful!"
-                : 'Tout commence ici... créez quelque chose de beau !'}
+              {tx("It all starts here... let's create something beautiful!", 'Tout commence ici... créez quelque chose de beau !')}
             </p>
           </div>
         )}
@@ -188,7 +187,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder={isEn ? 'Message...' : 'Message...'}
+          placeholder={tx('Message...', 'Message...')}
           style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', outline: 'none' }}
         />
         <button onClick={sendMessage} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>

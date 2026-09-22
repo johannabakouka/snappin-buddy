@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useRoles, useUnivers, useT } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 const BIO_MAX = 150;
 
@@ -31,7 +32,7 @@ function getVideoEmbed(url) {
 
 export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
 
@@ -70,7 +71,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   async function handlePortfolioUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    if (portfolioUrls.length + files.length > 5) { setError(isEn ? 'Maximum 5 portfolio photos' : 'Maximum 5 photos de portfolio'); return; }
+    if (portfolioUrls.length + files.length > 5) { setError(tx('Maximum 5 portfolio photos', 'Maximum 5 photos de portfolio')); return; }
     setUploadingPortfolio(true);
     const { data: { user } } = await supabase.auth.getUser();
     const newUrls = [...portfolioUrls];
@@ -88,7 +89,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   }
 
   async function handleSave() {
-    if (!username || !handle || !selectedRole) { setError(isEn ? 'Required fields missing' : 'Champs obligatoires manquants'); return; }
+    if (!username || !handle || !selectedRole) { setError(tx('Required fields missing', 'Champs obligatoires manquants')); return; }
     setLoading(true);
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const universToSave = selectedUnivers.map(label => {
@@ -114,7 +115,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-        <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{isEn ? 'Edit profile' : 'Modifier le profil'}</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{tx('Edit profile', 'Modifier le profil')}</h2>
       </div>
 
       {profile?.avatar_url && (
@@ -124,9 +125,9 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       )}
 
       {[
-        { label: isEn ? 'Name' : 'Nom', value: username, set: setUsername, placeholder: isEn ? 'Your name or username' : 'Ton prénom ou pseudo', max: null },
+        { label: tx('Name', 'Nom'), value: username, set: setUsername, placeholder: tx('Your name or username', 'Ton prénom ou pseudo'), max: null },
         { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle', max: null },
-        { label: isEn ? 'Area' : 'Zone', value: zone, set: setZone, placeholder: isEn ? 'Shoreditch, Kreuzberg...' : 'Belleville, Oberkampf...', max: null },
+        { label: tx('Area', 'Zone'), value: zone, set: setZone, placeholder: tx('Shoreditch, Kreuzberg...', 'Belleville, Oberkampf...'), max: null },
       ].map(({ label, value, set, placeholder }) => (
         <div key={label} style={{ marginBottom: '16px' }}>
           <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>{label}</p>
@@ -137,18 +138,18 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <p style={{ color: subText, fontSize: '12px', fontWeight: '600' }}>{isEn ? 'Pitch' : 'Pitch'}</p>
+          <p style={{ color: subText, fontSize: '12px', fontWeight: '600' }}>{tx('Pitch', 'Pitch')}</p>
           {charCount(bio, BIO_MAX)}
         </div>
         <input
           value={bio}
           onChange={e => e.target.value.length <= BIO_MAX && setBio(e.target.value)}
-          placeholder={isEn ? 'Current project...' : 'Ton projet en cours...'}
+          placeholder={tx('Current project...', 'Ton projet en cours...')}
           style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
         />
       </div>
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{isEn ? 'ROLE *' : 'RÔLE *'}</p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{tx('ROLE *', 'RÔLE *')}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
         {ROLES.map(r => {
           const active = selectedRole === r.id;
@@ -168,7 +169,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         })}
       </div>
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{isEn ? 'UNIVERSE' : 'UNIVERS'}</p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{tx('UNIVERSE', 'UNIVERS')}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {UNIVERS.map(s => {
           const active = selectedUnivers.includes(s);
@@ -202,7 +203,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       </div>
       <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 {isEn ? 'VIDEO LINK' : 'LIEN VIDÉO'} <span style={{ fontWeight: '400' }}>(YouTube, Vimeo, TikTok, Instagram)</span></p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 {tx('VIDEO LINK', 'LIEN VIDÉO')} <span style={{ fontWeight: '400' }}>(YouTube, Vimeo, TikTok, Instagram)</span></p>
       <input
         value={videoUrl}
         onChange={e => setVideoUrl(e.target.value)}
@@ -216,14 +217,14 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       )}
       {embedUrl && embedUrl.type === 'link' && (
         <a href={embedUrl.src} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)', color: 'white', fontWeight: '700', fontSize: '13px', textAlign: 'center', marginBottom: '16px', textDecoration: 'none' }}>
-          📸 {isEn ? 'View on Instagram →' : 'Voir sur Instagram →'}
+          📸 {tx('View on Instagram →', 'Voir sur Instagram →')}
         </a>
       )}
 
       {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
       <button onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-        {loading ? (isEn ? 'Saving...' : 'Sauvegarde...') : (isEn ? 'Save' : 'Enregistrer')}
+        {loading ? (tx('Saving...', 'Sauvegarde...')) : (tx('Save', 'Enregistrer'))}
       </button>
     </div>
   );

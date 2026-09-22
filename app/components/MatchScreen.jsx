@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import Header from './Header';
 import QRScreen from './QRScreen';
@@ -7,6 +7,7 @@ import OfferForm from './OfferForm';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import ShareCard from './ShareCard';
 import { useT, useRoles, useUnivers } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
 async function sendEmail(type, payload) {
@@ -23,9 +24,9 @@ async function sendEmail(type, payload) {
   }
 }
 
-export default function MatchScreen({ theme, setScreen }) {
+export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0 }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
   const darkMode = theme?.dark ?? true;
@@ -69,6 +70,29 @@ export default function MatchScreen({ theme, setScreen }) {
     });
   }, []);
 
+  // Retour sur l'onglet : mise à jour silencieuse des projets et candidatures
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && user) {
+      loadCollabs(user.id);
+      loadOffers(user.id);
+      loadApplied(user.id);
+    }
+    wasActive.current = active;
+  }, [active]);
+
+  // Bouton « Mes projets » du profil : ouvre l'onglet Projets, en haut de la liste
+  const scrollBoxRef = useRef(null);
+  const [seenSignal, setSeenSignal] = useState(myProjectsSignal);
+  if (myProjectsSignal !== seenSignal) {
+    setSeenSignal(myProjectsSignal);
+    setTab('offres');
+    setSelectedOffer(null);
+  }
+  useEffect(() => {
+    if (myProjectsSignal) scrollBoxRef.current?.scrollTo({ top: 0 });
+  }, [myProjectsSignal]);
+
   async function loadApplied(userId) {
     const { data } = await supabase.from('collabs').select('message').eq('sender_id', userId);
     if (data) {
@@ -85,12 +109,12 @@ export default function MatchScreen({ theme, setScreen }) {
     const { data: snt } = await supabase.from('collabs').select('*').eq('sender_id', userId).order('created_at', { ascending: false });
     if (recv && recv.length > 0) {
       const senderIds = recv.map(c => c.sender_id);
-      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls').in('user_id', senderIds);
+      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', senderIds);
       setReceived(recv.map(c => ({ ...c, senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id) })));
     } else setReceived([]);
     if (snt && snt.length > 0) {
       const receiverIds = snt.map(c => c.receiver_id);
-      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls').in('user_id', receiverIds);
+      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', receiverIds);
       setSent(snt.map(c => ({ ...c, receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id) })));
     } else setSent([]);
   }
@@ -112,7 +136,7 @@ export default function MatchScreen({ theme, setScreen }) {
     const { data: collabs } = await supabase.from('collabs').select('*').eq('receiver_id', user.id).ilike('message', `%${offer.title}%`).order('created_at', { ascending: false });
     if (collabs && collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls').in('user_id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
     } else setOfferCandidates([]);
     setLoadingCandidates(false);
@@ -136,7 +160,7 @@ export default function MatchScreen({ theme, setScreen }) {
       if (data.url) window.location.href = data.url;
       else throw new Error(data.error || 'checkout');
     } catch (err) {
-      alert(isEn ? 'Payment error, try again.' : 'Erreur de paiement, réessaie.');
+      alert(tx('Payment error, try again.', 'Erreur de paiement, réessaie.'));
     }
   }
 
@@ -172,7 +196,7 @@ export default function MatchScreen({ theme, setScreen }) {
       await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: senderId,
-        content: isEn ? "⚡ Let's create something beautiful together! When shall we meet?" : '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?'
+        content: tx("⚡ Let's create something beautiful together! When shall we meet?", '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?')
       });
 
       // Prévient le candidat accepté (et non plus la personne qui accepte)
@@ -213,9 +237,9 @@ export default function MatchScreen({ theme, setScreen }) {
   });
 
   const statusBadge = (status) => {
-    if (status === 'accepted') return { label: isEn ? 'Accepted ✓' : 'Accepté ✓', color: '#2ECC71' };
-    if (status === 'declined') return { label: isEn ? 'Declined' : 'Refusé', color: '#FF4D4D' };
-    return { label: isEn ? 'Pending' : 'En attente', color: '#FFD700' };
+    if (status === 'accepted') return { label: tx('Accepted ✓', 'Accepté ✓'), color: '#2ECC71' };
+    if (status === 'declined') return { label: tx('Declined', 'Refusé'), color: '#FF4D4D' };
+    return { label: tx('Pending', 'En attente'), color: '#FFD700' };
   };
 
   const tabStyle = (active) => ({
@@ -250,7 +274,7 @@ export default function MatchScreen({ theme, setScreen }) {
           </div>
           {onViewFull && (
             <button onClick={() => onViewFull(profile)} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', flexShrink: 0 }}>
-              {isEn ? 'View profile' : 'Voir profil'}
+              {tx('View profile', 'Voir profil')}
             </button>
           )}
         </div>
@@ -295,7 +319,7 @@ export default function MatchScreen({ theme, setScreen }) {
         <button onClick={() => setSelectedOffer(null)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color }}>{selectedOffer.title}</p>
-          <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {isEn ? 'proposal(s)' : 'proposition(s)'}</p>
+          <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {tx('proposal(s)', 'proposition(s)')}</p>
         </div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
@@ -304,8 +328,8 @@ export default function MatchScreen({ theme, setScreen }) {
         ) : offerCandidates.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: '60px' }}>
             <p style={{ fontSize: '32px', marginBottom: '12px' }}>📭</p>
-            <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'No proposals yet' : 'Pas encore de propositions'}</p>
-            <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Share your project to get proposals!' : 'Partage ton projet pour recevoir des propositions !'}</p>
+            <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{tx('No proposals yet', 'Pas encore de propositions')}</p>
+            <p style={{ color: subText, fontSize: '13px' }}>{tx('Share your project to get proposals!', 'Partage ton projet pour recevoir des propositions !')}</p>
           </div>
         ) : (
           offerCandidates.map(c => (
@@ -340,7 +364,7 @@ export default function MatchScreen({ theme, setScreen }) {
         <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>{t.matchTab}</button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px' }}>
+      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px' }}>
 
         {tab === 'offres' && (
           <>
@@ -374,16 +398,16 @@ export default function MatchScreen({ theme, setScreen }) {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                           <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
-                            {o.status === 'open' ? (isEn ? 'Open' : 'Ouvert') : (isEn ? 'Closed' : 'Fermé')}
+                            {o.status === 'open' ? (tx('Open', 'Ouvert')) : (tx('Closed', 'Fermé'))}
                           </span>
                           <span style={{ fontSize: '10px', color: subText }}>
-                            {isEn ? 'See proposals →' : 'Voir propositions →'}
+                            {tx('See proposals →', 'Voir propositions →')}
                           </span>
                           <button onClick={e => { e.stopPropagation(); setEditingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: theme?.color, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
-                            ✏️ {isEn ? 'Edit' : 'Modifier'}
+                            ✏️ {tx('Edit', 'Modifier')}
                           </button>
                           <button onClick={e => { e.stopPropagation(); setSharingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}>
-                            📸 {isEn ? 'Share' : 'Partager'}
+                            📸 {tx('Share', 'Partager')}
                           </button>
                           {o.status === 'open' && !isBoosted && (
                             <div style={{ display: 'flex', gap: '4px' }}>
@@ -406,12 +430,12 @@ export default function MatchScreen({ theme, setScreen }) {
 
             <div style={{ marginBottom: '12px' }}>
               <input value={filterZone} onChange={e => setFilterZone(e.target.value)}
-                placeholder={isEn ? '📍 City or country...' : '📍 Ville ou pays...'}
+                placeholder={tx('📍 City or country...', '📍 Ville ou pays...')}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {isEn ? 'For you' : 'Pour toi'}</button>
-                <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {isEn ? 'Recent' : 'Récent'}</button>
+                <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
+                <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {tx('Recent', 'Récent')}</button>
                 {ROLES.slice(0, 6).map(r => (
                   <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>{r.icon} {r.label}</button>
                 ))}
@@ -426,7 +450,7 @@ export default function MatchScreen({ theme, setScreen }) {
             {displayedOffers.length > 0 ? (
               <>
                 <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>
-                  {sortBy === 'match' ? (isEn ? 'MATCHING YOUR PROFILE' : 'CORRESPOND À TON UNIVERS') : t.offersNow}
+                  {sortBy === 'match' ? (tx('MATCHING YOUR PROFILE', 'CORRESPOND À TON UNIVERS')) : t.offersNow}
                 </p>
                 {displayedOffers.map(o => {
                   const score = getMatchScore(o);
@@ -439,7 +463,7 @@ export default function MatchScreen({ theme, setScreen }) {
                           {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (isEn ? 'Creative' : 'Créatif')}</p>
+                          <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (tx('Creative', 'Créatif'))}</p>
                           <p style={{ fontSize: '11px', color: subText }}>{o.authorProfile?.role}</p>
                         </div>
                         {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '2px 8px', fontWeight: '700' }}>🚀 Boost</span>}
@@ -476,7 +500,7 @@ export default function MatchScreen({ theme, setScreen }) {
                             </button>
                           )}
                           <button onClick={() => setSharingOffer(o)} style={{ width: '100%', padding: '8px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, background: 'transparent', color: subText, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                            📸 {isEn ? 'Share on story' : 'Partager en story'}
+                            📸 {tx('Share on story', 'Partager en story')}
                           </button>
                         </div>
                       ) : (
@@ -509,7 +533,7 @@ export default function MatchScreen({ theme, setScreen }) {
                       <span style={{ fontSize: '11px', color: statusBadge(c.status).color, fontWeight: '700' }}>{statusBadge(c.status).label}</span>
                     </div>
                     <MiniProfile profile={c.senderProfile} onViewFull={(p) => setViewingBuddy(p)} />
-                    <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'pending' || c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (isEn ? 'No message' : 'Pas de message')}</p>
+                    <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'pending' || c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (tx('No message', 'Pas de message'))}</p>
                     {c.status === 'pending' && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <button onClick={() => respondCollab(c.id, 'accepted', c.sender_id)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#2ECC71', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>{t.accept}</button>
@@ -535,7 +559,7 @@ export default function MatchScreen({ theme, setScreen }) {
                       <span style={{ fontSize: '11px', color: statusBadge(c.status).color, fontWeight: '700' }}>{statusBadge(c.status).label}</span>
                     </div>
                     <MiniProfile profile={c.receiverProfile} />
-                    <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (isEn ? 'No message' : 'Pas de message')}</p>
+                    <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (tx('No message', 'Pas de message'))}</p>
                     {c.status === 'accepted' && (
                       <button onClick={() => setQrCollab(c)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: theme?.color, fontWeight: '700', fontSize: '13px', cursor: 'pointer', marginTop: '12px' }}>
                         {t.generateQR}

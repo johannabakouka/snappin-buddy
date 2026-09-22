@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useT, useRoles, useUnivers } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 const EUROPEAN_CITIES = [
   'Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nantes', 'Lille', 'Strasbourg', 'Nice', 'Rennes',
@@ -21,7 +22,7 @@ const DESC_MAX = 500;
 
 export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
   const darkMode = theme?.dark ?? true;
@@ -101,35 +102,35 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>
-            {isEdit ? (isEn ? 'Edit project' : 'Modifier le projet') : (isEn ? 'New project' : 'Nouveau projet')}
+            {isEdit ? (tx('Edit project', 'Modifier le projet')) : (tx('New project', 'Nouveau projet'))}
           </h2>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{isEn ? 'TITLE *' : 'TITRE *'}</span>
+          <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{tx('TITLE *', 'TITRE *')}</span>
           {charCount(offerTitle, TITLE_MAX)}
         </div>
         <input
           value={offerTitle}
           onChange={e => e.target.value.length <= TITLE_MAX && setOfferTitle(e.target.value)}
-          placeholder={isEn ? 'Project title *' : 'Titre du projet *'}
+          placeholder={tx('Project title *', 'Titre du projet *')}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', outline: 'none' }}
         />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{isEn ? 'DESCRIPTION' : 'DESCRIPTION'}</span>
+          <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{tx('DESCRIPTION', 'DESCRIPTION')}</span>
           {charCount(offerDesc, DESC_MAX)}
         </div>
         <textarea
           value={offerDesc}
           onChange={e => e.target.value.length <= DESC_MAX && setOfferDesc(e.target.value)}
-          placeholder={isEn ? 'Describe your project...' : 'Décris ton projet...'}
+          placeholder={tx('Describe your project...', 'Décris ton projet...')}
           rows={3}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none', outline: 'none' }}
         />
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
-          {isEn ? 'WHO ARE YOU LOOKING FOR? *' : 'QUI CHERCHES-TU ? *'}
+          {tx('WHO ARE YOU LOOKING FOR? *', 'QUI CHERCHES-TU ? *')}
           {offerRoles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerRoles.length})</span>}
         </p>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
@@ -163,7 +164,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
               value={offerZone}
               onChange={e => handleCityChange(e.target.value)}
               onBlur={() => setTimeout(() => setShowCitySuggestions(false), 150)}
-              placeholder={isEn ? 'City' : 'Ville'}
+              placeholder={tx('City', 'Ville')}
               style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
             />
             {showCitySuggestions && (
@@ -207,7 +208,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           disabled={offerLoading || !offerTitle || offerRoles.length === 0}
           style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}
         >
-          {offerLoading ? (isEn ? 'Launching...' : 'Lancement...') : isEdit ? (isEn ? '✓ Save changes' : '✓ Enregistrer') : (isEn ? '⚡ Launch project' : '⚡ Lancer le projet')}
+          {offerLoading ? (tx('Launching...', 'Lancement...')) : isEdit ? (tx('✓ Save changes', '✓ Enregistrer')) : (tx('⚡ Launch project', '⚡ Lancer le projet'))}
         </button>
 
         {isEdit && (
@@ -215,7 +216,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
             onClick={onCloseOffer}
             style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(255,77,77,0.4)', background: 'transparent', color: '#FF4D4D', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
           >
-            🔒 {isEn ? 'Close project' : 'Fermer le projet'}
+            🔒 {tx('Close project', 'Fermer le projet')}
           </button>
         )}
       </div>

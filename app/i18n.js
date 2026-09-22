@@ -40,7 +40,7 @@ export const translations = {
     offersNow: 'PROJETS DU MOMENT',
     noOffers: "Aucun projet pour l'instant",
     beFirst: 'Lance le premier projet !',
-    applyOffer: '⚡ Me proposer',
+    applyOffer: '⚡ Je me propose',
     noMatch: 'Pas encore de match',
     noMatchSub: 'Lance un projet ou explore les créatifs',
     seeOffers: 'Voir les projets',
@@ -83,6 +83,8 @@ export const translations = {
     notOnMap: "Tu n'apparais pas encore sur la carte",
     notOnMapCta: "Choisir ma ville",
     changeCity: "Changer de ville",
+    showPassword: "Afficher le mot de passe",
+    hidePassword: "Masquer le mot de passe",
   },
 
   en: {
@@ -167,6 +169,8 @@ export const translations = {
     notOnMap: "You're not on the map yet",
     notOnMapCta: "Choose my city",
     changeCity: "Change city",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
   },
 
   pt: {
@@ -236,21 +240,23 @@ export const translations = {
     useThis: 'Usar',
     alreadyApplied: 'Proposto ✓',
     projectFull: '🔒 Projeto completo',
-    geoTitle: "Encontra os criativos perto de ti",
-    geoText: "O Snappin'Buddy usa a tua localização para mostrar os criativos perto de ti. A tua posição exata nunca é partilhada: fica desfocada a cerca de 400 m.",
+    geoTitle: "Encontre criativos perto de você",
+    geoText: "O Snappin'Buddy usa a sua localização para mostrar criativos perto de você. A sua posição exata nunca é compartilhada: ela fica desfocada em cerca de 400 m.",
     geoAllow: "📍 Permitir localização",
-    geoChooseCity: "🏙️ Escolher a minha cidade",
+    geoChooseCity: "🏙️ Escolher minha cidade",
     geoNotNow: "Agora não",
-    geoDenied: "Localização indisponível. Escolhe a tua cidade para aparecer no mapa:",
-    cityTitle: "Escolhe a tua cidade",
-    cityHint: "Vais aparecer na tua cidade, sem posição exata.",
-    cityPlaceholder: "A tua cidade…",
-    cityLoading: "A carregar cidades…",
+    geoDenied: "Localização indisponível. Escolha sua cidade para aparecer no mapa:",
+    cityTitle: "Escolha sua cidade",
+    cityHint: "Você vai aparecer na sua cidade, sem posição exata.",
+    cityPlaceholder: "Sua cidade…",
+    cityLoading: "Carregando cidades…",
     cityNoResult: "Nenhuma cidade encontrada",
     cityBack: "← Voltar",
-    notOnMap: "Ainda não apareces no mapa",
-    notOnMapCta: "Escolher a minha cidade",
+    notOnMap: "Você ainda não aparece no mapa",
+    notOnMapCta: "Escolher minha cidade",
     changeCity: "Mudar de cidade",
+    showPassword: "Mostrar senha",
+    hidePassword: "Ocultar senha",
   },
 
   es: {
@@ -335,6 +341,8 @@ export const translations = {
     notOnMap: "Todavía no apareces en el mapa",
     notOnMapCta: "Elegir mi ciudad",
     changeCity: "Cambiar de ciudad",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
   },
 
   de: {
@@ -419,6 +427,8 @@ export const translations = {
     notOnMap: "Du bist noch nicht auf der Karte",
     notOnMapCta: "Meine Stadt wählen",
     changeCity: "Stadt ändern",
+    showPassword: "Passwort anzeigen",
+    hidePassword: "Passwort verbergen",
   },
 
   it: {
@@ -503,6 +513,8 @@ export const translations = {
     notOnMap: "Non sei ancora sulla mappa",
     notOnMapCta: "Scegli la mia città",
     changeCity: "Cambia città",
+    showPassword: "Mostra password",
+    hidePassword: "Nascondi password",
   },
 };
 

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
 import { useT, useRoles } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN } from '../constants';
 
 function getVideoEmbed(url) {
@@ -36,7 +37,7 @@ function translateTag(tag, isEn) {
 
 export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const ROLES = useRoles();
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
@@ -61,10 +62,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const portfolio = buddy?.portfolio_urls || [];
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = buddy?.status === 'shoot'
-    ? (isEn ? 'On shoot' : 'En shoot')
+    ? (tx('On shoot', 'En shoot'))
     : buddy?.status === 'indispo'
-    ? (isEn ? 'Unavailable' : 'Indisponible')
-    : (isEn ? 'Available' : 'Disponible');
+    ? (tx('Unavailable', 'Indisponible'))
+    : (tx('Available', 'Disponible'));
   const embedUrl = getVideoEmbed(buddy?.video_url);
 
   const roleObj = ROLES.find(r => r.id === buddy?.role?.toLowerCase());
@@ -116,6 +117,11 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
             {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{buddy?.username}</h2>
+          {buddy?.is_early_adopter && (
+            <span style={{ display: 'inline-block', margin: '6px 0 4px', padding: '3px 10px', borderRadius: '12px', background: 'rgba(242,224,80,0.14)', border: '1px solid rgba(242,224,80,0.5)', color: '#F2E050', fontSize: '11px', fontWeight: '800', letterSpacing: '0.3px' }}>
+              ✨ Early Adopter
+            </span>
+          )}
           <p style={{ color: subText, fontSize: '13px' }}>{buddy?.handle}</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor }}/>
@@ -136,14 +142,14 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {embedUrl && (
           <div style={{ marginBottom: '16px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>🎬 {isEn ? 'VIDEO' : 'VIDÉO'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>🎬 {tx('VIDEO', 'VIDÉO')}</p>
             {embedUrl.type === 'iframe' ? (
               <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
                 <iframe src={embedUrl.src} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
               </div>
             ) : (
               <a href={embedUrl.src} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)', color: 'white', fontWeight: '700', fontSize: '13px', textAlign: 'center', textDecoration: 'none' }}>
-                📸 {isEn ? 'View on Instagram →' : 'Voir sur Instagram →'}
+                📸 {tx('View on Instagram →', 'Voir sur Instagram →')}
               </a>
             )}
           </div>
@@ -151,21 +157,21 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {buddy?.bio && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{isEn ? 'CURRENT PROJECT' : 'PROJET EN COURS'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{tx('CURRENT PROJECT', 'PROJET EN COURS')}</p>
             <p style={{ fontSize: '14px', color }}>{buddy.bio}</p>
           </div>
         )}
 
         {roleLabel && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{isEn ? 'ROLE' : 'RÔLE'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{tx('ROLE', 'RÔLE')}</p>
             <p style={{ fontSize: '14px', color }}>{roleLabel}</p>
           </div>
         )}
 
         {styles.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'UNIVERSE' : 'UNIVERS'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{tx('UNIVERSE', 'UNIVERS')}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {styles.map(s => (
                 <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>
@@ -178,7 +184,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {zones.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'SHOOT ZONES' : 'ZONES DE SHOOT'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{tx('SHOOT ZONES', 'ZONES DE SHOOT')}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {zones.map(z => (
                 <span key={z} style={{ fontSize: '12px', color: tagColor, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', borderRadius: '20px', padding: '4px 12px' }}>{z}</span>
@@ -189,20 +195,20 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {sent ? (
           <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#2ECC71', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
-            {isEn ? "✓ Proposal sent! Let's create something beautiful 🎨" : '✓ Proposition envoyée ! Créez quelque chose de beau 🎨'}
+            {tx("✓ Proposal sent! Let's create something beautiful 🎨", '✓ Proposition envoyée ! Créez quelque chose de beau 🎨')}
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
             <input value={message} onChange={e => setMessage(e.target.value)}
-              placeholder={isEn ? 'Tell them about your project...' : 'Parle-lui de ton projet...'}
+              placeholder={tx('Tell them about your project...', 'Parle-lui de ton projet...')}
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
             <button onClick={sendCollab} disabled={sending} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              {sending ? (isEn ? 'Sending...' : 'Envoi...') : (isEn ? '⚡ Send proposal' : '⚡ Envoyer ma proposition')}
+              {sending ? (tx('Sending...', 'Envoi...')) : (tx('⚡ Send proposal', '⚡ Envoyer ma proposition'))}
             </button>
           </div>
         ) : (
           <button onClick={() => setShowInput(true)} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
-            {isEn ? '⚡ Propose a collab' : '⚡ Proposer une création ensemble'}
+            {tx('⚡ Propose a collab', '⚡ Proposer une création ensemble')}
           </button>
         )}
 
@@ -210,24 +216,24 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
         <div style={{ marginTop: '24px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px' }}>
           {!showReport ? (
             <button onClick={() => setShowReport(true)} style={{ background: 'none', border: 'none', color: subText, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 auto' }}>
-              🚩 {isEn ? 'Report this user' : 'Signaler cet utilisateur'}
+              🚩 {tx('Report this user', 'Signaler cet utilisateur')}
             </button>
           ) : reportSent ? (
             <p style={{ color: '#2ECC71', fontSize: '13px', textAlign: 'center', fontWeight: '600' }}>
-              ✓ {isEn ? 'Report sent, thank you.' : 'Signalement envoyé, merci.'}
+              ✓ {tx('Report sent, thank you.', 'Signalement envoyé, merci.')}
             </p>
           ) : (
             <div>
               <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', textAlign: 'center' }}>
-                {isEn ? 'Why are you reporting this user?' : 'Pourquoi tu signales cet utilisateur ?'}
+                {tx('Why are you reporting this user?', 'Pourquoi tu signales cet utilisateur ?')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
                 {[
-                  isEn ? 'Inappropriate behavior' : 'Comportement inapproprié',
-                  isEn ? 'Fake profile' : 'Faux profil',
-                  isEn ? 'Spam' : 'Spam',
-                  isEn ? 'Harassment' : 'Harcèlement',
-                  isEn ? 'Other' : 'Autre',
+                  tx('Inappropriate behavior', 'Comportement inapproprié'),
+                  tx('Fake profile', 'Faux profil'),
+                  tx('Spam', 'Spam'),
+                  tx('Harassment', 'Harcèlement'),
+                  tx('Other', 'Autre'),
                 ].map(reason => (
                   <button key={reason} onClick={() => setReportReason(reason)} style={{
                     padding: '10px 14px', borderRadius: '12px', textAlign: 'left',
@@ -242,10 +248,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => { setShowReport(false); setReportReason(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: subText, fontSize: '13px', cursor: 'pointer' }}>
-                  {isEn ? 'Cancel' : 'Annuler'}
+                  {tx('Cancel', 'Annuler')}
                 </button>
                 <button onClick={sendReport} disabled={!reportReason} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: reportReason ? '#FF4D4D' : 'rgba(255,77,77,0.3)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: reportReason ? 'pointer' : 'default' }}>
-                  {isEn ? 'Send report' : 'Envoyer'}
+                  {tx('Send report', 'Envoyer')}
                 </button>
               </div>
             </div>

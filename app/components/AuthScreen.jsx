@@ -2,12 +2,14 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
 export default function AuthScreen({ onLogin, theme }) {
   const t = useT();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [cguAccepted, setCguAccepted] = useState(false);
@@ -19,11 +21,11 @@ export default function AuthScreen({ onLogin, theme }) {
   const subText = darkMode ? '#555' : '#999';
   const inputBg = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const inputBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
 
   async function handleSubmit() {
     if (mode === 'signup' && !cguAccepted) {
-      setMessage(isEn ? 'Please accept the terms of use to continue.' : 'Accepte les CGU pour continuer.');
+      setMessage(tx('Please accept the terms of use to continue.', 'Accepte les CGU pour continuer.'));
       return;
     }
     setLoading(true);
@@ -31,7 +33,7 @@ export default function AuthScreen({ onLogin, theme }) {
     if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setMessage(error.message);
-      else setMessage(isEn ? 'Check your email to confirm your account!' : 'Vérifie ton email pour confirmer ton compte !');
+      else setMessage(tx('Check your email to confirm your account!', 'Vérifie ton email pour confirmer ton compte !'));
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage(error.message);
@@ -81,12 +83,41 @@ export default function AuthScreen({ onLogin, theme }) {
       />
 
       {mode !== 'reset' && (
-        <input
-          type="password" placeholder={t.password} value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-          style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
-        />
+        <div style={{ position: 'relative', marginBottom: '8px' }}>
+          <input
+            type={showPassword ? 'text' : 'password'} placeholder={t.password} value={password}
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            style={{ width: '100%', padding: '14px 48px 14px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            aria-label={showPassword ? t.hidePassword : t.showPassword}
+            title={showPassword ? t.hidePassword : t.showPassword}
+            style={{
+              position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+              width: '36px', height: '36px', border: 'none', background: 'transparent', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.5)',
+            }}
+          >
+            {showPassword ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        </div>
       )}
 
       {mode === 'login' && (
@@ -110,14 +141,14 @@ export default function AuthScreen({ onLogin, theme }) {
             {cguAccepted && <span style={{ color: bg, fontSize: '12px', fontWeight: '900' }}>✓</span>}
           </div>
           <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5, margin: 0 }}>
-            {isEn ? "I accept the " : "J'accepte les "}
+            {tx("I accept the ", "J'accepte les ")}
             <span
               onClick={() => setShowLegal(true)}
               style={{ color, textDecoration: 'underline', cursor: 'pointer', fontWeight: '700' }}
             >
-              {isEn ? "Terms of Use & Privacy Policy" : "CGU & Politique de confidentialité"}
+              {tx("Terms of Use & Privacy Policy", "CGU & Politique de confidentialité")}
             </span>
-            {isEn ? " of Snappin'Buddy" : " de Snappin'Buddy"}
+            {tx(" of Snappin'Buddy", " de Snappin'Buddy")}
           </p>
         </div>
       )}
@@ -174,7 +205,7 @@ Pour toute question : ateliers777.contact@gmail.com`}</p>
             onClick={() => { setCguAccepted(true); setShowLegal(false); }}
             style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
           >
-            ✓ {isEn ? 'Accept and continue' : 'Accepter et continuer'}
+            ✓ {tx('Accept and continue', 'Accepter et continuer')}
           </button>
         </div>
       )}

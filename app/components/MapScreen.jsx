@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export default function MapScreen({ theme }) {
+export default function MapScreen({ theme, active = true }) {
   const [loaded, setLoaded] = useState(false);
   const darkMode = theme?.dark ?? true;
 
@@ -12,5 +12,5 @@ export default function MapScreen({ theme }) {
   if (!loaded) return <div style={{ height: '100vh', background: darkMode ? '#0f0f0f' : '#F5F5F5' }}/>;
 
   const MapComponent = require('./MapComponent').default;
-  return <MapComponent key={darkMode ? 'dark' : 'light'} theme={theme} />;
+  return <MapComponent key={darkMode ? 'dark' : 'light'} theme={theme} active={active} />;
 }

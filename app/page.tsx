@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase';
 import Navbar from './components/Navbar';
 import MapScreen from './components/MapScreen';
@@ -10,6 +10,7 @@ import ProfileScreen from './components/ProfileScreen';
 import AuthScreen from './components/AuthScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
+import NewPasswordScreen from './components/NewPasswordScreen';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
@@ -48,6 +49,8 @@ function LoadingScreen() {
   );
 }
 
+const SCREENS = ['map', 'explore', 'match', 'messages', 'profile'];
+
 export default function Home() {
   const [screen, setScreen] = useState('map');
   const [user, setUser] = useState<any>(null);
@@ -57,6 +60,22 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  // Écrans déjà ouverts : ils restent en mémoire (cachés) pour revenir dessus instantanément
+  const [visited, setVisited] = useState<string[]>([]);
+  // Lien « mot de passe oublié » ouvert : on affiche l'écran de nouveau mot de passe
+  const [recovery, setRecovery] = useState(false);
+  // Incrémenté pour demander à l'écran Match d'afficher « Mes projets »
+  const [myProjectsSignal, setMyProjectsSignal] = useState(0);
+  const userIdRef = useRef<string | null>(null);
+
+  async function fetchProfile(userId: string) {
+    const { data: p } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+    setProfile(p || null);
+  }
+
+  async function refreshProfile() {
+    if (userIdRef.current) await fetchProfile(userIdRef.current);
+  }
 
   useEffect(() => {
     localStorage.removeItem('sb_user');
@@ -65,52 +84,45 @@ export default function Home() {
     const savedScreen = localStorage.getItem('lastScreen') || 'map';
     const savedDark = localStorage.getItem('darkMode');
     const savedWelcome = !localStorage.getItem('welcomeSeen');
-    setScreen(savedScreen);
+    setScreen(SCREENS.includes(savedScreen) ? savedScreen : 'map');
     setDarkMode(savedDark !== null ? savedDark === 'true' : true);
     setShowWelcome(savedWelcome);
     setInitialized(true);
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      const u: any = data.session?.user ?? null;
-
+    // Un seul point d'entrée pour la session. Si c'est le même utilisateur
+    // (renouvellement du jeton, retour sur l'onglet), on ne recharge rien :
+    // avant, l'app repassait par l'écran de chargement et perdait tous ses écrans.
+    function handleUser(u: any) {
       if (!u) {
+        userIdRef.current = null;
         setUser(null);
         setProfile(null);
         setProfileChecked(true);
         setLoading(false);
         return;
       }
-
-      setUser(u);
-      const { data: p } = await supabase.from('profiles')
-        .select('*')
-        .eq('user_id', u.id)
-        .single();
-
-      setProfile(p || null);
-      setProfileChecked(true);
-      setLoading(false);
-    });
-
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u: any = session?.user ?? null;
-      if (u) {
+      if (u.id === userIdRef.current) {
         setUser(u);
-        setProfileChecked(false); // Reset pendant le chargement
-        const { data: p } = await supabase.from('profiles')
-          .select('*')
-          .eq('user_id', u.id)
-          .single();
-        setProfile(p || null);
-        setProfileChecked(true);
-        setLoading(false);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setProfileChecked(true);
-        setLoading(false);
+        return;
       }
+      userIdRef.current = u.id;
+      setUser(u);
+      setProfileChecked(false);
+      // setTimeout : Supabase déconseille d'appeler la base directement dans onAuthStateChange
+      setTimeout(async () => {
+        await fetchProfile(u.id);
+        setProfileChecked(true);
+        setLoading(false);
+      }, 0);
+    }
+
+    supabase.auth.getSession().then(({ data }) => handleUser(data.session?.user ?? null));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+      handleUser(session?.user ?? null);
     });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -120,6 +132,9 @@ export default function Home() {
   useEffect(() => {
     if (initialized) localStorage.setItem('lastScreen', screen);
   }, [screen, initialized]);
+
+  // Mémorise les écrans déjà ouverts (mise à jour pendant le rendu, recommandée par React)
+  if (!visited.includes(screen)) setVisited([...visited, screen]);
 
   const theme = {
     bg: darkMode ? '#0A0A0A' : '#F5F5F5',
@@ -131,6 +146,12 @@ export default function Home() {
   if (loading || !profileChecked) return (
     <div style={{ maxWidth: '390px', margin: '0 auto' }}>
       <LoadingScreen />
+    </div>
+  );
+
+  if (recovery && user) return (
+    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
+      <NewPasswordScreen theme={theme} onDone={() => setRecovery(false)} />
     </div>
   );
 
@@ -150,19 +171,29 @@ export default function Home() {
     );
   }
 
-  // User connecté mais profil pas encore vérifié = loading
-  if (!profileChecked) return (
-    <div style={{ maxWidth: '390px', margin: '0 auto' }}>
-      <LoadingScreen />
-    </div>
-  );
-
   // User connecté, profil vérifié, pas de profil = onboarding
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
-      <OnboardingScreen user={user} onComplete={() => window.location.reload()} />
+      <OnboardingScreen user={user} onComplete={refreshProfile} />
     </div>
   );
+
+  function openMyProjects() {
+    setMyProjectsSignal(n => n + 1);
+    setScreen('match');
+  }
+
+  function renderScreen(name: string) {
+    const active = screen === name;
+    switch (name) {
+      case 'map': return <MapScreen theme={theme} active={active} />;
+      case 'explore': return <ExploreScreen theme={theme} active={active} />;
+      case 'match': return <MatchScreen theme={theme} setScreen={setScreen} active={active} myProjectsSignal={myProjectsSignal} />;
+      case 'messages': return <MessagesScreen theme={theme} active={active} />;
+      case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} />;
+      default: return null;
+    }
+  }
 
   return (
     <div style={{
@@ -171,11 +202,11 @@ export default function Home() {
       position: 'relative', overflow: 'hidden',
       boxSizing: 'border-box',
     }}>
-      {screen === 'map' && <MapScreen theme={theme} />}
-      {screen === 'explore' && <ExploreScreen theme={theme} />}
-      {screen === 'match' && <MatchScreen theme={theme} setScreen={setScreen} />}
-      {screen === 'messages' && <MessagesScreen theme={theme} />}
-      {screen === 'profile' && <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={() => window.location.reload()} />}
+      {SCREENS.filter(name => name === screen || visited.includes(name)).map(name => (
+        <div key={name} style={{ display: name === screen ? 'block' : 'none', height: '100%' }}>
+          {renderScreen(name)}
+        </div>
+      ))}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />
     </div>
   );

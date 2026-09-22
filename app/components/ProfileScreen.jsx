@@ -1,9 +1,10 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import { useT, useRoles } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN } from '../constants';
 
 function translateTag(tag, isEn) {
@@ -14,11 +15,11 @@ function translateTag(tag, isEn) {
 
 function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   const steps = [
-    { key: 'avatar', label: isEn ? 'Profile photo' : 'Photo de profil', done: !!profile?.avatar_url, pts: 25 },
-    { key: 'role', label: isEn ? 'Role' : 'Rôle', done: !!profile?.role, pts: 25 },
+    { key: 'avatar', label: tx('Profile photo', 'Photo de profil'), done: !!profile?.avatar_url, pts: 25 },
+    { key: 'role', label: tx('Role', 'Rôle'), done: !!profile?.role, pts: 25 },
     { key: 'bio', label: 'Pitch', done: !!profile?.bio, pts: 20 },
-    { key: 'univers', label: isEn ? 'Universe' : 'Univers', done: (profile?.styles || '').trim().length > 0, pts: 20 },
-    { key: 'zone', label: isEn ? 'Area' : 'Zone', done: !!profile?.zone, pts: 10 },
+    { key: 'univers', label: tx('Universe', 'Univers'), done: (profile?.styles || '').trim().length > 0, pts: 20 },
+    { key: 'zone', label: tx('Area', 'Zone'), done: !!profile?.zone, pts: 10 },
   ];
 
   const score = steps.filter(s => s.done).reduce((acc, s) => acc + s.pts, 0);
@@ -26,21 +27,21 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
 
   let message, messageColor;
   if (score < 50) {
-    message = isEn ? 'Complete your profile to be found more easily!' : 'Complète ton profil pour être trouvé plus facilement !';
+    message = tx('Complete your profile to be found more easily!', 'Complète ton profil pour être trouvé plus facilement !');
     messageColor = '#FF4D4D';
   } else if (score < 80) {
-    message = isEn ? 'Good start! The more complete, the more you match' : 'Bon début ! Plus ton profil est riche, plus tu matches';
+    message = tx('Good start! The more complete, the more you match', 'Bon début ! Plus ton profil est riche, plus tu matches');
     messageColor = '#FFD700';
   } else if (score < 80) {
-    message = isEn ? 'Almost perfect!' : 'Presque parfait !';
+    message = tx('Almost perfect!', 'Presque parfait !');
     messageColor = '#FFD700';
   } else {
-    message = isEn ? 'Complete profile 🔥 Ready to create something beautiful!' : 'Profil complet 🔥 Prêt à créer quelque chose de beau !';
+    message = tx('Complete profile 🔥 Ready to create something beautiful!', 'Profil complet 🔥 Prêt à créer quelque chose de beau !');
     messageColor = '#2ECC71';
   }
 
   const barColor = score < 50 ? '#FF4D4D' : score < 80 ? '#FFD700' : '#2ECC71';
-  const scoreLabel = isEn ? 'Profile strength' : 'Force du profil';
+  const scoreLabel = tx('Profile strength', 'Force du profil');
 
   return (
     <div style={{
@@ -81,7 +82,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
           )}
           {profile?.video_url && (
             <span style={{ fontSize: '10px', color: '#2ECC71', border: '1px solid rgba(46,204,113,0.3)', borderRadius: '20px', padding: '2px 8px', fontWeight: '700' }}>
-              🎬 {isEn ? 'Video' : 'Vidéo'}
+              🎬 {tx('Video', 'Vidéo')}
             </span>
           )}
         </div>
@@ -90,7 +91,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   );
 }
 
-export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode }) {
+export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode, onOpenMyProjects }) {
   const t = useT();
   const ROLES = useRoles();
   const [editing, setEditing] = useState(false);
@@ -100,13 +101,22 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
   const [loggingOut, setLoggingOut] = useState(false);
   const fileInputRef = useRef(null);
+  const [openProjects, setOpenProjects] = useState(null);
 
-  const isEn = t.map === 'Map';
+  // Nombre de projets en cours, affiché sur le bouton « Mes projets »
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    supabase.from('offers').select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.user_id).eq('status', 'open')
+      .then(({ count }) => setOpenProjects(count ?? 0));
+  }, [profile?.user_id]);
+
+  const isEn = isNotFrench();
 
   const STATUTS = [
-    { id: 'dispo', label: isEn ? 'Available' : 'Disponible', color: '#2ECC71' },
-    { id: 'shoot', label: isEn ? 'On shoot' : 'En shoot', color: '#FFD700' },
-    { id: 'indispo', label: isEn ? 'Unavailable' : 'Indisponible', color: '#FF4D4D' },
+    { id: 'dispo', label: tx('Available', 'Disponible'), color: '#2ECC71' },
+    { id: 'shoot', label: tx('On shoot', 'En shoot'), color: '#FFD700' },
+    { id: 'indispo', label: tx('Unavailable', 'Indisponible'), color: '#FF4D4D' },
   ];
 
   const styles = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -219,6 +229,11 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
 
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
+          {profile?.is_early_adopter && (
+            <span style={{ display: 'inline-block', margin: '6px 0 4px', padding: '3px 10px', borderRadius: '12px', background: 'rgba(242,224,80,0.14)', border: '1px solid rgba(242,224,80,0.5)', color: '#F2E050', fontSize: '11px', fontWeight: '800', letterSpacing: '0.3px' }}>
+              ✨ Early Adopter
+            </span>
+          )}
           <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
           {roleLabel && <p style={{ color: subText, fontSize: '12px', marginTop: '4px' }}>{roleLabel}</p>}
 
@@ -236,6 +251,19 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             ))}
           </div>
         </div>
+
+        {onOpenMyProjects && (
+          <button onClick={onOpenMyProjects} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
+            padding: '14px 16px', marginBottom: '16px', cursor: 'pointer', color: theme.color,
+          }}>
+            <span style={{ fontSize: '15px', fontWeight: '800' }}>⚡ {tx('My projects', 'Mes projets')}</span>
+            <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>
+              {openProjects === null ? '' : `${openProjects} ${tx('active', 'en cours')}`} →
+            </span>
+          </button>
+        )}
 
         <ProfileScore
           profile={{ ...profile, avatar_url: avatarUrl }}
@@ -255,7 +283,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         {styles.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{isEn ? 'UNIVERSE' : 'UNIVERS'}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{tx('UNIVERSE', 'UNIVERS')}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {styles.map(s => (
                 <span key={s} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>

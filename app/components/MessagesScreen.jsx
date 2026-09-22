@@ -1,13 +1,14 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import ChatScreen from './ChatScreen';
 import Header from './Header';
 import { useT } from '../i18n';
+import { tx, isNotFrench } from '../tx';
 
-export default function MessagesScreen({ theme }) {
+export default function MessagesScreen({ theme, active = true }) {
   const t = useT();
-  const isEn = t.map === 'Map';
+  const isEn = isNotFrench();
   const [activeBuddy, setActiveBuddy] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [buddies, setBuddies] = useState([]);
@@ -31,6 +32,17 @@ export default function MessagesScreen({ theme }) {
     });
   }, []);
 
+  // Retour sur l'onglet : mise à jour silencieuse
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && user) {
+      loadConversations(user.id);
+      loadBuddies(user.id);
+      loadFollowing(user.id);
+    }
+    wasActive.current = active;
+  }, [active]);
+
   async function loadConversations(userId) {
     const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
     if (!msgs || msgs.length === 0) return;
@@ -41,11 +53,11 @@ export default function MessagesScreen({ theme }) {
       const lastMsg = msgs.find(m => (m.sender_id === userId && m.receiver_id === buddyId) || (m.sender_id === buddyId && m.receiver_id === userId));
       return {
         id: buddyId, user_id: buddyId,
-        username: profile?.username || (isEn ? 'Creative' : 'Créatif'),
+        username: profile?.username || (tx('Creative', 'Créatif')),
         handle: profile?.handle || '',
         avatar_url: profile?.avatar_url || null,
         last: lastMsg?.content || '',
-        time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString(isEn ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+        time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString(tx('en-GB', 'fr-FR'), { hour: '2-digit', minute: '2-digit' }) : '',
         unread: 0,
       };
     });
@@ -116,7 +128,7 @@ export default function MessagesScreen({ theme }) {
           color: isFollowingUser(p.user_id) ? subText : theme?.bg,
           flexShrink: 0,
         }}>
-          {isFollowingUser(p.user_id) ? (isEn ? 'Following ✓' : 'Suivi ✓') : (isEn ? 'Follow' : 'Suivre')}
+          {isFollowingUser(p.user_id) ? (tx('Following ✓', 'Suivi ✓')) : (tx('Follow', 'Suivre'))}
         </button>
       </div>
     );
@@ -135,7 +147,7 @@ export default function MessagesScreen({ theme }) {
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
         <button style={tabStyle(tab === 'messages')} onClick={() => setTab('messages')}>💬 {t.messages}</button>
         <button style={tabStyle(tab === 'buddies')} onClick={() => setTab('buddies')}>⚡ Buddies</button>
-        <button style={tabStyle(tab === 'suivis')} onClick={() => setTab('suivis')}>🔖 {isEn ? 'Following' : 'Suivis'}</button>
+        <button style={tabStyle(tab === 'suivis')} onClick={() => setTab('suivis')}>🔖 {tx('Following', 'Suivis')}</button>
       </div>
 
       <div style={{ padding: '20px 16px 100px' }}>
@@ -144,7 +156,7 @@ export default function MessagesScreen({ theme }) {
           <>
             {conversations.length === 0 && (
               <p style={{ color: subText, fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
-                {isEn ? 'No conversations yet' : 'Aucune conversation pour l\'instant'}
+                {tx('No conversations yet', 'Aucune conversation pour l\'instant')}
               </p>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -169,13 +181,13 @@ export default function MessagesScreen({ theme }) {
         {tab === 'buddies' && (
           <>
             <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>
-              {isEn ? 'Creatives you\'ve already collaborated with' : 'Créatifs avec qui tu as déjà collaboré'}
+              {tx('Creatives you\'ve already collaborated with', 'Créatifs avec qui tu as déjà collaboré')}
             </p>
             {buddies.length === 0 ? (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
                 <p style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</p>
-                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'No buddies yet' : 'Pas encore de buddies'}</p>
-                <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Your accepted collabs will appear here!' : 'Tes collabs acceptées apparaîtront ici !'}</p>
+                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{tx('No buddies yet', 'Pas encore de buddies')}</p>
+                <p style={{ color: subText, fontSize: '13px' }}>{tx('Your accepted collabs will appear here!', 'Tes collabs acceptées apparaîtront ici !')}</p>
               </div>
             ) : (
               buddies.map(p => <ProfileCard key={p.user_id} p={p} />)
@@ -186,13 +198,13 @@ export default function MessagesScreen({ theme }) {
         {tab === 'suivis' && (
           <>
             <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>
-              {isEn ? 'Your private list of creatives to follow' : 'Ta liste privée de créatifs à suivre'}
+              {tx('Your private list of creatives to follow', 'Ta liste privée de créatifs à suivre')}
             </p>
             {following.length === 0 ? (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
                 <p style={{ fontSize: '32px', marginBottom: '12px' }}>🔖</p>
-                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{isEn ? 'Nobody yet' : 'Personne encore'}</p>
-                <p style={{ color: subText, fontSize: '13px' }}>{isEn ? 'Follow creatives from Explore or Buddies!' : 'Suis des créatifs depuis Explorer ou Buddies !'}</p>
+                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{tx('Nobody yet', 'Personne encore')}</p>
+                <p style={{ color: subText, fontSize: '13px' }}>{tx('Follow creatives from Explore or Buddies!', 'Suis des créatifs depuis Explorer ou Buddies !')}</p>
               </div>
             ) : (
               following.map(p => <ProfileCard key={p.user_id} p={p} />)
