@@ -119,6 +119,22 @@ export function newApplicationMail(to: string, applicant: string, role: string, 
   };
 }
 
+export function newProposalMail(to: string, sender: string, role: string, message: string): Mail {
+  const s = escapeHtml(sender), r = escapeHtml(role);
+  const m = escapeHtml(message.slice(0, 300));
+  const quote = m ? `<br><br><i>« ${m} »</i>` : '';
+  const quoteEn = m ? `<br><br><i>“${m}”</i>` : '';
+  return {
+    to,
+    subject: `⚡ ${sender} te propose une collab`.slice(0, 120),
+    titleFr: 'Nouvelle proposition de collab ⚡',
+    bodyFr: `<b>${s}</b>${r ? ` (${r})` : ''} te propose de créer ensemble.${quote}<br><br>Ouvre l’app pour voir son profil et accepter ou refuser.`,
+    titleEn: 'New collab proposal ⚡',
+    bodyEn: `<b>${s}</b>${r ? ` (${r})` : ''} wants to create with you.${quoteEn}<br><br>Open the app to see their profile and accept or decline.`,
+    cta: '',
+  };
+}
+
 export function applicationAcceptedMail(to: string, poster: string, offerTitle: string): Mail {
   const p = escapeHtml(poster), o = escapeHtml(offerTitle);
   return {

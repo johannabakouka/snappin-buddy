@@ -132,6 +132,12 @@ const TX = {
     'Save password': 'Guardar contraseña',
     'Password updated! ✓': '¡Contraseña actualizada! ✓',
     'Continue to the app →': 'Continuar a la app →',
+    'They will get an email. Once accepted, you can chat.': 'Recibirá un email. Cuando acepte, podréis chatear.',
+    'Message': 'Escribir',
+    'Proposal sent · waiting for a reply': 'Propuesta enviada · esperando respuesta',
+    'They already sent you a proposal: reply in Match → 🤝': 'Ya te ha enviado una propuesta: responde en Match → 🤝',
+    'Remember to generate and scan your QR codes in the tab': 'Acordaos de generar y escanear vuestros códigos QR en la pestaña',
+    'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'Las propuestas que recibes y envías. Acepta una para abrir el chat y genera tu código QR el día de la sesión.',
   },
 
   pt: {
@@ -264,6 +270,12 @@ const TX = {
     'Save password': 'Salvar senha',
     'Password updated! ✓': 'Senha atualizada! ✓',
     'Continue to the app →': 'Continuar para o app →',
+    'They will get an email. Once accepted, you can chat.': 'A pessoa vai receber um e-mail. Quando aceitar, vocês podem conversar.',
+    'Message': 'Escrever',
+    'Proposal sent · waiting for a reply': 'Proposta enviada · aguardando resposta',
+    'They already sent you a proposal: reply in Match → 🤝': 'Essa pessoa já te enviou uma proposta: responda em Match → 🤝',
+    'Remember to generate and scan your QR codes in the tab': 'Lembrem de gerar e escanear os QR codes na aba',
+    'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'As propostas que você recebe e envia. Aceite uma para abrir o chat e gere seu QR code no dia do ensaio.',
   },
 
   de: {
@@ -396,6 +408,12 @@ const TX = {
     'Save password': 'Passwort speichern',
     'Password updated! ✓': 'Passwort aktualisiert! ✓',
     'Continue to the app →': 'Weiter zur App →',
+    'They will get an email. Once accepted, you can chat.': 'Die Person bekommt eine E-Mail. Sobald sie annimmt, könnt ihr chatten.',
+    'Message': 'Schreiben',
+    'Proposal sent · waiting for a reply': 'Vorschlag gesendet · wartet auf Antwort',
+    'They already sent you a proposal: reply in Match → 🤝': 'Diese Person hat dir schon einen Vorschlag geschickt: antworte unter Match → 🤝',
+    'Remember to generate and scan your QR codes in the tab': 'Denkt daran, eure QR-Codes im Tab zu erstellen und zu scannen',
+    'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'Deine empfangenen und gesendeten Vorschläge. Nimm einen an, um den Chat zu öffnen, und erstelle beim Treffen deinen QR-Code.',
   },
 
   it: {
@@ -528,6 +546,12 @@ const TX = {
     'Save password': 'Salva la password',
     'Password updated! ✓': 'Password aggiornata! ✓',
     'Continue to the app →': 'Continua nell’app →',
+    'They will get an email. Once accepted, you can chat.': 'Riceverà un’email. Quando accetta, potrete chattare.',
+    'Message': 'Scrivi',
+    'Proposal sent · waiting for a reply': 'Proposta inviata · in attesa di risposta',
+    'They already sent you a proposal: reply in Match → 🤝': 'Ti ha già inviato una proposta: rispondi in Match → 🤝',
+    'Remember to generate and scan your QR codes in the tab': 'Ricordatevi di generare e scansionare i vostri QR code nella scheda',
+    'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'Le proposte che ricevi e invii. Accettane una per aprire la chat, poi genera il tuo QR code il giorno dello shooting.',
   },
 };
 

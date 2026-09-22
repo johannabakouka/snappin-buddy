@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
 
@@ -8,6 +8,8 @@ export default function Navbar({ screen, setScreen, theme }) {
   const darkMode = theme?.dark ?? true;
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingCollabs, setPendingCollabs] = useState(0);
+  // Écran affiché, lu dans les abonnements temps réel (sans relancer l'abonnement)
+  const screenRef = useRef(screen);
 
   useEffect(() => {
     let msgChannel, collabChannel;
@@ -24,7 +26,8 @@ export default function Navbar({ screen, setScreen, theme }) {
 
       msgChannel = supabase.channel('navbar-messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
-          setUnreadMessages(n => n + 1);
+          // Pas de pastille si on est déjà dans Messages
+          if (screenRef.current !== 'messages') setUnreadMessages(n => n + 1);
         }).subscribe();
 
       collabChannel = supabase.channel('navbar-collabs')
@@ -42,8 +45,28 @@ export default function Navbar({ screen, setScreen, theme }) {
   }, []);
 
   useEffect(() => {
+    const previous = screenRef.current;
+    screenRef.current = screen;
     if (screen === 'messages') setUnreadMessages(0);
     if (screen === 'match') setPendingCollabs(0);
+    // En quittant Match, la pastille revient s'il reste des propositions sans réponse
+    if (previous === 'match' && screen !== 'match') {
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) return;
+        const { count } = await supabase.from('collabs').select('id', { count: 'exact', head: true })
+          .eq('receiver_id', user.id).eq('status', 'pending');
+        setPendingCollabs(count || 0);
+      });
+    }
+    // En quittant Messages, on recompte les vrais non-lus (les conversations ouvertes sont marquées lues)
+    if (previous === 'messages' && screen !== 'messages') {
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) return;
+        const { count } = await supabase.from('messages').select('id', { count: 'exact', head: true })
+          .eq('receiver_id', user.id).eq('read', false);
+        setUnreadMessages(count || 0);
+      });
+    }
   }, [screen]);
 
   const tabs = [

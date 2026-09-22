@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN } from '../constants';
+import ChatScreen from './ChatScreen';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -56,6 +57,27 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  // Lien déjà existant avec ce créatif : 'loading' | 'none' | 'pending' | 'incoming' | 'buddies' | 'self'
+  const [relation, setRelation] = useState('loading');
+  const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!alive) return;
+      if (!user || !buddy?.user_id) { setRelation('none'); return; }
+      if (user.id === buddy.user_id) { setRelation('self'); return; }
+      const { data } = await supabase.from('collabs')
+        .select('sender_id, status')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${buddy.user_id}),and(sender_id.eq.${buddy.user_id},receiver_id.eq.${user.id})`);
+      if (!alive) return;
+      if (data?.some(c => c.status === 'accepted')) setRelation('buddies');
+      else if (data?.some(c => c.status === 'pending' && c.sender_id === user.id)) setRelation('pending');
+      else if (data?.some(c => c.status === 'pending')) setRelation('incoming');
+      else setRelation('none');
+    });
+    return () => { alive = false; };
+  }, [buddy?.user_id]);
 
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
@@ -75,13 +97,23 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
     setSending(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from('collabs').insert({
+      const { data: collab } = await supabase.from('collabs').insert({
         sender_id: user.id,
         receiver_id: buddy.user_id,
         message,
         status: 'pending',
-      });
+      }).select('id').single();
       setSent(true);
+      setRelation('pending');
+      // Prévient la personne par email (le serveur retrouve son adresse)
+      if (collab?.id) {
+        const { data: { session } } = await supabase.auth.getSession();
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+          body: JSON.stringify({ type: 'new_proposal', collabId: collab.id }),
+        }).catch(e => console.error('Email error:', e));
+      }
     }
     setSending(false);
   }
@@ -193,9 +225,24 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         )}
 
-        {sent ? (
+        {relation === 'self' || relation === 'loading' ? null : sent ? (
           <div style={{ width: '100%', padding: '14px', borderRadius: '24px', background: '#2ECC71', color: '#000', fontSize: '14px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
             {tx("✓ Proposal sent! Let's create something beautiful 🎨", '✓ Proposition envoyée ! Créez quelque chose de beau 🎨')}
+            <div style={{ fontSize: '12px', fontWeight: '600', marginTop: '4px', opacity: 0.75 }}>
+              {tx('They will get an email. Once accepted, you can chat.', 'Elle ou il reçoit un email. Une fois acceptée, vous pourrez discuter.')}
+            </div>
+          </div>
+        ) : relation === 'buddies' ? (
+          <button onClick={() => setChatOpen(true)} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+            💬 {tx('Message', 'Écrire')} {buddy?.username}
+          </button>
+        ) : relation === 'pending' ? (
+          <div style={{ width: '100%', padding: '14px', borderRadius: '24px', border: `1px solid ${tagBorder}`, color: subText, fontSize: '13px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
+            ⏳ {tx('Proposal sent · waiting for a reply', 'Proposition envoyée · en attente de réponse')}
+          </div>
+        ) : relation === 'incoming' ? (
+          <div style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(242,224,80,0.5)', color: '#F2E050', fontSize: '13px', fontWeight: '700', textAlign: 'center', marginTop: '8px' }}>
+            🤝 {tx('They already sent you a proposal: reply in Match → 🤝', 'Cette personne t’a déjà fait une proposition : réponds-lui dans Match → 🤝')}
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
@@ -258,6 +305,11 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           )}
         </div>
       </div>
+      {chatOpen && (
+        <div style={{ position: 'fixed', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '390px', zIndex: 2600, background: bg }}>
+          <ChatScreen buddy={buddy} onBack={() => setChatOpen(false)} theme={theme} />
+        </div>
+      )}
     </div>
   );
 }

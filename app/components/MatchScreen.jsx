@@ -6,6 +6,7 @@ import QRScreen from './QRScreen';
 import OfferForm from './OfferForm';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import ShareCard from './ShareCard';
+import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 
@@ -24,6 +25,7 @@ async function sendEmail(type, payload) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0 }) {
   const t = useT();
   const isEn = isNotFrench();
@@ -52,6 +54,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const [appliedOffers, setAppliedOffers] = useState(new Set());
   const [viewingBuddy, setViewingBuddy] = useState(null);
   const [sharingOffer, setSharingOffer] = useState(null);
+  // Conversation ouverte directement depuis Match (après avoir accepté, ou bouton Écrire)
+  const [chatBuddy, setChatBuddy] = useState(null);
 
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
@@ -133,8 +137,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function openOfferCandidates(offer) {
     setSelectedOffer(offer);
     setLoadingCandidates(true);
-    const { data: collabs } = await supabase.from('collabs').select('*').eq('receiver_id', user.id).ilike('message', `%${offer.title}%`).order('created_at', { ascending: false });
-    if (collabs && collabs.length > 0) {
+    const { data: found } = await supabase.from('collabs').select('*').eq('receiver_id', user.id).ilike('message', `%${offer.title}%`).order('created_at', { ascending: false });
+    const collabs = (found || []).filter(c => (c.message || '').trim().endsWith(`: ${offer.title}`));
+    if (collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
       const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
@@ -202,7 +207,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       // Prévient le candidat accepté (et non plus la personne qui accepte)
       sendEmail('application_accepted', { collabId: id });
 
-      setScreen('messages');
+      // Ouvre directement la conversation avec la personne acceptée
+      const profile = received.find(c => c.id === id)?.senderProfile
+        || offerCandidates.find(c => c.id === id)?.senderProfile
+        || { user_id: senderId };
+      setSelectedOffer(null);
+      setChatBuddy(profile);
     }
     loadCollabs(user.id);
   }
@@ -241,6 +251,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     if (status === 'declined') return { label: tx('Declined', 'Refusé'), color: '#FF4D4D' };
     return { label: tx('Pending', 'En attente'), color: '#FFD700' };
   };
+
+  // Propositions reçues qui attendent une réponse (pastille sur l'onglet 🤝)
+  const pendingReceived = received.filter(c => c.status === 'pending').length;
 
   const tabStyle = (active) => ({
     flex: 1, padding: '10px', border: 'none', background: 'transparent',
@@ -298,6 +311,10 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   if (sharingOffer) return <ShareCard offer={sharingOffer} onClose={() => setSharingOffer(null)} />;
+
+  if (chatBuddy) return (
+    <ChatScreen buddy={chatBuddy} onBack={() => { setChatBuddy(null); if (user) loadCollabs(user.id); }} theme={theme} />
+  );
 
   if (viewingBuddy) return (
     <BuddyProfileScreen buddy={viewingBuddy} onBack={() => setViewingBuddy(null)} theme={theme} />
@@ -361,7 +378,14 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
         <button style={tabStyle(tab === 'offres')} onClick={() => setTab('offres')}>{t.offers}</button>
-        <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>{t.matchTab}</button>
+        <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>
+          {t.matchTab}
+          {pendingReceived > 0 && (
+            <span style={{ marginLeft: '6px', background: '#FF4D4D', color: 'white', borderRadius: '10px', minWidth: '18px', height: '18px', padding: '0 5px', fontSize: '10px', fontWeight: '900', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
+              {pendingReceived > 9 ? '9+' : pendingReceived}
+            </span>
+          )}
+        </button>
       </div>
 
       <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px' }}>
@@ -524,6 +548,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
         {tab === 'match' && (
           <>
+            <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5, marginBottom: '16px', padding: '10px 12px', borderRadius: '12px', background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
+              {tx('Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.', 'Les propositions reçues et envoyées. Accepte-en une pour ouvrir le chat, puis génère ton QR code le jour du shoot.')}
+            </p>
             {received.length > 0 && (
               <>
                 <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>{t.received}</p>
@@ -541,9 +568,14 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                       </div>
                     )}
                     {c.status === 'accepted' && (
-                      <button onClick={() => setQrCollab(c)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: theme?.color, fontWeight: '700', fontSize: '13px', cursor: 'pointer', marginTop: '12px' }}>
-                        {t.generateQR}
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                        <button onClick={() => setChatBuddy(c.senderProfile || { user_id: c.sender_id })} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                          💬 {tx('Message', 'Écrire')}
+                        </button>
+                        <button onClick={() => setQrCollab(c)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: theme?.color, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                          {t.generateQR}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -561,9 +593,14 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                     <MiniProfile profile={c.receiverProfile} />
                     <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (tx('No message', 'Pas de message'))}</p>
                     {c.status === 'accepted' && (
-                      <button onClick={() => setQrCollab(c)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: theme?.color, fontWeight: '700', fontSize: '13px', cursor: 'pointer', marginTop: '12px' }}>
-                        {t.generateQR}
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                        <button onClick={() => setChatBuddy(c.receiverProfile || { user_id: c.receiver_id })} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                          💬 {tx('Message', 'Écrire')}
+                        </button>
+                        <button onClick={() => setQrCollab(c)} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: theme?.color, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                          {t.generateQR}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}

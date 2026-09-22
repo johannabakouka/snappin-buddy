@@ -58,7 +58,7 @@ export default function MessagesScreen({ theme, active = true }) {
         avatar_url: profile?.avatar_url || null,
         last: lastMsg?.content || '',
         time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString(tx('en-GB', 'fr-FR'), { hour: '2-digit', minute: '2-digit' }) : '',
-        unread: 0,
+        unread: msgs.filter(m => m.sender_id === buddyId && m.receiver_id === userId && m.read === false).length,
       };
     });
     setConversations(convs);
@@ -103,7 +103,7 @@ export default function MessagesScreen({ theme, active = true }) {
     transition: 'all 0.2s',
   });
 
-  function ProfileCard({ p }) {
+  function ProfileCard({ p, canMessage = false }) {
     const styles = (p.styles || '').split(',').map(s => s.trim()).filter(Boolean);
     return (
       <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -121,6 +121,12 @@ export default function MessagesScreen({ theme, active = true }) {
             </div>
           )}
         </div>
+        {canMessage && (
+          <button onClick={() => setActiveBuddy(p)} aria-label={tx('Message', 'Écrire')} title={tx('Message', 'Écrire')} style={{
+            width: '34px', height: '34px', borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
+            background: theme?.color, color: theme?.bg, fontSize: '15px',
+          }}>💬</button>
+        )}
         <button onClick={() => toggleFollow(p.user_id)} style={{
           padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
           border: `1px solid ${isFollowingUser(p.user_id) ? cardBorder : theme?.color}`,
@@ -170,7 +176,12 @@ export default function MessagesScreen({ theme, active = true }) {
                       <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{c.username}</span>
                       <span style={{ color: subText, fontSize: '11px' }}>{c.time}</span>
                     </div>
-                    <div style={{ color: subText, fontSize: '13px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <div style={{ flex: 1, minWidth: 0, color: c.unread ? theme?.color : subText, fontWeight: c.unread ? '700' : '400', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last}</div>
+                      {c.unread > 0 && (
+                        <span style={{ minWidth: '20px', height: '20px', padding: '0 6px', borderRadius: '10px', background: '#F2E050', color: '#0A0A0A', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.unread}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -190,7 +201,7 @@ export default function MessagesScreen({ theme, active = true }) {
                 <p style={{ color: subText, fontSize: '13px' }}>{tx('Your accepted collabs will appear here!', 'Tes collabs acceptées apparaîtront ici !')}</p>
               </div>
             ) : (
-              buddies.map(p => <ProfileCard key={p.user_id} p={p} />)
+              buddies.map(p => <ProfileCard key={p.user_id} p={p} canMessage />)
             )}
           </>
         )}

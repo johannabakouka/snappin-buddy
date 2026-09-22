@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import {
-  ADMIN_EMAIL, applicationAcceptedMail, getProfile, getUserEmail, newApplicationMail,
+  ADMIN_EMAIL, applicationAcceptedMail, getProfile, getUserEmail, newApplicationMail, newProposalMail,
   offerTitleFromMessage, reportMail, requireUser, sendMail, supabaseAdmin,
 } from '../../lib/server';
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const { type } = body as { type?: string };
 
-    if (type === 'new_application' || type === 'application_accepted') {
+    if (type === 'new_application' || type === 'new_proposal' || type === 'application_accepted') {
       const collabId = body.collabId;
       if (!collabId) return Response.json({ error: 'collabId manquant' }, { status: 400 });
 
@@ -29,13 +29,15 @@ export async function POST(request: Request) {
 
       const offerTitle = offerTitleFromMessage(collab.message) || 'ton projet';
 
-      if (type === 'new_application') {
-        // Seul le candidat peut déclencher cet email, et il part au porteur du projet.
+      if (type === 'new_application' || type === 'new_proposal') {
+        // Seul l'expéditeur peut déclencher cet email, et il part au destinataire de la proposition.
         if (collab.sender_id !== user.id) return Response.json({ error: 'forbidden' }, { status: 403 });
         const to = await getUserEmail(collab.receiver_id);
         if (!to) return Response.json({ error: 'destinataire sans email' }, { status: 404 });
         const me = await getProfile(user.id);
-        await sendMail(newApplicationMail(to, me?.username || 'Un créatif', me?.role || '', offerTitle));
+        await sendMail(type === 'new_application'
+          ? newApplicationMail(to, me?.username || 'Un créatif', me?.role || '', offerTitle)
+          : newProposalMail(to, me?.username || 'Un créatif', me?.role || '', collab.message || ''));
       } else {
         // Seul le porteur du projet peut accepter, et l'email part au candidat.
         if (collab.receiver_id !== user.id || collab.status !== 'accepted') {

@@ -2,11 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
-import { tx, isNotFrench } from '../tx';
+import { tx } from '../tx';
 
 export default function ChatScreen({ buddy, onBack, theme }) {
   const t = useT();
-  const isEn = isNotFrench();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [user, setUser] = useState(null);
@@ -42,6 +41,21 @@ export default function ChatScreen({ buddy, onBack, theme }) {
     };
   }, [buddy]);
 
+  // Marque comme lus les messages reçus de cette personne
+  async function markRead(buddyId) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ buddyId }),
+      });
+    } catch (e) {
+      console.error('mark-read', e);
+    }
+  }
+
   async function loadBuddyStatus() {
     if (!buddyUserId) return;
     const { data } = await supabase.from('profiles').select('status').eq('user_id', buddyUserId).single();
@@ -56,6 +70,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
       .order('created_at', { ascending: true });
     if (data) {
       setMessages(data);
+      if (data.some(m => m.sender_id === buddyId && m.read === false)) markRead(buddyId);
       if (data.length === 1 && (data[0].content.includes('Collab acceptée') || data[0].content.includes('Collab accepted') || data[0].content.includes('Créons'))) {
         setShowQRReminder(true);
       }
@@ -82,6 +97,8 @@ export default function ChatScreen({ buddy, onBack, theme }) {
             if (prev.find(m => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
+          // Message reçu pendant que la conversation est ouverte : il est lu
+          if (msg.sender_id === buddyId) markRead(buddyId);
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
       })
@@ -137,10 +154,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
               🔒 {tx('Before you meet', 'Avant de vous retrouver')}
             </p>
             <p style={{ fontSize: '12px', color: subText, lineHeight: 1.5 }}>
-              {isEn
-                ? <>Remember to generate and scan your QR codes in the <strong style={{ color }}>Match → 🤝</strong> tab!</>
-                : <>Pensez à générer et scanner vos QR codes dans l&apos;onglet <strong style={{ color }}>Match → 🤝</strong> !</>
-              }
+              {tx('Remember to generate and scan your QR codes in the tab', 'Pensez à générer et scanner vos QR codes dans l’onglet')} <strong style={{ color }}>Match → 🤝</strong> !
             </p>
           </div>
         )}
