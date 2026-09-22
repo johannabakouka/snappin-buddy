@@ -20,7 +20,10 @@ const EUROPEAN_CITIES = [
 const TITLE_MAX = 60;
 const DESC_MAX = 500;
 
-export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer }) {
+export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer, onReopenOffer, onDeleteOffer }) {
+  // Suppression en deux temps pour éviter les erreurs
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -211,12 +214,38 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           {offerLoading ? (tx('Launching...', 'Lancement...')) : isEdit ? (tx('✓ Save changes', '✓ Enregistrer')) : (tx('⚡ Launch project', '⚡ Lancer le projet'))}
         </button>
 
-        {isEdit && (
+        {isEdit && (editingOffer?.status === 'closed' ? (
+          <button
+            onClick={onReopenOffer}
+            style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(46,204,113,0.5)', background: 'transparent', color: '#2ECC71', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}
+          >
+            🔓 {tx('Reopen project', 'Rouvrir le projet')}
+          </button>
+        ) : (
           <button
             onClick={onCloseOffer}
-            style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(255,77,77,0.4)', background: 'transparent', color: '#FF4D4D', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
+            style={{ width: '100%', padding: '14px', borderRadius: '24px', border: '1px solid rgba(255,77,77,0.4)', background: 'transparent', color: '#FF4D4D', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}
           >
             🔒 {tx('Close project', 'Fermer le projet')}
+          </button>
+        ))}
+
+        {isEdit && onDeleteOffer && (
+          <button
+            disabled={deleting}
+            onClick={async () => {
+              if (!confirmDelete) { setConfirmDelete(true); return; }
+              setDeleting(true);
+              await onDeleteOffer();
+              setDeleting(false);
+            }}
+            style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: confirmDelete ? '#FF4D4D' : 'transparent', color: confirmDelete ? '#fff' : subText, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+          >
+            {deleting
+              ? tx('Deleting...', 'Suppression...')
+              : confirmDelete
+              ? tx('Tap again to delete for good', 'Appuie encore pour supprimer définitivement')
+              : `🗑 ${tx('Delete project', 'Supprimer le projet')}`}
           </button>
         )}
       </div>

@@ -138,6 +138,11 @@ const TX = {
     'They already sent you a proposal: reply in Match → 🤝': 'Ya te ha enviado una propuesta: responde en Match → 🤝',
     'Remember to generate and scan your QR codes in the tab': 'Acordaos de generar y escanear vuestros códigos QR en la pestaña',
     'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'Las propuestas que recibes y envías. Acepta una para abrir el chat y genera tu código QR el día de la sesión.',
+    'Reopen project': 'Reabrir el proyecto',
+    'Deleting...': 'Eliminando...',
+    'Tap again to delete for good': 'Pulsa otra vez para eliminarlo definitivamente',
+    'Delete project': 'Eliminar el proyecto',
+    'Could not delete the project, try again.': 'No se pudo eliminar el proyecto, inténtalo de nuevo.',
   },
 
   pt: {
@@ -276,6 +281,11 @@ const TX = {
     'They already sent you a proposal: reply in Match → 🤝': 'Essa pessoa já te enviou uma proposta: responda em Match → 🤝',
     'Remember to generate and scan your QR codes in the tab': 'Lembrem de gerar e escanear os QR codes na aba',
     'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'As propostas que você recebe e envia. Aceite uma para abrir o chat e gere seu QR code no dia do ensaio.',
+    'Reopen project': 'Reabrir o projeto',
+    'Deleting...': 'Excluindo...',
+    'Tap again to delete for good': 'Toque de novo para excluir de vez',
+    'Delete project': 'Excluir o projeto',
+    'Could not delete the project, try again.': 'Não foi possível excluir o projeto, tente de novo.',
   },
 
   de: {
@@ -414,6 +424,11 @@ const TX = {
     'They already sent you a proposal: reply in Match → 🤝': 'Diese Person hat dir schon einen Vorschlag geschickt: antworte unter Match → 🤝',
     'Remember to generate and scan your QR codes in the tab': 'Denkt daran, eure QR-Codes im Tab zu erstellen und zu scannen',
     'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'Deine empfangenen und gesendeten Vorschläge. Nimm einen an, um den Chat zu öffnen, und erstelle beim Treffen deinen QR-Code.',
+    'Reopen project': 'Projekt wieder öffnen',
+    'Deleting...': 'Wird gelöscht...',
+    'Tap again to delete for good': 'Tippe nochmal, um endgültig zu löschen',
+    'Delete project': 'Projekt löschen',
+    'Could not delete the project, try again.': 'Projekt konnte nicht gelöscht werden, versuch es nochmal.',
   },
 
   it: {
@@ -552,6 +567,11 @@ const TX = {
     'They already sent you a proposal: reply in Match → 🤝': 'Ti ha già inviato una proposta: rispondi in Match → 🤝',
     'Remember to generate and scan your QR codes in the tab': 'Ricordatevi di generare e scansionare i vostri QR code nella scheda',
     'Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.': 'Le proposte che ricevi e invii. Accettane una per aprire la chat, poi genera il tuo QR code il giorno dello shooting.',
+    'Reopen project': 'Riapri il progetto',
+    'Deleting...': 'Eliminazione...',
+    'Tap again to delete for good': 'Tocca di nuovo per eliminarlo definitivamente',
+    'Delete project': 'Elimina il progetto',
+    'Could not delete the project, try again.': 'Impossibile eliminare il progetto, riprova.',
   },
 };
 

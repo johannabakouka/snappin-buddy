@@ -152,6 +152,32 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     loadOffers(user.id);
   }
 
+  async function reopenOffer(offerId) {
+    await supabase.from('offers').update({ status: 'open' }).eq('id', offerId);
+    loadOffers(user.id);
+  }
+
+  // Suppression définitive (passe par le serveur, qui vérifie que le projet est bien à toi)
+  async function deleteOffer(offerId) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/delete-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ offerId }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+    } catch (e) {
+      console.error('delete-offer', e);
+      alert(tx('Could not delete the project, try again.', 'Impossible de supprimer le projet, réessaie.'));
+      return;
+    }
+    setEditingOffer(null);
+    setSelectedOffer(null);
+    loadOffers(user.id);
+    loadCollabs(user.id);
+  }
+
   // Le prix est fixé par le serveur (1 jour · 1,99 € / 7 jours · 4,99 €)
   async function boostOffer(offer, days) {
     try {
@@ -327,7 +353,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   );
 
   if (editingOffer) return (
-    <OfferForm theme={theme} isEdit={true} editingOffer={editingOffer} onClose={() => setEditingOffer(null)} onSave={handleSaveOffer} onCloseOffer={async () => { await closeOffer(editingOffer.id); setEditingOffer(null); }} />
+    <OfferForm theme={theme} isEdit={true} editingOffer={editingOffer} onClose={() => setEditingOffer(null)} onSave={handleSaveOffer} onCloseOffer={async () => { await closeOffer(editingOffer.id); setEditingOffer(null); }} onReopenOffer={async () => { await reopenOffer(editingOffer.id); setEditingOffer(null); }} onDeleteOffer={() => deleteOffer(editingOffer.id)} />
   );
 
   if (selectedOffer) return (
