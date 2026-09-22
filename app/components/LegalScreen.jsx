@@ -55,7 +55,7 @@ Base de données : Supabase (infrastructure AWS, région Europe)`,
       title: '📍 Données collectées',
       content: `Pour fonctionner, Snappin'Buddy collecte :
 · Adresse email (authentification)
-· Nom, handle, rôle, bio, zone de shoot
+· Nom, handle, rôle, bio, zone
 · Photo de profil et portfolio (optionnels)
 · Position géographique approximative (±400m)
 · Messages échangés entre utilisateurs

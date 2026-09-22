@@ -126,7 +126,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: bg, color }}>
+    <div style={{ height: '100dvh', maxHeight: '100dvh', display: 'flex', flexDirection: 'column', background: bg, color }}>
 
       <div style={{ padding: '16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
@@ -196,11 +196,12 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         <div ref={bottomRef} />
       </div>
 
-      <div style={{ padding: '12px 16px 80px', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div style={{ padding: '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
         <input
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
+          onFocus={() => setTimeout(() => bottomRef.current?.scrollIntoView({ block: 'end' }), 300)}
           placeholder={tx('Message...', 'Message...')}
           style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', outline: 'none' }}
         />

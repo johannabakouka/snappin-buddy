@@ -575,7 +575,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
         {tab === 'match' && (
           <>
             <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5, marginBottom: '16px', padding: '10px 12px', borderRadius: '12px', background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
-              {tx('Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.', 'Les propositions reçues et envoyées. Accepte-en une pour ouvrir le chat, puis génère ton QR code le jour du shoot.')}
+              {tx('Proposals you receive and send. Accept one to open the chat, then generate your QR code when you meet.', 'Les propositions reçues et envoyées. Accepte-en une pour ouvrir le chat, puis génère ton QR code le jour J.')}
             </p>
             {received.length > 0 && (
               <>

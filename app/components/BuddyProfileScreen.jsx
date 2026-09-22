@@ -216,7 +216,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {zones.length > 0 && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{tx('SHOOT ZONES', 'ZONES DE SHOOT')}</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>{tx('AREAS', 'ZONES')}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {zones.map(z => (
                 <span key={z} style={{ fontSize: '12px', color: tagColor, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', borderRadius: '20px', padding: '4px 12px' }}>{z}</span>
