@@ -10,8 +10,24 @@ import { tx, isNotFrench } from '../tx';
 // ~400 m pour une position GPS, ~2 km pour une ville choisie (répartit les pins dans la ville)
 const GPS_FUZZ = 0.004;
 const CITY_FUZZ = 0.02;
-// Zoom d'ouverture assez large pour voir les créatifs des villes alentour (on peut zoomer à la main)
-const MAP_ZOOM = 10;
+// Zoom d'ouverture quand on ne connaît personne autour : vue régionale (on peut zoomer à la main)
+const MAP_ZOOM = 8;
+// À l'ouverture, la carte s'élargit jusqu'à montrer les NEAREST créatifs les plus proches,
+// sans descendre sous MIN_OPEN_ZOOM (≈ un pays) ni zoomer plus que MAX_OPEN_ZOOM (≈ toute l’Île-de-France).
+const NEAREST = 8;
+const MIN_OPEN_ZOOM = 5;
+const MAX_OPEN_ZOOM = 9;
+
+function openingZoom(Lf, map, lat, lng, all) {
+  const others = (all || []).filter(p => !p._isMe && p.lat && p.lng);
+  if (!Lf || !map || others.length === 0) return MAP_ZOOM;
+  const dists = others.map(p => map.distance([lat, lng], [p.lat, p.lng])).sort((a, b) => a - b);
+  const radius = dists[Math.min(NEAREST, dists.length) - 1] * 1.15 + 3000;
+  const bounds = Lf.latLng(lat, lng).toBounds(radius * 2);
+  // Marge pour les filtres en haut et la barre du bas, qui cachent une partie de la carte
+  const z = map.getBoundsZoom(bounds, false, Lf.point(40, 260));
+  return Math.max(MIN_OPEN_ZOOM, Math.min(MAX_OPEN_ZOOM, z));
+}
 
 // localStorage 'geoMode' : 'gps' | 'city' | 'none'
 function getGeoMode() {
@@ -92,11 +108,13 @@ export default function MapComponent({ theme, active = true }) {
       const { data: profileData } = await supabase.from('profiles').select('*');
       const { data: { user } } = await supabase.auth.getUser();
 
+      const allProfiles = (profileData || []).map(p => ({ ...p, _isMe: !!user && p.user_id === user.id }));
       if (profileData) {
-        setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
-        // Centre la carte sur sa propre position enregistrée (ville choisie ou dernière position)
-        const me = user && profileData.find(p => p.user_id === user.id);
-        if (me?.lat && me?.lng) map.setView([me.lat, me.lng], MAP_ZOOM);
+        setProfiles(allProfiles);
+        // Centre la carte sur sa propre position enregistrée, assez large pour voir les créatifs proches
+        const me = allProfiles.find(p => p._isMe);
+        if (me?.lat && me?.lng) map.setView([me.lat, me.lng], openingZoom(LeafletModule, map, me.lat, me.lng, allProfiles));
+        else map.setView([48.8566, 2.3522], openingZoom(LeafletModule, map, 48.8566, 2.3522, allProfiles));
       }
 
       if (askGeo) {
@@ -106,7 +124,7 @@ export default function MapComponent({ theme, active = true }) {
         }
         navigator.geolocation.getCurrentPosition(async pos => {
           const { latitude, longitude } = pos.coords;
-          map.setView([latitude, longitude], MAP_ZOOM);
+          map.setView([latitude, longitude], openingZoom(LeafletModule, map, latitude, longitude, allProfiles));
           if (user) {
             const fuzzed = fuzzPosition(latitude, longitude);
             await supabase.from('profiles').update({ lat: fuzzed.lat, lng: fuzzed.lng }).eq('user_id', user.id);
@@ -186,7 +204,7 @@ export default function MapComponent({ theme, active = true }) {
       setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng } : p));
     }
     localStorage.setItem('geoMode', 'city');
-    mapInstance.current?.setView([city.lat, city.lng], MAP_ZOOM);
+    mapInstance.current?.setView([city.lat, city.lng], openingZoom(L, mapInstance.current, city.lat, city.lng, profiles));
     setCityOverlay(null);
     setSavingCity(false);
   }
