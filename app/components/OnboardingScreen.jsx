@@ -90,7 +90,7 @@ export default function OnboardingScreen({ user, onComplete }) {
   const stepLabel = `${t.step} ${step}/3`;
 
   return (
-    <div style={{ padding: '40px 24px', minHeight: '100vh', background: bg, color, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '40px 24px', minHeight: '100dvh', background: bg, color, display: 'flex', flexDirection: 'column' }}>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
         <span style={{ fontSize: '12px', color: subText, fontWeight: '600', letterSpacing: '1px' }}>{stepLabel}</span>

@@ -32,7 +32,7 @@ function BoostSuccessContent() {
   }, [sessionId]);
 
   return (
-    <div style={{ height: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '24px', textAlign: 'center' }}>
+    <div style={{ height: '100dvh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '24px', textAlign: 'center' }}>
       <div style={{ fontSize: '64px' }}>{state === 'error' ? '⚠️' : '🚀'}</div>
       <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '900' }}>
         {state === 'done' ? 'Projet boosté !' : state === 'error' ? 'Boost non activé' : 'Activation...'}
@@ -54,7 +54,7 @@ function BoostSuccessContent() {
 export default function BoostSuccess() {
   return (
     <Suspense fallback={
-      <div style={{ height: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: '100dvh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: 'white', fontSize: '24px' }}>🚀</div>
       </div>
     }>

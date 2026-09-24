@@ -147,7 +147,7 @@ export default function MessagesScreen({ theme, active = true }) {
   );
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
       <Header theme={theme} />
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
@@ -156,7 +156,7 @@ export default function MessagesScreen({ theme, active = true }) {
         <button style={tabStyle(tab === 'suivis')} onClick={() => setTab('suivis')}>🔖 {tx('Following', 'Suivis')}</button>
       </div>
 
-      <div style={{ padding: '20px 16px 100px' }}>
+      <div style={{ padding: '20px 16px calc(110px + env(safe-area-inset-bottom))' }}>
 
         {tab === 'messages' && (
           <>

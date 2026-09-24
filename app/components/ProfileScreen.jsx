@@ -181,7 +181,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   if (showLegal) return <LegalScreen theme={theme} onBack={() => setShowLegal(false)} />;
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
@@ -209,7 +209,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
         </div>
       </div>
 
-      <div style={{ padding: '24px 16px 100px' }}>
+      <div style={{ padding: '24px 16px calc(110px + env(safe-area-inset-bottom))' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div onClick={() => fileInputRef.current?.click()} style={{
             width: '88px', height: '88px', borderRadius: '50%',

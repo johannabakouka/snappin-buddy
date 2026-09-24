@@ -130,9 +130,9 @@ export default function ExploreScreen({ theme, active = true }) {
   };
 
   return (
-    <div ref={scrollRef} style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+    <div ref={scrollRef} style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
       <Header theme={theme} onLogoClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
-      <div style={{ padding: '24px 16px 100px' }}>
+      <div style={{ padding: '24px 16px calc(110px + env(safe-area-inset-bottom))' }}>
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>{t.exploreSubtitle}</p>
 

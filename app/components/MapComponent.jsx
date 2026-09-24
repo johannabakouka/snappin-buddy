@@ -283,7 +283,7 @@ export default function MapComponent({ theme, active = true }) {
   const sep = <div style={{ width: '1.5px', background: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)', margin: '0 4px', flexShrink: 0, borderRadius: '2px' }} />;
 
   return (
-    <div style={{ position: 'relative', height: '100vh' }}>
+    <div style={{ position: 'relative', height: '100dvh' }}>
       {/* Filtre CSS pour rendre la carte sombre */}
       <style>{`
         .leaflet-tile-pane {
@@ -291,7 +291,7 @@ export default function MapComponent({ theme, active = true }) {
         }
       `}</style>
 
-      <div ref={mapRef} style={{ height: '100vh', width: '100%' }} />
+      <div ref={mapRef} style={{ height: '100dvh', width: '100%' }} />
 
       {showGeoPrompt && (
         <div style={{

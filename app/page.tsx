@@ -22,7 +22,7 @@ function LoadingScreen() {
   }, []);
   return (
     <div style={{
-      height: '100vh', background: '#0A0A0A',
+      height: '100dvh', background: '#0A0A0A',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: '20px',
     }}>
@@ -150,14 +150,14 @@ export default function Home() {
   );
 
   if (recovery && user) return (
-    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
+    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh', background: theme.bg, color: theme.color }}>
       <NewPasswordScreen theme={theme} onDone={() => setRecovery(false)} />
     </div>
   );
 
   if (!user) {
     if (showWelcome) return (
-      <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh' }}>
+      <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh' }}>
         <WelcomeScreen onStart={() => {
           localStorage.setItem('welcomeSeen', 'true');
           setShowWelcome(false);
@@ -165,7 +165,7 @@ export default function Home() {
       </div>
     );
     return (
-      <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
+      <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh', background: theme.bg, color: theme.color }}>
         <AuthScreen onLogin={() => {}} theme={theme} />
       </div>
     );
@@ -173,7 +173,7 @@ export default function Home() {
 
   // User connecté, profil vérifié, pas de profil = onboarding
   if (!profile) return (
-    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100vh', background: theme.bg, color: theme.color }}>
+    <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh', background: theme.bg, color: theme.color }}>
       <OnboardingScreen user={user} onComplete={refreshProfile} />
     </div>
   );
@@ -197,7 +197,7 @@ export default function Home() {
 
   return (
     <div style={{
-      maxWidth: '390px', margin: '0 auto', height: '100vh',
+      maxWidth: '390px', margin: '0 auto', height: '100dvh',
       background: theme.bg, color: theme.color,
       position: 'relative', overflow: 'hidden',
       boxSizing: 'border-box',

@@ -357,7 +357,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   );
 
   if (selectedOffer) return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
       <div style={{ padding: '16px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
         <button onClick={() => setSelectedOffer(null)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ flex: 1 }}>
@@ -365,7 +365,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
           <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {tx('proposal(s)', 'proposition(s)')}</p>
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px calc(110px + env(safe-area-inset-bottom))' }}>
         {loadingCandidates ? (
           <p style={{ color: subText, textAlign: 'center', marginTop: '40px' }}>...</p>
         ) : offerCandidates.length === 0 ? (
@@ -399,7 +399,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   );
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color, position: 'relative' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color, position: 'relative' }}>
       <Header theme={theme} />
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
@@ -414,7 +414,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
         </button>
       </div>
 
-      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px' }}>
+      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px calc(110px + env(safe-area-inset-bottom))' }}>
 
         {tab === 'offres' && (
           <>

@@ -55,7 +55,7 @@ export default function WelcomeScreen({ onStart }) {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       style={{
-        height: '100vh', background: '#0A0A0A', display: 'flex',
+        height: '100dvh', background: '#0A0A0A', display: 'flex',
         flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: '40px 32px', color: 'white', position: 'relative',
         userSelect: 'none',

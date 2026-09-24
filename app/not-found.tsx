@@ -13,7 +13,7 @@ export default function NotFound() {
 
   return (
     <div style={{
-      height: '100vh', background: '#0A0A0A',
+      height: '100dvh', background: '#0A0A0A',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: '32px', textAlign: 'center',

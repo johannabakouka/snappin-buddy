@@ -54,7 +54,7 @@ export default function AuthScreen({ onLogin, theme }) {
   }
 
   return (
-    <div style={{ padding: '60px 24px', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: bg, color }}>
+    <div style={{ padding: '60px 24px', height: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: bg, color }}>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '48px' }}>
         <img
