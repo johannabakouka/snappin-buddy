@@ -121,6 +121,16 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
   const styles = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const zones = (profile?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
+  const [receipts, setReceipts] = useState(profile?.read_receipts !== false);
+
+  async function toggleReceipts() {
+    const next = !receipts;
+    setReceipts(next);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('profiles').update({ read_receipts: next }).eq('user_id', user.id);
+  }
+
   const card = darkMode ? '#1A1A1A' : '#E8E8E8';
   const cardText = darkMode ? 'rgba(255,255,255,0.78)' : 'rgba(0,0,0,0.78)';
   const tagColor = darkMode ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.65)';
@@ -304,6 +314,30 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             </div>
           </div>
         )}
+
+        <div style={{ background: card, borderRadius: '14px', padding: '14px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: theme.color }}>
+              ✓✓ {tx('Read receipts', 'Accusés de lecture')}
+            </p>
+            <p style={{ fontSize: '11px', color: subText, lineHeight: 1.4, marginTop: '2px' }}>
+              {tx('Let others see when you read their messages.', 'Laisse les autres voir quand tu as lu leurs messages.')}
+            </p>
+          </div>
+          <div
+            onClick={toggleReceipts}
+            style={{
+              width: '46px', height: '26px', borderRadius: '20px', flexShrink: 0, cursor: 'pointer',
+              background: receipts ? '#2ECC71' : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+              position: 'relative', transition: 'background 0.2s',
+            }}
+          >
+            <div style={{
+              width: '20px', height: '20px', borderRadius: '50%', background: 'white',
+              position: 'absolute', top: '3px', left: receipts ? '23px' : '3px', transition: 'left 0.2s',
+            }} />
+          </div>
+        </div>
 
         <button onClick={() => setEditing(true)} style={{ width: '100%', background: theme.color, color: theme.bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
           {t.editProfile}

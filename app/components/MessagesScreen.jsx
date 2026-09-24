@@ -56,7 +56,7 @@ export default function MessagesScreen({ theme, active = true }) {
         username: profile?.username || (tx('Creative', 'Créatif')),
         handle: profile?.handle || '',
         avatar_url: profile?.avatar_url || null,
-        last: lastMsg?.content || '',
+        last: lastMsg?.deleted ? tx('Message deleted', 'Message supprimé') : (lastMsg?.content || ''),
         time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString(tx('en-GB', 'fr-FR'), { hour: '2-digit', minute: '2-digit' }) : '',
         unread: msgs.filter(m => m.sender_id === buddyId && m.receiver_id === userId && m.read === false).length,
       };
