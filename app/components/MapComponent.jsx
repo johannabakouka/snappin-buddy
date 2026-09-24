@@ -20,7 +20,7 @@ const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIB = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const MAPTILER_ATTRIB = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const maptilerUrl = (dark) =>
-  `https://api.maptiler.com/maps/${dark ? 'dataviz-dark' : 'dataviz-light'}/{z}/{x}/{y}{r}.png?key=${MAPTILER_KEY}`;
+  `https://api.maptiler.com/maps/${dark ? 'streets-v2-dark' : 'streets-v2'}/{z}/{x}/{y}{r}.png?key=${MAPTILER_KEY}`;
 // À l'ouverture, la carte s'élargit jusqu'à montrer les NEAREST créatifs les plus proches,
 // sans descendre sous MIN_OPEN_ZOOM (≈ un pays) ni zoomer plus que MAX_OPEN_ZOOM (≈ toute l’Île-de-France).
 const NEAREST = 8;
