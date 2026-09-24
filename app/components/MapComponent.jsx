@@ -12,6 +12,15 @@ const GPS_FUZZ = 0.004;
 const CITY_FUZZ = 0.02;
 // Zoom d'ouverture quand on ne connaît personne autour : vue régionale (on peut zoomer à la main)
 const MAP_ZOOM = 8;
+
+// Fond de carte : MapTiler si la clé est configurée (style sombre soigné),
+// sinon OpenStreetMap, qui reste le filet de sécurité gratuit et sans clé.
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
+const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIB = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const MAPTILER_ATTRIB = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const maptilerUrl = (dark) =>
+  `https://api.maptiler.com/maps/${dark ? 'dataviz-dark' : 'dataviz-light'}/{z}/{x}/{y}{r}.png?key=${MAPTILER_KEY}`;
 // À l'ouverture, la carte s'élargit jusqu'à montrer les NEAREST créatifs les plus proches,
 // sans descendre sous MIN_OPEN_ZOOM (≈ un pays) ni zoomer plus que MAX_OPEN_ZOOM (≈ toute l’Île-de-France).
 const NEAREST = 8;
@@ -78,6 +87,10 @@ export default function MapComponent({ theme, active = true }) {
   });
   // null | 'choose' | 'denied' : panneau de choix de ville
   const [cityOverlay, setCityOverlay] = useState(null);
+  // Repli sur OpenStreetMap : on remet alors le filtre qui assombrit la carte
+  const [useFilter, setUseFilter] = useState(false);
+  const fallbackRef = useRef(false);
+  const tilesRef = useRef(null);
   const [savingCity, setSavingCity] = useState(false);
 
   const STATUS_FILTERS = [
@@ -94,13 +107,32 @@ export default function MapComponent({ theme, active = true }) {
       const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], MAP_ZOOM);
       mapInstance.current = map;
 
-      LeafletModule.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      const useMaptiler = !!MAPTILER_KEY;
+      const tiles = LeafletModule.tileLayer(
+        useMaptiler ? maptilerUrl(darkMode) : OSM_URL,
         {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          attribution: useMaptiler ? MAPTILER_ATTRIB : OSM_ATTRIB,
           maxZoom: 20,
+          detectRetina: useMaptiler,
         }
       ).addTo(map);
+      tilesRef.current = tiles;
+      if (!useMaptiler) {
+        fallbackRef.current = true;
+        setUseFilter(true);
+      }
+
+      // Si MapTiler ne répond pas (clé absente, quota, coupure), on repasse sur OpenStreetMap
+      let tileErrors = 0;
+      tiles.on('tileerror', () => {
+        tileErrors += 1;
+        if (tileErrors >= 6 && !fallbackRef.current) {
+          fallbackRef.current = true;
+          setUseFilter(true);
+          tiles.setUrl(OSM_URL);
+          map.attributionControl.setPrefix('');
+        }
+      });
 
       LeafletModule.control.zoom({ position: 'bottomright' }).addTo(map);
       setL(LeafletModule);
@@ -134,6 +166,12 @@ export default function MapComponent({ theme, active = true }) {
       }
     });
   }
+
+  // Bascule clair / sombre : on change le fond sans recharger la carte
+  useEffect(() => {
+    if (!tilesRef.current || fallbackRef.current || !MAPTILER_KEY) return;
+    tilesRef.current.setUrl(maptilerUrl(darkMode));
+  }, [darkMode]);
 
   useEffect(() => {
     // Ceux qui ont choisi une ville ou refusé ne se voient plus redemander le GPS à chaque visite.
@@ -287,8 +325,14 @@ export default function MapComponent({ theme, active = true }) {
       {/* Filtre CSS pour rendre la carte sombre */}
       <style>{`
         .leaflet-tile-pane {
-          filter: ${darkMode ? 'invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9)' : 'none'};
+          filter: ${useFilter && darkMode ? 'invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9)' : 'none'};
         }
+        .leaflet-control-attribution {
+          background: ${darkMode ? 'rgba(10,10,10,0.6)' : 'rgba(255,255,255,0.7)'} !important;
+          color: ${darkMode ? '#666' : '#777'} !important;
+          font-size: 9px !important;
+        }
+        .leaflet-control-attribution a { color: ${darkMode ? '#8a8a8a' : '#555'} !important; }
       `}</style>
 
       <div ref={mapRef} style={{ height: '100dvh', width: '100%' }} />
