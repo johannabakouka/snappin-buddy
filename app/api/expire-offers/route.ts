@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } from '../../lib/server';
+import { getProfile, getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } from '../../lib/server';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -47,7 +47,8 @@ export async function GET(request: Request) {
         const to = await getUserEmail(offer.user_id);
         if (!to) return;
         const expiry = new Date(new Date(offer.created_at).getTime() + 30 * DAY).toLocaleDateString('fr-FR');
-        await sendMail(offerExpiringMail(to, offer.title, expiry, expired));
+        const dest = await getProfile(offer.user_id);
+        await sendMail(offerExpiringMail(to, offer.title, expiry, expired, dest?.username));
         emailsSent++;
       } catch (e) {
         console.error('Email error:', e);

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import {
   ADMIN_EMAIL, applicationAcceptedMail, getProfile, getUserEmail, newApplicationMail, newProposalMail,
-  offerTitleFromMessage, reportMail, requireUser, sendMail, supabaseAdmin,
+  newMessageMail, offerTitleFromMessage, reportMail, requireUser, sendMail, supabaseAdmin,
 } from '../../lib/server';
 
 // L'app envoie seulement le type d'email et l'identifiant concerné.
@@ -15,6 +15,26 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const { type } = body as { type?: string };
+
+    // Nouveau message dans le chat : un seul email tant que la personne n'a pas lu.
+    // Si elle a déjà des messages non lus de notre part, on n'envoie rien de plus.
+    if (type === 'new_message') {
+      const toUserId = String(body.toUserId || '');
+      if (!toUserId || toUserId === user.id) return Response.json({ error: 'destinataire invalide' }, { status: 400 });
+
+      const db = supabaseAdmin();
+      const { count } = await db.from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('sender_id', user.id).eq('receiver_id', toUserId).eq('read', false);
+      if ((count || 0) !== 1) return Response.json({ ok: true, skipped: 'deja prevenu' });
+
+      const to = await getUserEmail(toUserId);
+      if (!to) return Response.json({ error: 'destinataire sans email' }, { status: 404 });
+      const me = await getProfile(user.id);
+      const dest = await getProfile(toUserId);
+      await sendMail(newMessageMail(to, me?.username || 'Un créatif', dest?.username));
+      return Response.json({ ok: true });
+    }
 
     if (type === 'new_application' || type === 'new_proposal' || type === 'application_accepted') {
       const collabId = body.collabId;
@@ -35,9 +55,10 @@ export async function POST(request: Request) {
         const to = await getUserEmail(collab.receiver_id);
         if (!to) return Response.json({ error: 'destinataire sans email' }, { status: 404 });
         const me = await getProfile(user.id);
+        const dest = await getProfile(collab.receiver_id);
         await sendMail(type === 'new_application'
-          ? newApplicationMail(to, me?.username || 'Un créatif', me?.role || '', offerTitle)
-          : newProposalMail(to, me?.username || 'Un créatif', me?.role || '', collab.message || ''));
+          ? newApplicationMail(to, me?.username || 'Un créatif', me?.role || '', offerTitle, dest?.username)
+          : newProposalMail(to, me?.username || 'Un créatif', me?.role || '', collab.message || '', dest?.username));
       } else {
         // Seul le porteur du projet peut accepter, et l'email part au candidat.
         if (collab.receiver_id !== user.id || collab.status !== 'accepted') {
@@ -46,7 +67,8 @@ export async function POST(request: Request) {
         const to = await getUserEmail(collab.sender_id);
         if (!to) return Response.json({ error: 'destinataire sans email' }, { status: 404 });
         const me = await getProfile(user.id);
-        await sendMail(applicationAcceptedMail(to, me?.username || 'Un créatif', offerTitle));
+        const dest = await getProfile(collab.sender_id);
+        await sendMail(applicationAcceptedMail(to, me?.username || 'Un créatif', offerTitle, dest?.username));
       }
       return Response.json({ ok: true });
     }

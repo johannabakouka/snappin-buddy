@@ -58,6 +58,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [profileChecked, setProfileChecked] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  // Pseudo du compte auquel le mail était adressé (lien ...?for=pseudo)
+  const [linkFor, setLinkFor] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('for');
+  });
   const [darkMode, setDarkMode] = useState(true);
   const [initialized, setInitialized] = useState(false);
   // Écrans déjà ouverts : ils restent en mémoire (cachés) pour revenir dessus instantanément
@@ -124,6 +129,13 @@ export default function Home() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  function forgetLink() {
+    setLinkFor(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('for');
+    window.history.replaceState({}, '', url.pathname + url.search);
+  }
 
   useEffect(() => {
     if (initialized) localStorage.setItem('darkMode', String(darkMode));
@@ -195,6 +207,9 @@ export default function Home() {
     }
   }
 
+  const wrongAccount = !!linkFor && !!profile?.username &&
+    profile.username.trim().toLowerCase() !== linkFor.trim().toLowerCase();
+
   return (
     <div style={{
       maxWidth: '390px', margin: '0 auto', height: '100dvh',
@@ -208,6 +223,39 @@ export default function Home() {
         </div>
       ))}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />
+
+      {wrongAccount && (
+        <div style={{
+          position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+          bottom: 'calc(96px + env(safe-area-inset-bottom))', zIndex: 9000,
+          width: 'calc(100% - 32px)', maxWidth: '358px',
+          background: darkMode ? '#1A1A1A' : '#FFFFFF',
+          border: '1px solid rgba(242,224,80,0.5)', borderRadius: '18px',
+          padding: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        }}>
+          <p style={{ fontSize: '13px', fontWeight: '800', color: theme.color, marginBottom: '4px' }}>
+            ✉️ Ce mail concerne @{linkFor}
+          </p>
+          <p style={{ fontSize: '12px', lineHeight: 1.5, color: darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)' }}>
+            Tu es connecté·e en tant que @{profile?.username}.<br />
+            This email was sent to @{linkFor}, you are signed in as @{profile?.username}.
+          </p>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); }}
+              style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#F2E050', color: '#0A0A0A', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+            >
+              Changer de compte · Switch
+            </button>
+            <button
+              onClick={forgetLink}
+              style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}`, background: 'transparent', color: theme.color, fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Rester ici · Stay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

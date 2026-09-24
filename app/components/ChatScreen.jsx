@@ -110,11 +110,27 @@ export default function ChatScreen({ buddy, onBack, theme }) {
     if (!text.trim() || !user || !buddyUserId) return;
     const content = text.trim();
     setText('');
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       sender_id: user.id,
       receiver_id: buddyUserId,
       content,
     });
+    if (!error) notifyByEmail();
+  }
+
+  // Prévient la personne par email, seulement si elle n'a pas déjà un message non lu de notre part
+  async function notifyByEmail() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ type: 'new_message', toUserId: buddyUserId }),
+      });
+    } catch (e) {
+      console.error('Email error:', e);
+    }
   }
 
   const bg = darkMode ? '#0A0A0A' : '#F5F5F5';

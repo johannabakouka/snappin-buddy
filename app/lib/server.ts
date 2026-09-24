@@ -82,14 +82,17 @@ export function offerTitleFromMessage(message?: string | null): string {
   return (i >= 0 ? message.slice(i + 2) : message).trim();
 }
 
-type Mail = { to: string; subject: string; titleFr: string; bodyFr: string; titleEn: string; bodyEn: string; cta?: string };
+// forUser : le pseudo du destinataire, ajouté au lien pour que l'app prévienne
+// si on ouvre le mail alors qu'on est connecté sur un autre compte.
+type Mail = { to: string; subject: string; titleFr: string; bodyFr: string; titleEn: string; bodyEn: string; cta?: string; forUser?: string };
 
 function layout(m: Mail): string {
+  const link = m.forUser ? `${APP_URL}/?for=${encodeURIComponent(m.forUser)}` : APP_URL;
   const button = m.cta === undefined ? '' : `
-    <a href="${APP_URL}" style="display:inline-block;margin-top:24px;padding:12px 22px;border-radius:24px;background:#F2E050;color:#0A0A0A;font-weight:800;text-decoration:none">${m.cta || "Ouvrir Snappin'Buddy · Open"}</a>`;
+    <a href="${link}" style="display:inline-block;margin-top:24px;padding:12px 22px;border-radius:24px;background:#F2E050;color:#0A0A0A;font-weight:800;text-decoration:none">${m.cta || "Ouvrir Snappin'Buddy · Open"}</a>`;
   return `<!doctype html><html><body bgcolor="#0A0A0A" style="margin:0;background:#0A0A0A;font-family:Helvetica,Arial,sans-serif;color:#fff">
   <div style="max-width:520px;margin:0 auto;padding:32px 24px">
-    <a href="${APP_URL}" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none">
+    <a href="${link}" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none">
       <img src="${APP_URL}/logo-email.png" width="120" height="120" alt="Snappin'Buddy" style="display:inline-block;width:120px;height:120px;border:0">
     </a>
     <h1 style="font-size:20px;margin:0 0 12px">${m.titleFr}</h1>
@@ -108,7 +111,7 @@ export async function sendMail(m: Mail) {
 
 // ---------- Modèles d'emails (FR puis EN) ----------
 
-export function newApplicationMail(to: string, applicant: string, role: string, offerTitle: string): Mail {
+export function newApplicationMail(to: string, applicant: string, role: string, offerTitle: string, forUser?: string): Mail {
   const a = escapeHtml(applicant), r = escapeHtml(role), o = escapeHtml(offerTitle);
   return {
     to,
@@ -118,10 +121,11 @@ export function newApplicationMail(to: string, applicant: string, role: string, 
     titleEn: 'Someone wants to create with you ⚡',
     bodyEn: `<b>${a}</b>${r ? ` (${r})` : ''} applied to your project <b>“${o}”</b>. Open the app to see their profile and reply.`,
     cta: '',
+    forUser,
   };
 }
 
-export function newProposalMail(to: string, sender: string, role: string, message: string): Mail {
+export function newProposalMail(to: string, sender: string, role: string, message: string, forUser?: string): Mail {
   const s = escapeHtml(sender), r = escapeHtml(role);
   const m = escapeHtml(message.slice(0, 300));
   const quote = m ? `<br><br><i>« ${m} »</i>` : '';
@@ -134,10 +138,25 @@ export function newProposalMail(to: string, sender: string, role: string, messag
     titleEn: 'New collab proposal ⚡',
     bodyEn: `<b>${s}</b>${r ? ` (${r})` : ''} wants to create with you.${quoteEn}<br><br>Open the app to see their profile and accept or decline.`,
     cta: '',
+    forUser,
   };
 }
 
-export function applicationAcceptedMail(to: string, poster: string, offerTitle: string): Mail {
+export function newMessageMail(to: string, sender: string, forUser?: string): Mail {
+  const s = escapeHtml(sender);
+  return {
+    to,
+    subject: `💬 ${sender} t'a écrit sur Snappin'Buddy`.slice(0, 120),
+    titleFr: 'Tu as un nouveau message 💬',
+    bodyFr: `<b>${s}</b> t’a écrit. Ouvre l’app pour lire et répondre.`,
+    titleEn: 'You have a new message 💬',
+    bodyEn: `<b>${s}</b> sent you a message. Open the app to read and reply.`,
+    cta: '',
+    forUser,
+  };
+}
+
+export function applicationAcceptedMail(to: string, poster: string, offerTitle: string, forUser?: string): Mail {
   const p = escapeHtml(poster), o = escapeHtml(offerTitle);
   return {
     to,
@@ -147,10 +166,11 @@ export function applicationAcceptedMail(to: string, poster: string, offerTitle: 
     titleEn: 'Your application was accepted 🎉',
     bodyEn: `<b>${p}</b> accepted your application for <b>“${o}”</b>. A message is waiting for you in the app.`,
     cta: '',
+    forUser,
   };
 }
 
-export function offerExpiringMail(to: string, offerTitle: string, expiryDate: string, expired: boolean): Mail {
+export function offerExpiringMail(to: string, offerTitle: string, expiryDate: string, expired: boolean, forUser?: string): Mail {
   const o = escapeHtml(offerTitle), d = escapeHtml(expiryDate);
   return expired
     ? {
@@ -161,6 +181,7 @@ export function offerExpiringMail(to: string, offerTitle: string, expiryDate: st
         titleEn: 'Your project has ended',
         bodyEn: `Your project <b>“${o}”</b> was closed after 30 days. You can launch a new one anytime.`,
         cta: '',
+        forUser,
       }
     : {
         to,
@@ -170,6 +191,7 @@ export function offerExpiringMail(to: string, offerTitle: string, expiryDate: st
         titleEn: 'Your project expires in 7 days ⏳',
         bodyEn: `Your project <b>“${o}”</b> will close on <b>${d}</b>. Remember to reply to applications before then.`,
         cta: '',
+        forUser,
       };
 }
 
