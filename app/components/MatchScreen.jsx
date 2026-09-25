@@ -338,7 +338,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     );
   }
 
-  if (sharingOffer) return <ShareCard offer={sharingOffer} onClose={() => setSharingOffer(null)} />;
+  if (sharingOffer) return <ShareCard offer={sharingOffer} profile={myProfile} onClose={() => setSharingOffer(null)} />;
 
   if (chatBuddy) return (
     <ChatScreen buddy={chatBuddy} onBack={() => { setChatBuddy(null); if (user) loadCollabs(user.id); }} theme={theme} />

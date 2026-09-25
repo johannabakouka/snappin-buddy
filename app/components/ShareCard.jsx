@@ -3,20 +3,23 @@ import { useRef } from 'react';
 import { useRoles, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 
-export default function ShareCard({ offer, onClose }) {
+export default function ShareCard({ offer, profile, onClose }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
   const cardRef = useRef(null);
 
   const roles = (offer.role_needed || '').split(',').map(r => r.trim()).filter(Boolean);
+  // Instagram de la personne qui partage, pour qu'on puisse la retrouver depuis la story
+  const handle = (profile?.handle || '').replace(/^@+/, '').trim();
   const styles = (offer.styles_needed || '').split(',').map(s => s.trim()).filter(Boolean);
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000,
       background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', padding: '24px',
+      alignItems: 'center', justifyContent: 'flex-start', overflowY: 'auto',
+      padding: 'calc(env(safe-area-inset-top) + 24px) 24px calc(40px + env(safe-area-inset-bottom))',
     }}>
       <div style={{ width: '100%', maxWidth: '340px', marginBottom: '20px' }}>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>
@@ -55,6 +58,11 @@ export default function ShareCard({ offer, onClose }) {
             <span style={{ color: 'white', fontWeight: '900', fontSize: '14px', letterSpacing: '-0.3px' }}>
               Snappin&apos;Buddy
             </span>
+            {handle && (
+              <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.45)', fontSize: '12px', fontWeight: '700' }}>
+                @{handle}
+              </span>
+            )}
           </div>
 
           {/* Badge projet */}
@@ -166,7 +174,8 @@ export default function ShareCard({ offer, onClose }) {
       <button onClick={onClose} style={{
         background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
         color: 'white', borderRadius: '24px', padding: '12px 32px',
-        fontSize: '14px', fontWeight: '700', cursor: 'pointer',
+        fontSize: '14px', fontWeight: '700', cursor: 'pointer', flexShrink: 0,
+        marginTop: '8px',
       }}>
         {tx('Close', 'Fermer')}
       </button>
