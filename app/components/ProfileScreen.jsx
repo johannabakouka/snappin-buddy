@@ -137,8 +137,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const tagBorder = darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
   const subText = darkMode ? '#666' : '#888';
 
-  const roleObj = ROLES.find(r => r.id === profile?.role?.toLowerCase());
-  const roleLabel = roleObj?.label || profile?.role || '';
+  const roleLabel = roleLabels(profile?.role, ROLES);
 
   async function updateStatus(newStatus) {
     setStatus(newStatus);

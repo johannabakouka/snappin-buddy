@@ -38,7 +38,17 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
   const [username, setUsername] = useState(profile?.username || '');
   const [handle, setHandle] = useState(profile?.handle || '');
-  const [selectedRole, setSelectedRole] = useState(profile?.role || null);
+  const [selectedRoles, setSelectedRoles] = useState(
+    (profile?.role || '').split(',').map(r => r.trim()).filter(Boolean)
+  );
+
+  function toggleRole(id) {
+    setSelectedRoles(prev => {
+      if (prev.includes(id)) return prev.filter(r => r !== id);
+      if (prev.length >= 3) return prev; // 3 rôles maximum, pour rester lisible
+      return [...prev, id];
+    });
+  }
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
   const [videoUrl, setVideoUrl] = useState(profile?.video_url || '');
@@ -89,7 +99,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   }
 
   async function handleSave() {
-    if (!username || !handle || !selectedRole) { setError(tx('Required fields missing', 'Champs obligatoires manquants')); return; }
+    if (!username || !handle || selectedRoles.length === 0) { setError(tx('Required fields missing', 'Champs obligatoires manquants')); return; }
     setLoading(true);
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const universToSave = selectedUnivers.map(label => {
@@ -98,7 +108,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       return idx >= 0 ? UNIVERS_FR[idx] : label;
     });
     const { error } = await supabase.from('profiles').update({
-      username, handle, role: selectedRole,
+      username, handle, role: selectedRoles.join(', '),
       bio, zone, styles: universToSave.join(', '),
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
@@ -149,12 +159,15 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         />
       </div>
 
-      <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{tx('ROLE *', 'RÔLE *')}</p>
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>{tx('ROLES *', 'RÔLES *')}</p>
+      <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>
+        {tx('Pick up to 3.', 'Choisis-en jusqu’à 3.')}
+      </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
         {ROLES.map(r => {
-          const active = selectedRole === r.id;
+          const active = selectedRoles.includes(r.id);
           return (
-            <button key={r.id} onClick={() => setSelectedRole(r.id)} style={{
+            <button key={r.id} onClick={() => toggleRole(r.id)} style={{
               padding: '12px 8px', borderRadius: '12px',
               border: `1.5px solid ${active ? color : (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)')}`,
               background: active ? color : inputBg,

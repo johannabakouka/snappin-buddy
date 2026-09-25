@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
-import { ROLE_FILTERS, UNIVERS } from '../constants';
+import { ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels } from '../constants';
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 
@@ -262,7 +262,7 @@ export default function MapComponent({ theme, active = true }) {
       if (p._isMe) return true;
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
       if (universFilter && !(p.styles || '').toLowerCase().includes(universFilter.toLowerCase())) return false;
-      if (roleFilter && p.role?.toLowerCase() !== roleFilter.toLowerCase()) return false;
+      if (roleFilter && !hasRole(p.role, roleFilter)) return false;
       return true;
     });
 
@@ -524,7 +524,7 @@ export default function MapComponent({ theme, active = true }) {
                 {popupBuddy.username}
               </div>
               <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontWeight: '600' }}>
-                {popupBuddy.role && <span style={{ marginRight: '6px' }}>{popupBuddy.role}</span>}
+                {popupBuddy.role && <span style={{ marginRight: '6px' }}>{roleLabels(popupBuddy.role, isEn ? ROLES_EN : ROLES_FR)}</span>}
                 {popupStyles.length > 0 && popupStyles.join(' · ')}
               </div>
             </div>

@@ -13,7 +13,15 @@ export default function OnboardingScreen({ user, onComplete }) {
   const [step, setStep] = useState(1);
   const [username, setUsername] = useState('');
   const [handle, setHandle] = useState('');
-  const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+
+  function toggleRole(id) {
+    setSelectedRoles(prev => {
+      if (prev.includes(id)) return prev.filter(r => r !== id);
+      if (prev.length >= 3) return prev; // 3 rôles maximum
+      return [...prev, id];
+    });
+  }
   const [selectedUnivers, setSelectedUnivers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -52,7 +60,7 @@ export default function OnboardingScreen({ user, onComplete }) {
   }
 
   async function handleCreate() {
-    if (!username || !handle || !selectedRole) {
+    if (!username || !handle || selectedRoles.length === 0) {
       setError(tx('Please fill in all required fields.', 'Remplis tous les champs obligatoires.'));
       return;
     }
@@ -70,7 +78,7 @@ export default function OnboardingScreen({ user, onComplete }) {
       user_id: user.id,
       username,
       handle,
-      role: selectedRole,
+      role: selectedRoles.join(', '),
       styles: universToSave.join(', '),
       status: 'dispo',
     });
@@ -163,13 +171,16 @@ export default function OnboardingScreen({ user, onComplete }) {
           <h2 style={{ fontFamily: 'var(--font-nunito)', fontSize: '26px', fontWeight: '900', marginBottom: '8px', marginTop: '24px' }}>
             {t.yourRole}
           </h2>
-          <p style={{ color: subText, fontSize: '14px', marginBottom: '32px' }}>{t.roleSub}</p>
+          <p style={{ color: subText, fontSize: '14px', marginBottom: '8px' }}>{t.roleSub}</p>
+          <p style={{ color: subText, fontSize: '13px', marginBottom: '28px' }}>
+            {tx('You can pick up to 3.', 'Tu peux en choisir jusqu’à 3.')}
+          </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '32px' }}>
             {ROLES.map(r => {
-              const active = selectedRole === r.id;
+              const active = selectedRoles.includes(r.id);
               return (
-                <button key={r.id} onClick={() => setSelectedRole(r.id)} style={{
+                <button key={r.id} onClick={() => toggleRole(r.id)} style={{
                   padding: '16px 8px', borderRadius: '14px',
                   border: `1.5px solid ${active ? 'white' : 'rgba(255,255,255,0.12)'}`,
                   background: active ? 'white' : 'rgba(255,255,255,0.04)',
@@ -188,10 +199,10 @@ export default function OnboardingScreen({ user, onComplete }) {
             <button onClick={() => setStep(1)} style={{ padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>
             <button
               onClick={() => {
-                if (selectedRole) { setError(''); setStep(3); }
-                else setError(tx('Choose a role.', 'Choisis un rôle.'));
+                if (selectedRoles.length) { setError(''); setStep(3); }
+                else setError(tx('Choose at least one role.', 'Choisis au moins un rôle.'));
               }}
-              style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: selectedRole ? 'white' : 'rgba(255,255,255,0.15)', color: selectedRole ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: selectedRoles.length ? 'white' : 'rgba(255,255,255,0.15)', color: selectedRoles.length ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
             >
               {t.continue}
             </button>

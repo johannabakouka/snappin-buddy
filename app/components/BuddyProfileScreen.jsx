@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
-import { UNIVERS_FR, UNIVERS_EN } from '../constants';
+import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
 
 function getVideoEmbed(url) {
@@ -90,8 +90,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
     : (tx('Available', 'Disponible'));
   const embedUrl = getVideoEmbed(buddy?.video_url);
 
-  const roleObj = ROLES.find(r => r.id === buddy?.role?.toLowerCase());
-  const roleLabel = roleObj?.label || buddy?.role || '';
+  const roleLabel = roleLabels(buddy?.role, ROLES);
 
   async function sendCollab() {
     setSending(true);

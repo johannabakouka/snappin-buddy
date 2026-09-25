@@ -9,6 +9,7 @@ import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { hasRole, roleLabels, splitRoles } from '../constants';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
 async function sendEmail(type, payload) {
@@ -247,8 +248,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     if (!myProfile) return 0;
     let score = 0;
     if (offer.role_needed && myProfile.role) {
-      const roles = offer.role_needed.split(',').map(r => r.trim());
-      if (roles.includes(myProfile.role)) score += 3;
+      const wanted = offer.role_needed.split(',').map(r => r.trim());
+      const mine = splitRoles(myProfile.role);
+      if (wanted.some(r => mine.includes(r))) score += 3;
     }
     if (offer.styles_needed && myProfile.styles) {
       const os = offer.styles_needed.toLowerCase().split(',').map(s => s.trim());
@@ -309,7 +311,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{profile.username}</p>
-            <p style={{ fontSize: '11px', color: subText }}>{profile.role}{profile.zone ? ` · ${profile.zone}` : ''}</p>
+            <p style={{ fontSize: '11px', color: subText }}>{roleLabels(profile.role, ROLES)}{profile.zone ? ` · ${profile.zone}` : ''}</p>
           </div>
           {onViewFull && (
             <button onClick={() => onViewFull(profile)} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', flexShrink: 0 }}>
@@ -514,7 +516,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         </div>
                         <div style={{ flex: 1 }}>
                           <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (tx('Creative', 'Créatif'))}</p>
-                          <p style={{ fontSize: '11px', color: subText }}>{o.authorProfile?.role}</p>
+                          <p style={{ fontSize: '11px', color: subText }}>{roleLabels(o.authorProfile?.role, ROLES)}</p>
                         </div>
                         {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '2px 8px', fontWeight: '700' }}>🚀 Boost</span>}
                         {score > 0 && o.status === 'open' && !isBoosted && (
@@ -528,7 +530,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
                         {o.role_needed && o.role_needed.split(',').map(r => r.trim()).filter(Boolean).map(r => {
                           const role = ROLES.find(x => x.id === r);
-                          const isMyRole = myProfile?.role === r;
+                          const isMyRole = hasRole(myProfile?.role, r);
                           return <span key={r} style={{ fontSize: '11px', color: isMyRole ? '#000' : theme?.color, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: '700', background: isMyRole ? '#2ECC71' : 'transparent' }}>{role?.icon} {role?.label || r}</span>;
                         })}
                         {o.styles_needed && o.styles_needed.split(',').map(s => s.trim()).filter(Boolean).map(s => {

@@ -3,8 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import ChatScreen from './ChatScreen';
 import Header from './Header';
-import { useT } from '../i18n';
+import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { roleLabels } from '../constants';
 
 export default function MessagesScreen({ theme, active = true }) {
   const t = useT();
@@ -104,6 +105,7 @@ export default function MessagesScreen({ theme, active = true }) {
   });
 
   function ProfileCard({ p, canMessage = false }) {
+  const ROLES = useRoles();
     const styles = (p.styles || '').split(',').map(s => s.trim()).filter(Boolean);
     return (
       <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -112,7 +114,7 @@ export default function MessagesScreen({ theme, active = true }) {
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{p.username}</p>
-          <p style={{ color: subText, fontSize: '11px' }}>{p.role}{p.handle ? ` · ${p.handle}` : ''}</p>
+          <p style={{ color: subText, fontSize: '11px' }}>{roleLabels(p.role, ROLES)}{p.handle ? ` · ${p.handle}` : ''}</p>
           {styles.length > 0 && (
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
               {styles.slice(0, 3).map(s => (

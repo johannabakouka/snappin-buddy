@@ -83,3 +83,23 @@ export const COLORS = {
   shoot: '#F0B429',
   indispo: '#FF4D4D',
 };
+// Un profil peut avoir plusieurs rôles : ils sont enregistrés séparés par des virgules
+// dans la même colonne, comme les univers. Un ancien profil à un seul rôle reste valide.
+export function splitRoles(role) {
+  return (role || '').split(',').map(r => r.trim()).filter(Boolean);
+}
+
+export function roleLabels(role, roles = ROLES_FR) {
+  return splitRoles(role)
+    .map(id => roles.find(r => r.id === id.toLowerCase())?.label || id)
+    .join(' · ');
+}
+
+export function roleIcons(role) {
+  return splitRoles(role).map(id => ROLE_ICONS[id.toLowerCase()] || '✨').join(' ');
+}
+
+export function hasRole(role, wanted) {
+  if (!wanted) return true;
+  return splitRoles(role).some(r => r.toLowerCase() === wanted.toLowerCase());
+}

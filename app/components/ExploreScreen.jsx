@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
-import { ROLE_ICONS } from '../constants';
+import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 
@@ -97,7 +97,7 @@ export default function ExploreScreen({ theme, active = true }) {
     );
   } else {
     if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
-    if (roleFilter) displayed = displayed.filter(p => p.role?.toLowerCase() === roleFilter.toLowerCase());
+    if (roleFilter) displayed = displayed.filter(p => hasRole(p.role, roleFilter));
     if (universFilter) {
       const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
       const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
@@ -176,7 +176,7 @@ export default function ExploreScreen({ theme, active = true }) {
                   </div>
                   <div>
                     <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{p.username}</p>
-                    <p style={{ fontSize: '11px', color: subText }}>{p.role}{p.zone ? ` · ${p.zone}` : ''}</p>
+                    <p style={{ fontSize: '11px', color: subText }}>{roleLabels(p.role, ROLES)}{p.zone ? ` · ${p.zone}` : ''}</p>
                   </div>
                   <div style={{ marginLeft: 'auto' }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }} />
@@ -224,10 +224,9 @@ export default function ExploreScreen({ theme, active = true }) {
             const matchStyles = myProfile?.styles
               ? (p.styles || '').split(',').map(s => s.trim()).filter(s => myProfile.styles.toLowerCase().includes(s.toLowerCase()))
               : [];
-            const roleIcon = ROLE_ICONS[p.role?.toLowerCase()] || '✨';
+            const roleIcon = roleIcons(p.role) || '✨';
             const portfolio = p.portfolio_urls || [];
-            const roleObj = ROLES.find(r => r.id === p.role?.toLowerCase());
-            const roleLabel = roleObj?.label || p.role || '';
+            const roleLabel = roleLabels(p.role, ROLES);
 
             return (
               <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', overflow: 'hidden' }}>
