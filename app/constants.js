@@ -1,6 +1,7 @@
 export const ROLES_FR = [
   { id: 'photographe', label: 'Photographe', icon: '📷' },
   { id: 'vidéaste', label: 'Vidéaste', icon: '🎬' },
+  { id: 'créateur de contenu', label: 'Créateur·rice de contenu', icon: '📱' },
   { id: 'directeur artistique', label: 'Dir. Artistique', icon: '🎨' },
   { id: 'directeur créatif', label: 'Dir. Créatif', icon: '🎯' },
   { id: 'monteur vidéo', label: 'Monteur vidéo', icon: '🎞️' },
@@ -19,6 +20,7 @@ export const ROLES_FR = [
 export const ROLES_EN = [
   { id: 'photographe', label: 'Photographer', icon: '📷' },
   { id: 'vidéaste', label: 'Videographer', icon: '🎬' },
+  { id: 'créateur de contenu', label: 'Content Creator', icon: '📱' },
   { id: 'directeur artistique', label: 'Art Director', icon: '🎨' },
   { id: 'directeur créatif', label: 'Creative Director', icon: '🎯' },
   { id: 'monteur vidéo', label: 'Video Editor', icon: '🎞️' },
@@ -51,7 +53,7 @@ export const ROLES = ROLES_FR;
 export const UNIVERS = UNIVERS_FR;
 
 export const ROLE_ICONS = {
-  'photographe': '📷', 'vidéaste': '🎬', 'directeur artistique': '🎨',
+  'photographe': '📷', 'vidéaste': '🎬', 'créateur de contenu': '📱', 'directeur artistique': '🎨',
   'directeur créatif': '🎯', 'monteur vidéo': '🎞️', 'éditeur photo': '🖼️',
   'styliste': '👗', 'maquilleur': '💄', 'modèle': '🧍',
   'designer': '✏️', 'musicien': '🎵', 'chanteur': '🎤',
@@ -61,6 +63,7 @@ export const ROLE_ICONS = {
 export const ROLE_FILTERS = [
   { id: 'photographe', label: 'Photo', icon: '📷' },
   { id: 'vidéaste', label: 'Vidéo', icon: '🎬' },
+  { id: 'créateur de contenu', label: 'Contenu', icon: '📱' },
   { id: 'directeur artistique', label: 'DA', icon: '🎨' },
   { id: 'directeur créatif', label: 'Dir. Créatif', icon: '🎯' },
   { id: 'monteur vidéo', label: 'Montage', icon: '🎞️' },
