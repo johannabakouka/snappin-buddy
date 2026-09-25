@@ -38,8 +38,13 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
   const [username, setUsername] = useState(profile?.username || '');
   const [handle, setHandle] = useState(profile?.handle || '');
+  // On normalise : les rôles sont enregistrés en minuscules, un ancien profil
+  // écrit autrement doit quand même s'allumer dans la liste.
   const [selectedRoles, setSelectedRoles] = useState(
-    (profile?.role || '').split(',').map(r => r.trim()).filter(Boolean)
+    (profile?.role || '')
+      .split(',')
+      .map(r => r.trim().toLowerCase())
+      .filter(r => r && ROLES.some(x => x.id === r))
   );
 
   function toggleRole(id) {
@@ -161,7 +166,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
       <p style={{ color: subText, fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>{tx('ROLES *', 'RÔLES *')}</p>
       <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>
-        {tx('Pick up to 3.', 'Choisis-en jusqu’à 3.')}
+        {tx('Pick up to 3.', 'Choisis-en jusqu’à 3.')} <span style={{ fontWeight: '700', color }}>{selectedRoles.length}/3</span>
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
         {ROLES.map(r => {

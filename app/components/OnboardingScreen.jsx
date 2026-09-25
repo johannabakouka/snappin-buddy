@@ -173,7 +173,7 @@ export default function OnboardingScreen({ user, onComplete }) {
           </h2>
           <p style={{ color: subText, fontSize: '14px', marginBottom: '8px' }}>{t.roleSub}</p>
           <p style={{ color: subText, fontSize: '13px', marginBottom: '28px' }}>
-            {tx('You can pick up to 3.', 'Tu peux en choisir jusqu’à 3.')}
+            {tx('You can pick up to 3.', 'Tu peux en choisir jusqu’à 3.')} <span style={{ fontWeight: '700', color: 'white' }}>{selectedRoles.length}/3</span>
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '32px' }}>
