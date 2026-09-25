@@ -11,6 +11,7 @@ import AuthScreen from './components/AuthScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
 import NewPasswordScreen from './components/NewPasswordScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
@@ -219,7 +220,9 @@ export default function Home() {
     }}>
       {SCREENS.filter(name => name === screen || visited.includes(name)).map(name => (
         <div key={name} style={{ display: name === screen ? 'block' : 'none', height: '100%' }}>
-          {renderScreen(name)}
+          <ErrorBoundary theme={theme}>
+            {renderScreen(name)}
+          </ErrorBoundary>
         </div>
       ))}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />

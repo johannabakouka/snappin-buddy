@@ -5,7 +5,7 @@ import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
-import { UNIVERS_FR, UNIVERS_EN } from '../constants';
+import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 
 function translateTag(tag, isEn) {
   if (!isEn) return tag;

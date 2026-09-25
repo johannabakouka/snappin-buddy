@@ -166,6 +166,9 @@ const TX = {
     'Pick up to 3.': 'Elige hasta 3.',
     'You can pick up to 3.': 'Puedes elegir hasta 3.',
     'Choose at least one role.': 'Elige al menos un rol.',
+    'This screen had a problem': 'Esta pantalla tuvo un problema',
+    'The rest of the app still works. Reload to try again.': 'El resto de la app funciona. Recarga para volver a intentarlo.',
+    'Reload': 'Recargar',
   },
 
   pt: {
@@ -332,6 +335,9 @@ const TX = {
     'Pick up to 3.': 'Escolha até 3.',
     'You can pick up to 3.': 'Você pode escolher até 3.',
     'Choose at least one role.': 'Escolha pelo menos uma função.',
+    'This screen had a problem': 'Esta tela teve um problema',
+    'The rest of the app still works. Reload to try again.': 'O resto do app funciona. Recarregue para tentar de novo.',
+    'Reload': 'Recarregar',
   },
 
   de: {
@@ -498,6 +504,9 @@ const TX = {
     'Pick up to 3.': 'Wähle bis zu 3 aus.',
     'You can pick up to 3.': 'Du kannst bis zu 3 auswählen.',
     'Choose at least one role.': 'Wähle mindestens eine Rolle.',
+    'This screen had a problem': 'Auf diesem Bildschirm gab es ein Problem',
+    'The rest of the app still works. Reload to try again.': 'Der Rest der App funktioniert. Lade neu, um es erneut zu versuchen.',
+    'Reload': 'Neu laden',
   },
 
   it: {
@@ -664,6 +673,9 @@ const TX = {
     'Pick up to 3.': 'Scegline fino a 3.',
     'You can pick up to 3.': 'Puoi sceglierne fino a 3.',
     'Choose at least one role.': 'Scegli almeno un ruolo.',
+    'This screen had a problem': 'Questa schermata ha avuto un problema',
+    'The rest of the app still works. Reload to try again.': 'Il resto dell’app funziona. Ricarica per riprovare.',
+    'Reload': 'Ricarica',
   },
 };
 
