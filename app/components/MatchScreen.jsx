@@ -27,7 +27,7 @@ async function sendEmail(type, payload) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0 }) {
+export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0, sharedOfferId = '', onSharedOfferSeen }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -57,6 +57,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const [sharingOffer, setSharingOffer] = useState(null);
   // Conversation ouverte directement depuis Match (après avoir accepté, ou bouton Écrire)
   const [chatBuddy, setChatBuddy] = useState(null);
+  // Projet ouvert depuis un lien partagé (snappinbuddy.com/?offer=123)
+  const [sharedOffer, setSharedOffer] = useState(null);
 
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
@@ -74,6 +76,23 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       }
     });
   }, []);
+
+  // Lien partagé : on charge le projet même s'il n'est pas dans la liste, et on l'affiche en premier
+  useEffect(() => {
+    if (!sharedOfferId) return;
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.from('offers').select('*').eq('id', sharedOfferId).maybeSingle();
+      if (!alive || !data) return;
+      const { data: author } = await supabase.from('profiles')
+        .select('user_id, username, avatar_url, role').eq('user_id', data.user_id).maybeSingle();
+      setSharedOffer({ ...data, authorProfile: author || null });
+      setTab('offres');
+      scrollBoxRef.current?.scrollTo({ top: 0 });
+      onSharedOfferSeen?.();
+    })();
+    return () => { alive = false; };
+  }, [sharedOfferId]);
 
   // Retour sur l'onglet : mise à jour silencieuse des projets et candidatures
   const wasActive = useRef(active);
@@ -261,6 +280,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   let displayedOffers = [...offers];
+  if (sharedOffer && !displayedOffers.some(o => o.id === sharedOffer.id)) {
+    displayedOffers = [sharedOffer, ...displayedOffers];
+  }
   if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
   if (filterUnivers) {
     const filterFR = isEn ? (() => { try { const { UNIVERS_FR: fr, UNIVERS_EN: en } = require('../constants'); const i = en.indexOf(filterUnivers); return i >= 0 ? fr[i] : filterUnivers; } catch { return filterUnivers; } })() : filterUnivers;
@@ -268,6 +290,10 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
   if (filterZone) displayedOffers = displayedOffers.filter(o => (o.zone || '').toLowerCase().includes(filterZone.toLowerCase()));
   if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => {
+    if (sharedOffer) {
+      if (a.id === sharedOffer.id) return -1;
+      if (b.id === sharedOffer.id) return 1;
+    }
     const boostedA = a.boosted_until && new Date(a.boosted_until) > new Date() ? 1 : 0;
     const boostedB = b.boosted_until && new Date(b.boosted_until) > new Date() ? 1 : 0;
     if (boostedB !== boostedA) return boostedB - boostedA;
@@ -505,11 +531,17 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                   {sortBy === 'match' ? (tx('MATCHING YOUR PROFILE', 'CORRESPOND À TON UNIVERS')) : t.offersNow}
                 </p>
                 {displayedOffers.map(o => {
+                  const isShared = sharedOffer && o.id === sharedOffer.id;
                   const score = getMatchScore(o);
                   const isBoosted = o.boosted_until && new Date(o.boosted_until) > new Date();
                   const hasApplied = appliedOffers.has(o.title);
                   return (
-                    <div key={o.id} style={{ background: card, border: `1px solid ${isBoosted ? '#F0B429' : score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1 }}>
+                    <div key={o.id} style={{ background: card, border: `1px solid ${isShared ? '#F2E050' : isBoosted ? '#F0B429' : score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1, boxShadow: isShared ? '0 0 24px rgba(242,224,80,0.18)' : 'none' }}>
+                      {isShared && (
+                        <p style={{ fontSize: '11px', fontWeight: '800', color: '#F2E050', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                          🔗 {tx('Shared project', 'Projet partagé')}
+                        </p>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                           {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}

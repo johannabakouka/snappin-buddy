@@ -53,13 +53,22 @@ function LoadingScreen() {
 const SCREENS = ['map', 'explore', 'match', 'messages', 'profile'];
 
 export default function Home() {
-  const [screen, setScreen] = useState('map');
+  const [screen, setScreen] = useState(() => {
+    if (typeof window === 'undefined') return 'map';
+    return new URLSearchParams(window.location.search).get('offer') ? 'match' : 'map';
+  });
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [profileChecked, setProfileChecked] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   // Pseudo du compte auquel le mail était adressé (lien ...?for=pseudo)
+  // Lien partagé en story : snappinbuddy.com/?offer=123 ouvre directement le projet
+  const [sharedOfferId, setSharedOfferId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('offer');
+  });
+
   const [linkFor, setLinkFor] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('for');
@@ -201,7 +210,21 @@ export default function Home() {
     switch (name) {
       case 'map': return <MapScreen theme={theme} active={active} />;
       case 'explore': return <ExploreScreen theme={theme} active={active} />;
-      case 'match': return <MatchScreen theme={theme} setScreen={setScreen} active={active} myProjectsSignal={myProjectsSignal} />;
+      case 'match': return (
+        <MatchScreen
+          theme={theme}
+          setScreen={setScreen}
+          active={active}
+          myProjectsSignal={myProjectsSignal}
+          sharedOfferId={sharedOfferId || ''}
+          onSharedOfferSeen={() => {
+            setSharedOfferId(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete('offer');
+            window.history.replaceState({}, '', url.pathname + url.search);
+          }}
+        />
+      );
       case 'messages': return <MessagesScreen theme={theme} active={active} />;
       case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} />;
       default: return null;
