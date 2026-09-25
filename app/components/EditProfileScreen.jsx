@@ -1,8 +1,10 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useRoles, useUnivers, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { cleanHandle, isHandleValid, checkHandle } from '../handles';
+import { handleIssue } from '../handle-filter';
 
 const BIO_MAX = 150;
 
@@ -38,6 +40,9 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
   const [username, setUsername] = useState(profile?.username || '');
   const [handle, setHandle] = useState(profile?.handle || '');
+  // Disponibilité du pseudo : on retient le pseudo vérifié avec le résultat,
+  // pour savoir si le résultat affiché correspond bien à ce qui est tapé.
+  const [handleCheck, setHandleCheck] = useState({ handle: '', free: null, suggestions: [] });
   // On normalise : les rôles sont enregistrés en minuscules, un ancien profil
   // écrit autrement doit quand même s'allumer dans la liste.
   const [selectedRoles, setSelectedRoles] = useState(
@@ -46,6 +51,23 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       .map(r => r.trim().toLowerCase())
       .filter(r => r && ROLES.some(x => x.id === r))
   );
+
+  // Vérification du pseudo pendant la saisie, avec une pause de 500 ms.
+  // profile.user_id : on ne se signale pas soi-même comme « déjà pris ».
+  useEffect(() => {
+    if (!isHandleValid(handle)) return;
+    const timer = setTimeout(async () => {
+      const { free, suggestions, issue } = await checkHandle(handle, profile?.user_id);
+      setHandleCheck({ handle, free, suggestions, issue });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [handle, profile?.user_id]);
+
+  const handleChecked = handleCheck.handle === handle;
+  const handleFree = handleChecked ? handleCheck.free : null;
+  const handleSuggestions = handleChecked ? handleCheck.suggestions : [];
+  const handleIssueCode = handleChecked ? handleCheck.issue : null;
+  const checkingHandle = isHandleValid(handle) && !handleChecked;
 
   function toggleRole(id) {
     setSelectedRoles(prev => {
@@ -105,6 +127,9 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
   async function handleSave() {
     if (!username || !handle || selectedRoles.length === 0) { setError(tx('Required fields missing', 'Champs obligatoires manquants')); return; }
+    if (!isHandleValid(handle)) { setError(tx('Your handle needs at least 3 characters.', 'Ton handle doit faire au moins 3 caractères.')); return; }
+    if (handleIssue(handle)) { setError(tx('This handle is not allowed.', "Ce handle n'est pas autorisé.")); return; }
+    if (handleFree === false) { setError(tx('This handle is already taken.', 'Ce handle est déjà pris.')); return; }
     setLoading(true);
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const universToSave = selectedUnivers.map(label => {
@@ -118,8 +143,10 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
     }).eq('user_id', profile.user_id);
-    if (error) setError(error.message);
-    else onSave();
+    if (error) {
+      const taken = /duplicate|unique/i.test(error.message || '');
+      setError(taken ? tx('This handle is already taken.', 'Ce handle est déjà pris.') : error.message);
+    } else onSave();
     setLoading(false);
   }
 
@@ -141,7 +168,6 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
 
       {[
         { label: tx('Name', 'Nom'), value: username, set: setUsername, placeholder: tx('Your name or username', 'Ton prénom ou pseudo'), max: null },
-        { label: 'Handle', value: handle, set: setHandle, placeholder: '@tonhandle', max: null },
         { label: tx('Area', 'Zone'), value: zone, set: setZone, placeholder: tx('Shoreditch, Kreuzberg...', 'Belleville, Oberkampf...'), max: null },
       ].map(({ label, value, set, placeholder }) => (
         <div key={label} style={{ marginBottom: '16px' }}>
@@ -150,6 +176,60 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
             style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }} />
         </div>
       ))}
+
+      {/* Le handle a son propre bloc : il doit être unique, donc on vérifie
+          sa disponibilité pendant la saisie et on propose des variantes libres. */}
+      <div style={{ marginBottom: '16px' }}>
+        <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>Handle</p>
+        <input
+          value={handle}
+          onChange={e => setHandle(cleanHandle(e.target.value))}
+          placeholder="@tonhandle"
+          autoCapitalize="none"
+          autoCorrect="off"
+          style={{
+            width: '100%', padding: '13px 14px', borderRadius: '12px',
+            border: `1px solid ${handleFree === false ? '#FF4D4D' : handleFree === true ? '#4CD964' : inputBorder}`,
+            background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none',
+          }}
+        />
+        {handle && !isHandleValid(handle) && (
+          <p style={{ color: subText, fontSize: '12px', marginTop: '6px' }}>
+            {tx('At least 3 characters: letters, numbers, . or _', 'Au moins 3 caractères : lettres, chiffres, point ou tiret bas')}
+          </p>
+        )}
+        {checkingHandle && isHandleValid(handle) && (
+          <p style={{ color: subText, fontSize: '12px', marginTop: '6px' }}>{tx('Checking…', 'Vérification…')}</p>
+        )}
+        {!checkingHandle && handleFree === true && handle !== profile?.handle && (
+          <p style={{ color: '#4CD964', fontSize: '12px', marginTop: '6px', fontWeight: '600' }}>
+            ✓ {tx('Available', 'Disponible')}
+          </p>
+        )}
+        {!checkingHandle && handleFree === false && (
+          <>
+            <p style={{ color: '#FF4D4D', fontSize: '12px', marginTop: '6px', fontWeight: '600' }}>
+              {handleIssueCode === 'insulte'
+                ? tx('This handle is not allowed', "Ce handle n'est pas autorisé")
+                : handleIssueCode === 'reserve'
+                ? tx('This handle is reserved', 'Ce handle est réservé')
+                : tx('Already taken', 'Déjà pris')}
+            </p>
+            {handleSuggestions.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                {handleSuggestions.map(h => (
+                  <button key={h} onClick={() => setHandle(h)} style={{
+                    padding: '6px 12px', borderRadius: '20px', border: `1px solid ${inputBorder}`,
+                    background: 'transparent', color: subText, fontSize: '12px', cursor: 'pointer',
+                  }}>
+                    {h}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
