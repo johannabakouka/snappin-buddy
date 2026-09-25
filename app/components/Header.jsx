@@ -5,7 +5,7 @@ export default function Header({ theme, onLogoClick }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px 0',
+      padding: 'calc(env(safe-area-inset-top) + 16px) 0 16px',
       borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
       flexShrink: 0,
       background: theme?.bg ?? '#0A0A0A',

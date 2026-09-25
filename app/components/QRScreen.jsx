@@ -171,7 +171,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto' }}>
-      <div style={{ padding: '24px 16px 100px' }}>
+      <div style={{ padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(110px + env(safe-area-inset-bottom))` }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>

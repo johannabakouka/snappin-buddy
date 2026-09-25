@@ -84,7 +84,7 @@ export default function Navbar({ screen, setScreen, theme }) {
       background: darkMode ? 'rgba(10,10,10,0.97)' : 'rgba(245,245,245,0.97)',
       borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
       display: 'flex', justifyContent: 'space-around',
-      padding: '12px 0 24px', zIndex: 9999,
+      padding: '12px 0 calc(24px + env(safe-area-inset-bottom))', zIndex: 9999,
     }}>
       {tabs.map(tab => (
         <button key={tab.id} onClick={() => setScreen(tab.id)} style={{

@@ -284,7 +284,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   return (
     <div style={{ height: '100dvh', maxHeight: '100dvh', display: 'flex', flexDirection: 'column', background: bg, color }}>
 
-      <div style={{ padding: '16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ padding: `calc(env(safe-area-inset-top) + 16px) 16px 16px`, borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}` }}>
           {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}

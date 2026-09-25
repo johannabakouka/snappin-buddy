@@ -218,7 +218,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
         </div>
       </div>
 
-      <div style={{ padding: '24px 16px calc(110px + env(safe-area-inset-bottom))' }}>
+      <div style={{ padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(110px + env(safe-area-inset-bottom))` }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div onClick={() => fileInputRef.current?.click()} style={{
             width: '88px', height: '88px', borderRadius: '50%',

@@ -39,7 +39,7 @@ export default function NewPasswordScreen({ theme, onDone }) {
   };
 
   return (
-    <div style={{ padding: '60px 24px', height: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: bg, color }}>
+    <div style={{ padding: 'calc(env(safe-area-inset-top) + 60px) 24px calc(60px + env(safe-area-inset-bottom))', height: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: bg, color }}>
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <div style={{ fontSize: '44px', marginBottom: '12px' }}>{done ? '✅' : '🔑'}</div>
         <h1 style={{ fontFamily: 'var(--font-nunito)', fontSize: '24px', fontWeight: '900', marginBottom: '8px' }}>
