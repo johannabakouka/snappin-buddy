@@ -158,7 +158,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         </div>
         <input
           value={bio}
-          onChange={e => e.target.value.length <= BIO_MAX && setBio(e.target.value)}
+          onChange={e => setBio(e.target.value.slice(0, BIO_MAX))}
           placeholder={tx('Current project...', 'Ton projet en cours...')}
           style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
         />

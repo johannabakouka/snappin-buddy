@@ -18,7 +18,7 @@ const EUROPEAN_CITIES = [
 ];
 
 const TITLE_MAX = 60;
-const DESC_MAX = 500;
+const DESC_MAX = 800;
 
 export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer, onReopenOffer, onDeleteOffer }) {
   // Suppression en deux temps pour éviter les erreurs
@@ -113,9 +113,11 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           <span style={{ color: subText, fontSize: '11px', fontWeight: '600' }}>{tx('TITLE *', 'TITRE *')}</span>
           {charCount(offerTitle, TITLE_MAX)}
         </div>
+        {/* On coupe au maximum autorisé au lieu de refuser la saisie : sinon un
+            copier-coller trop long ne colle rien du tout, sans aucune explication. */}
         <input
           value={offerTitle}
-          onChange={e => e.target.value.length <= TITLE_MAX && setOfferTitle(e.target.value)}
+          onChange={e => setOfferTitle(e.target.value.slice(0, TITLE_MAX))}
           placeholder={tx('Project title *', 'Titre du projet *')}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', outline: 'none' }}
         />
@@ -126,7 +128,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
         </div>
         <textarea
           value={offerDesc}
-          onChange={e => e.target.value.length <= DESC_MAX && setOfferDesc(e.target.value)}
+          onChange={e => setOfferDesc(e.target.value.slice(0, DESC_MAX))}
           placeholder={tx('Describe your project...', 'Décris ton projet...')}
           rows={3}
           style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none', outline: 'none' }}
