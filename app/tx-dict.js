@@ -3,6 +3,9 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Please confirm your age and accept the terms to continue.': 'Confirma tu edad y acepta las condiciones para continuar.',
+    'I confirm I am 18 or over': 'Confirmo que tengo 18 años o más',
+    ' and I accept the ': ' y acepto las ',
     'This handle is not allowed.': 'Este handle no está permitido.',
     'This handle is not allowed': 'Este handle no está permitido',
     'This handle is reserved': 'Este handle está reservado',
@@ -19,9 +22,7 @@ const TX = {
     '🔍 Search @handle, name, role...': '🔍 Busca un @handle, nombre, rol...',
     'Tap the link': 'Toca el enlace',
     'Apply ⚡': 'Postúlate ⚡',
-    'Please accept the terms of use to continue.': 'Acepta las condiciones de uso para continuar.',
     'Check your email to confirm your account!': '¡Revisa tu email para confirmar tu cuenta!',
-    'I accept the ': 'Acepto las ',
     'Terms of Use & Privacy Policy': 'Condiciones de uso y Política de privacidad',
     " of Snappin'Buddy": " de Snappin'Buddy",
     'Accept and continue': 'Aceptar y continuar',
@@ -194,6 +195,9 @@ const TX = {
   },
 
   pt: {
+    'Please confirm your age and accept the terms to continue.': 'Confirme sua idade e aceite os termos para continuar.',
+    'I confirm I am 18 or over': 'Confirmo que tenho 18 anos ou mais',
+    ' and I accept the ': ' e aceito os ',
     'This handle is not allowed.': 'Esse handle não é permitido.',
     'This handle is not allowed': 'Esse handle não é permitido',
     'This handle is reserved': 'Esse handle é reservado',
@@ -210,9 +214,7 @@ const TX = {
     '🔍 Search @handle, name, role...': '🔍 Busque um @handle, nome, função...',
     'Tap the link': 'Toque no link',
     'Apply ⚡': 'Candidatar-se ⚡',
-    'Please accept the terms of use to continue.': 'Aceite os termos de uso para continuar.',
     'Check your email to confirm your account!': 'Verifique seu email para confirmar sua conta!',
-    'I accept the ': 'Aceito os ',
     'Terms of Use & Privacy Policy': 'Termos de Uso e Política de Privacidade',
     " of Snappin'Buddy": " do Snappin'Buddy",
     'Accept and continue': 'Aceitar e continuar',
@@ -385,6 +387,9 @@ const TX = {
   },
 
   de: {
+    'Please confirm your age and accept the terms to continue.': 'Bestätige dein Alter und akzeptiere die Bedingungen, um fortzufahren.',
+    'I confirm I am 18 or over': 'Ich bestätige, dass ich 18 Jahre oder älter bin',
+    ' and I accept the ': ' und ich akzeptiere die ',
     'This handle is not allowed.': 'Dieses Handle ist nicht erlaubt.',
     'This handle is not allowed': 'Dieses Handle ist nicht erlaubt',
     'This handle is reserved': 'Dieses Handle ist reserviert',
@@ -401,9 +406,7 @@ const TX = {
     '🔍 Search @handle, name, role...': '🔍 @Handle, Name oder Rolle suchen...',
     'Tap the link': 'Tippe auf den Link',
     'Apply ⚡': 'Bewerben ⚡',
-    'Please accept the terms of use to continue.': 'Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.',
     'Check your email to confirm your account!': 'Schau in deine E-Mails, um dein Konto zu bestätigen!',
-    'I accept the ': 'Ich akzeptiere die ',
     'Terms of Use & Privacy Policy': 'Nutzungsbedingungen & Datenschutzerklärung',
     " of Snappin'Buddy": " von Snappin'Buddy",
     'Accept and continue': 'Akzeptieren und weiter',
@@ -576,6 +579,9 @@ const TX = {
   },
 
   it: {
+    'Please confirm your age and accept the terms to continue.': 'Conferma la tua età e accetta le condizioni per continuare.',
+    'I confirm I am 18 or over': 'Confermo di avere 18 anni o più',
+    ' and I accept the ': ' e accetto le ',
     'This handle is not allowed.': 'Questo handle non è consentito.',
     'This handle is not allowed': 'Questo handle non è consentito',
     'This handle is reserved': 'Questo handle è riservato',
@@ -592,9 +598,7 @@ const TX = {
     '🔍 Search @handle, name, role...': '🔍 Cerca un @handle, nome, ruolo...',
     'Tap the link': 'Tocca il link',
     'Apply ⚡': 'Candidati ⚡',
-    'Please accept the terms of use to continue.': 'Accetta le condizioni d’uso per continuare.',
     'Check your email to confirm your account!': 'Controlla la tua email per confermare l’account!',
-    'I accept the ': 'Accetto i ',
     'Terms of Use & Privacy Policy': 'Termini d’uso e Informativa sulla privacy',
     " of Snappin'Buddy": " di Snappin'Buddy",
     'Accept and continue': 'Accetta e continua',

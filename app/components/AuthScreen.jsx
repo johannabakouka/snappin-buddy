@@ -25,7 +25,7 @@ export default function AuthScreen({ onLogin, theme }) {
 
   async function handleSubmit() {
     if (mode === 'signup' && !cguAccepted) {
-      setMessage(tx('Please accept the terms of use to continue.', 'Accepte les CGU pour continuer.'));
+      setMessage(tx('Please confirm your age and accept the terms to continue.', 'Confirme ton âge et accepte les CGU pour continuer.'));
       return;
     }
     setLoading(true);
@@ -140,8 +140,13 @@ export default function AuthScreen({ onLogin, theme }) {
           >
             {cguAccepted && <span style={{ color: bg, fontSize: '12px', fontWeight: '900' }}>✓</span>}
           </div>
+          {/* L'app organise des rencontres réelles entre inconnus : elle est réservée
+              aux majeurs, et la personne le déclare explicitement à l'inscription. */}
           <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5, margin: 0 }}>
-            {tx("I accept the ", "J'accepte les ")}
+            <span style={{ color, fontWeight: '700' }}>
+              {tx('I confirm I am 18 or over', "Je certifie avoir 18 ans ou plus")}
+            </span>
+            {tx(' and I accept the ', " et j'accepte les ")}
             <span
               onClick={() => setShowLegal(true)}
               style={{ color, textDecoration: 'underline', cursor: 'pointer', fontWeight: '700' }}
