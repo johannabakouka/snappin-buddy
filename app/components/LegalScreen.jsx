@@ -132,11 +132,17 @@ Snappin'Buddy et Ateliers 777 ne sauraient être tenus responsables des dommages
     },
     {
       title: '💳 Paiements',
-      content: `Les paiements sont traités par Stripe Inc. (stripe.com), prestataire de paiement sécurisé certifié PCI-DSS.
+      content: `Le seul achat possible sur Snappin'Buddy est le Boost d'un projet, qui le remet en tête du feed :
+· Boost 1 jour — 1,99 € TTC
+· Boost 7 jours — 4,99 € TTC
 
-Snappin'Buddy ne stocke jamais tes données bancaires. Toutes les transactions sont chiffrées et sécurisées par Stripe.
+TVA non applicable, article 293 B du CGI.
 
-Les achats (boost de projet) sont non remboursables une fois activés, sauf défaut technique avéré.`,
+Les paiements sont traités par Stripe Inc. (stripe.com), prestataire de paiement sécurisé certifié PCI-DSS. Snappin'Buddy ne stocke jamais tes données bancaires : toutes les transactions sont chiffrées et gérées par Stripe.
+
+Le Boost est un service numérique exécuté immédiatement après le paiement. Conformément à l'article L221-28 du Code de la consommation, tu renonces à ton droit de rétractation de 14 jours en validant l'achat : le Boost est donc non remboursable une fois activé, sauf défaut technique avéré (dans ce cas : ateliers777.contact@gmail.com).
+
+Aucun abonnement, aucun prélèvement automatique : chaque Boost est un paiement unique.`,
     },
     {
       title: '📝 Modification des CGU',

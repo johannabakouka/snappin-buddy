@@ -41,6 +41,13 @@ export async function POST(request: Request) {
       customer_email: user.email || undefined,
       client_reference_id: String(offer.id),
       metadata: { offerId: String(offer.id), days: String(days), userId: user.id },
+      // Information obligatoire avant le paiement : service numérique exécuté tout de suite,
+      // donc pas de droit de rétractation de 14 jours.
+      custom_text: {
+        submit: {
+          message: `Ton projet passe en tête du feed pendant ${label}, tout de suite après le paiement. Paiement unique, sans abonnement. Service numérique exécuté immédiatement : non remboursable une fois activé (art. L221-28 du Code de la consommation).`,
+        },
+      },
       success_url: `${origin}/boost-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/`,
     });
