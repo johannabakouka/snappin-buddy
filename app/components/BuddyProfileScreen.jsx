@@ -5,6 +5,7 @@ import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
+import { blockUser, unblockUser } from '../blocks';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -57,16 +58,31 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  // Blocage : coupe le contact dans les deux sens.
+  const [blocked, setBlocked] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   // Lien déjà existant avec ce créatif : 'loading' | 'none' | 'pending' | 'incoming' | 'buddies' | 'self'
   const [relation, setRelation] = useState('loading');
   const [chatOpen, setChatOpen] = useState(false);
+  const [me, setMe] = useState(null);
 
   useEffect(() => {
     let alive = true;
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!alive) return;
+      setMe(user || null);
       if (!user || !buddy?.user_id) { setRelation('none'); return; }
       if (user.id === buddy.user_id) { setRelation('self'); return; }
+
+      // Cette personne est-elle déjà bloquée par moi ?
+      const { data: blockRows } = await supabase
+        .from('blocks')
+        .select('id')
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', buddy.user_id)
+        .limit(1);
+      if (alive && blockRows?.length) setBlocked(true);
       const { data } = await supabase.from('collabs')
         .select('sender_id, status')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${buddy.user_id}),and(sender_id.eq.${buddy.user_id},receiver_id.eq.${user.id})`);
@@ -115,6 +131,24 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
       }
     }
     setSending(false);
+  }
+
+  async function toggleBlock() {
+    if (!me?.id || !buddy?.user_id) return;
+    setBlocking(true);
+    try {
+      if (blocked) {
+        await unblockUser(me.id, buddy.user_id);
+        setBlocked(false);
+      } else {
+        await blockUser(me.id, buddy.user_id);
+        setBlocked(true);
+        setConfirmBlock(false);
+      }
+    } catch (e) {
+      console.error('block', e);
+    }
+    setBlocking(false);
   }
 
   async function sendReport() {
@@ -183,6 +217,29 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
                 📸 {tx('View on Instagram →', 'Voir sur Instagram →')}
               </a>
             )}
+          </div>
+        )}
+
+        {/* Projets validés : le seul signal de confiance de l'app qui ne dépende
+            pas du nombre d'abonnés. Il ne monte qu'après une vraie rencontre
+            confirmée par un scan de QR, donc il ne se triche pas. */}
+        {buddy?.validated_projects > 0 && (
+          <div style={{
+            background: 'rgba(46,204,113,0.08)', border: '1px solid rgba(46,204,113,0.25)',
+            borderRadius: '14px', padding: '14px 16px', marginBottom: '12px',
+            display: 'flex', alignItems: 'center', gap: '12px',
+          }}>
+            <span style={{ fontSize: '22px' }}>🤝</span>
+            <div>
+              <p style={{ color: '#2ECC71', fontSize: '15px', fontWeight: '900' }}>
+                {buddy.validated_projects} {buddy.validated_projects > 1
+                  ? tx('validated projects', 'projets validés')
+                  : tx('validated project', 'projet validé')}
+              </p>
+              <p style={{ color: subText, fontSize: '11px' }}>
+                {tx('Real meetings, confirmed on the spot', 'Rencontres réelles, confirmées sur place')}
+              </p>
+            </div>
           </div>
         )}
 
@@ -258,8 +315,56 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </button>
         )}
 
-        {/* Signalement */}
+        {/* Blocage. Séparé du signalement : signaler s'adresse à la modération,
+            bloquer agit tout de suite et sans attendre personne. */}
         <div style={{ marginTop: '24px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px' }}>
+          {blocked ? (
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', lineHeight: 1.5 }}>
+                {tx('You blocked this person. They can no longer contact you or see your profile.',
+                    'Tu as bloqué cette personne. Elle ne peut plus te contacter ni voir ton profil.')}
+              </p>
+              <button onClick={toggleBlock} disabled={blocking} style={{
+                background: 'none', border: 'none', color: subText, fontSize: '12px',
+                textDecoration: 'underline', cursor: 'pointer',
+              }}>
+                {tx('Unblock', 'Débloquer')}
+              </button>
+            </div>
+          ) : !confirmBlock ? (
+            <button onClick={() => setConfirmBlock(true)} style={{
+              background: 'none', border: 'none', color: subText, fontSize: '12px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 auto',
+            }}>
+              🚫 {tx('Block this person', 'Bloquer cette personne')}
+            </button>
+          ) : (
+            <div>
+              <p style={{ color: subText, fontSize: '12px', marginBottom: '10px', textAlign: 'center', lineHeight: 1.5 }}>
+                {tx('They won’t be able to message you, propose a collab, or see you on the map. You can undo this at any time.',
+                    'Elle ne pourra plus t’écrire, te proposer de collab, ni te voir sur la carte. Tu peux annuler à tout moment.')}
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => setConfirmBlock(false)} style={{
+                  flex: 1, padding: '11px', borderRadius: '20px',
+                  border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                  background: 'transparent', color: subText, fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                }}>
+                  {tx('Cancel', 'Annuler')}
+                </button>
+                <button onClick={toggleBlock} disabled={blocking} style={{
+                  flex: 1, padding: '11px', borderRadius: '20px', border: 'none',
+                  background: '#FF4D4D', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                }}>
+                  {blocking ? '…' : tx('Block', 'Bloquer')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Signalement */}
+        <div style={{ marginTop: '16px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px' }}>
           {!showReport ? (
             <button onClick={() => setShowReport(true)} style={{ background: 'none', border: 'none', color: subText, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 auto' }}>
               🚩 {tx('Report this user', 'Signaler cet utilisateur')}

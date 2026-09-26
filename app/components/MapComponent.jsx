@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
+import { loadBlockedIds } from '../blocks';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
 import { ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels } from '../constants';
@@ -140,8 +141,12 @@ export default function MapComponent({ theme, active = true }) {
 
       const { data: profileData } = await supabase.from('profiles').select('*');
       const { data: { user } } = await supabase.auth.getUser();
+      // Les personnes bloquées, dans un sens comme dans l'autre, n'apparaissent pas.
+      const blocked = await loadBlockedIds(user?.id);
 
-      const allProfiles = (profileData || []).map(p => ({ ...p, _isMe: !!user && p.user_id === user.id }));
+      const allProfiles = (profileData || [])
+        .filter(p => !blocked.has(p.user_id))
+        .map(p => ({ ...p, _isMe: !!user && p.user_id === user.id }));
       if (profileData) {
         setProfiles(allProfiles);
         // Centre la carte sur sa propre position enregistrée, assez large pour voir les créatifs proches
@@ -198,7 +203,10 @@ export default function MapComponent({ theme, active = true }) {
           supabase.from('profiles').select('*'),
           supabase.auth.getUser(),
         ]);
-        if (profileData) setProfiles(profileData.map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
+        const blocked = await loadBlockedIds(user?.id);
+        if (profileData) setProfiles(profileData
+          .filter(p => !blocked.has(p.user_id))
+          .map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
       })();
     }
     wasActive.current = active;

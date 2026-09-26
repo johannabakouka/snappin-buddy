@@ -13,6 +13,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import NewPasswordScreen from './components/NewPasswordScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 import BuddyProfileScreen from './components/BuddyProfileScreen';
+import ScanResultScreen from './components/ScanResultScreen';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
@@ -68,6 +69,12 @@ export default function Home() {
   const [sharedOfferId, setSharedOfferId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('offer');
+  });
+
+  // QR de rencontre scanné avec l'appareil photo : snappinbuddy.com/?scan=<id>
+  const [scanSession, setScanSession] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('scan');
   });
 
   // Lien de profil partagé en story : snappinbuddy.com/?buddy=sofia
@@ -277,6 +284,21 @@ export default function Home() {
         </div>
       ))}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />
+
+      {/* Rencontre validée par scan du QR */}
+      {scanSession && (
+        <ScanResultScreen
+          sessionId={scanSession}
+          theme={theme}
+          onDone={() => {
+            setScanSession(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete('scan');
+            window.history.replaceState({}, '', url.pathname + url.search);
+            refreshProfile();
+          }}
+        />
+      )}
 
       {/* Profil ouvert depuis un lien partagé en story */}
       {sharedBuddy && (

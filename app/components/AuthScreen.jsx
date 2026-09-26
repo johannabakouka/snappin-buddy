@@ -14,6 +14,9 @@ export default function AuthScreen({ onLogin, theme }) {
   const [message, setMessage] = useState('');
   const [cguAccepted, setCguAccepted] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
+  // Inscription faite : on attend que la personne clique le lien reçu par email.
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
@@ -31,14 +34,27 @@ export default function AuthScreen({ onLogin, theme }) {
     setLoading(true);
     setMessage('');
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) setMessage(error.message);
-      else setMessage(tx('Check your email to confirm your account!', 'Vérifie ton email pour confirmer ton compte !'));
+      else if (data?.session) {
+        // La confirmation par email n'est pas exigée : on entre directement.
+        onLogin();
+      } else {
+        setAwaitingConfirm(true);
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage(error.message);
       else onLogin();
     }
+    setLoading(false);
+  }
+
+  async function resendConfirmation() {
+    setLoading(true);
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) setMessage(error.message);
+    else { setResent(true); setTimeout(() => setResent(false), 4000); }
     setLoading(false);
   }
 
@@ -52,6 +68,50 @@ export default function AuthScreen({ onLogin, theme }) {
     else setMessage(t.resetSent);
     setLoading(false);
   }
+
+  // Écran d'attente : sans lui, la personne reste devant un message figé
+  // sans savoir qu'elle doit aller relever ses emails.
+  if (awaitingConfirm) return (
+    <div style={{
+      padding: 'calc(env(safe-area-inset-top) + 60px) 24px calc(60px + env(safe-area-inset-bottom))',
+      minHeight: '100dvh', display: 'flex', flexDirection: 'column',
+      justifyContent: 'center', background: bg, color, textAlign: 'center',
+    }}>
+      <p style={{ fontSize: '54px', marginBottom: '14px' }}>📬</p>
+      <h2 style={{ fontFamily: 'var(--font-nunito)', fontSize: '25px', fontWeight: '900', marginBottom: '12px' }}>
+        {tx('Check your emails', 'Va voir tes emails')}
+      </h2>
+      <p style={{ color: subText, fontSize: '14px', lineHeight: 1.6, marginBottom: '8px' }}>
+        {tx('We sent a confirmation link to', 'On a envoyé un lien de confirmation à')}
+      </p>
+      <p style={{ color, fontSize: '15px', fontWeight: '800', marginBottom: '20px', wordBreak: 'break-all' }}>
+        {email}
+      </p>
+      <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6, marginBottom: '28px' }}>
+        {tx('Click the link to activate your account, then come back here. Check your spam folder if you don’t see it.',
+            'Clique sur le lien pour activer ton compte, puis reviens ici. Pense à regarder dans tes spams si tu ne le vois pas.')}
+      </p>
+
+      <button onClick={resendConfirmation} disabled={loading} style={{
+        width: '100%', padding: '14px', borderRadius: '24px',
+        border: `1px solid ${inputBorder}`, background: 'transparent', color,
+        fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '10px',
+      }}>
+        {resent ? tx('Link sent again ✓', 'Lien renvoyé ✓') : tx('Resend the link', 'Renvoyer le lien')}
+      </button>
+
+      <button onClick={() => { setAwaitingConfirm(false); setMode('login'); setMessage(''); }} style={{
+        background: 'none', border: 'none', color: subText, fontSize: '13px',
+        textDecoration: 'underline', cursor: 'pointer', padding: '8px',
+      }}>
+        {tx('Back to sign in', 'Retour à la connexion')}
+      </button>
+
+      {message && (
+        <p style={{ color: '#FF4D4D', fontSize: '13px', marginTop: '14px' }}>{message}</p>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ padding: 'calc(env(safe-area-inset-top) + 60px) 24px calc(60px + env(safe-area-inset-bottom))', height: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: bg, color }}>

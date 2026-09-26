@@ -6,6 +6,7 @@ import Header from './Header';
 import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { loadBlockedIds } from '../blocks';
 
 // Recherche : on ignore les accents, les majuscules et le @ du handle,
 // pour que « sofia », « Sofía » et « @sofia » trouvent la même personne.
@@ -65,7 +66,8 @@ export default function ExploreScreen({ theme, active = true }) {
       setMyProfile(me);
     }
     const { data } = await supabase.from('profiles').select('*');
-    if (data) setProfiles(data);
+    const blocked = await loadBlockedIds(user?.id);
+    if (data) setProfiles(data.filter(p => !blocked.has(p.user_id)));
   }
 
   useEffect(() => {

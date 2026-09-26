@@ -9,6 +9,7 @@ import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { loadBlockedIds } from '../blocks';
 import { hasRole, roleLabels, splitRoles } from '../constants';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
@@ -144,7 +145,10 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function loadOffers(userId) {
-    const { data: all } = await supabase.from('offers').select('*').neq('user_id', userId).order('created_at', { ascending: false });
+    const { data: allRaw } = await supabase.from('offers').select('*').neq('user_id', userId).order('created_at', { ascending: false });
+    // Les projets des personnes bloquées ne remontent pas dans le feed.
+    const blocked = await loadBlockedIds(userId);
+    const all = (allRaw || []).filter(o => !blocked.has(o.user_id));
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (all) {
       const userIds = all.map(o => o.user_id);

@@ -6,6 +6,7 @@ import Header from './Header';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { roleLabels } from '../constants';
+import { loadBlockedIds } from '../blocks';
 
 export default function MessagesScreen({ theme, active = true }) {
   const t = useT();
@@ -47,7 +48,10 @@ export default function MessagesScreen({ theme, active = true }) {
   async function loadConversations(userId) {
     const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
     if (!msgs || msgs.length === 0) return;
-    const buddyIds = [...new Set(msgs.map(m => m.sender_id === userId ? m.receiver_id : m.sender_id))];
+    // Une conversation avec une personne bloquée n'a plus à s'afficher.
+    const blocked = await loadBlockedIds(userId);
+    const buddyIds = [...new Set(msgs.map(m => m.sender_id === userId ? m.receiver_id : m.sender_id))]
+      .filter(id => !blocked.has(id));
     const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url').in('user_id', buddyIds);
     const convs = buddyIds.map(buddyId => {
       const profile = profiles?.find(p => p.user_id === buddyId);
@@ -72,7 +76,9 @@ export default function MessagesScreen({ theme, active = true }) {
   async function loadBuddies(userId) {
     const { data: collabs } = await supabase.from('collabs').select('*').eq('status', 'accepted').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
     if (!collabs || collabs.length === 0) return;
-    const buddyIds = [...new Set(collabs.map(c => c.sender_id === userId ? c.receiver_id : c.sender_id))];
+    const blocked = await loadBlockedIds(userId);
+    const buddyIds = [...new Set(collabs.map(c => c.sender_id === userId ? c.receiver_id : c.sender_id))]
+      .filter(id => !blocked.has(id));
     const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').in('user_id', buddyIds);
     setBuddies(profiles || []);
   }

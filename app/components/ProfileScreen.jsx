@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import ProfileShareCard from './ProfileShareCard';
+import { loadMyBlocks, unblockUser } from '../blocks';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
@@ -98,6 +99,10 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [editing, setEditing] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [sharingProfile, setSharingProfile] = useState(false);
+  // Comptes bloqués et déconnexion de toutes les sessions
+  const [blockedList, setBlockedList] = useState(null);
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [signingOutAll, setSigningOutAll] = useState(false);
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
@@ -166,6 +171,36 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
       await onProfileUpdate();
     }
     setUploading(false);
+  }
+
+  async function openBlocked() {
+    setShowBlocked(true);
+    if (blockedList === null && profile?.user_id) {
+      setBlockedList(await loadMyBlocks(profile.user_id));
+    }
+  }
+
+  async function removeBlock(targetId) {
+    try {
+      await unblockUser(profile.user_id, targetId);
+      setBlockedList(prev => (prev || []).filter(p => p.user_id !== targetId));
+    } catch (e) {
+      console.error('unblock', e);
+    }
+  }
+
+  // Déconnecte toutes les sessions, sur tous les appareils. C'est le geste à
+  // faire quand on pense que quelqu'un d'autre a eu accès à son compte.
+  async function signOutEverywhere() {
+    setSigningOutAll(true);
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (e) {
+      console.error('signOut global', e);
+    } finally {
+      localStorage.clear();
+      window.location.href = '/';
+    }
   }
 
   async function handleLogout() {
@@ -271,6 +306,30 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           </div>
         </div>
 
+        {/* Projets validés. Affiché même à zéro, avec l'explication : c'est ce
+            qui donne une raison de scanner le QR lors des rencontres. */}
+        <div style={{
+          background: profile?.validated_projects > 0 ? 'rgba(46,204,113,0.08)' : card,
+          border: `1px solid ${profile?.validated_projects > 0 ? 'rgba(46,204,113,0.25)' : tagBorder}`,
+          borderRadius: '16px', padding: '14px 16px', marginBottom: '16px',
+          display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <span style={{ fontSize: '22px' }}>🤝</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: profile?.validated_projects > 0 ? '#2ECC71' : theme.color, fontSize: '15px', fontWeight: '900' }}>
+              {profile?.validated_projects || 0}{' '}
+              {(profile?.validated_projects || 0) > 1
+                ? tx('validated projects', 'projets validés')
+                : tx('validated project', 'projet validé')}
+            </p>
+            <p style={{ color: subText, fontSize: '11px', lineHeight: 1.4 }}>
+              {(profile?.validated_projects || 0) > 0
+                ? tx('Visible on your profile', 'Visible sur ton profil')
+                : tx('Scan your buddy’s QR when you meet to validate a project', 'Scanne le QR de ton buddy quand vous vous rencontrez pour valider un projet')}
+            </p>
+          </div>
+        </div>
+
         {/* Partager son profil : chaque inscrit devient une affiche pour l'app. */}
         <button onClick={() => setSharingProfile(true)} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -364,6 +423,65 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         <button onClick={() => setShowLegal(true)} style={{ width: '100%', background: 'transparent', color: subText, border: `1px solid ${tagBorder}`, borderRadius: '24px', padding: '14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' }}>
           {t.legal}
+        </button>
+
+        {/* Comptes bloqués */}
+        <button onClick={openBlocked} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
+          padding: '14px 16px', marginBottom: '12px', cursor: 'pointer', color: theme.color,
+        }}>
+          <span style={{ fontSize: '14px', fontWeight: '700' }}>🚫 {tx('Blocked accounts', 'Comptes bloqués')}</span>
+          <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>→</span>
+        </button>
+
+        {showBlocked && (
+          <div style={{ background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px' }}>
+            {blockedList === null ? (
+              <p style={{ color: subText, fontSize: '13px' }}>{tx('Loading…', 'Chargement…')}</p>
+            ) : blockedList.length === 0 ? (
+              <p style={{ color: subText, fontSize: '13px', lineHeight: 1.5 }}>
+                {tx('You haven’t blocked anyone.', 'Tu n’as bloqué personne.')}
+              </p>
+            ) : (
+              blockedList.map(p => (
+                <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: '700', color: theme.color }}>{p.username || tx('Creative', 'Créatif')}</p>
+                    <p style={{ fontSize: '11px', color: subText }}>{p.handle || ''}</p>
+                  </div>
+                  <button onClick={() => removeBlock(p.user_id)} style={{
+                    background: 'none', border: `1px solid ${tagBorder}`, borderRadius: '16px',
+                    padding: '6px 12px', color: subText, fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                  }}>
+                    {tx('Unblock', 'Débloquer')}
+                  </button>
+                </div>
+              ))
+            )}
+            <button onClick={() => setShowBlocked(false)} style={{
+              background: 'none', border: 'none', color: subText, fontSize: '12px',
+              textDecoration: 'underline', cursor: 'pointer', marginTop: '4px',
+            }}>
+              {tx('Close', 'Fermer')}
+            </button>
+          </div>
+        )}
+
+        {/* Déconnexion de toutes les sessions */}
+        <button
+          onClick={signOutEverywhere}
+          disabled={signingOutAll}
+          style={{
+            width: '100%', background: 'transparent', color: subText,
+            border: `1px solid ${tagBorder}`, borderRadius: '24px', padding: '13px',
+            fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginBottom: '8px',
+          }}
+        >
+          {signingOutAll ? '…' : tx('Sign out on all devices', 'Se déconnecter partout')}
         </button>
 
         <button

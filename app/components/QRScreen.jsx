@@ -36,8 +36,13 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
     if (data) setSessionId(data.id);
   }
 
-  const qrUrl = sessionId
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${sessionId}&bgcolor=${darkMode ? '1A1A1A' : 'FFFFFF'}&color=${darkMode ? 'FFFFFF' : '0A0A0A'}`
+  // Le QR contient un LIEN, pas un identifiant. L'appareil photo de n'importe
+  // quel téléphone sait ouvrir un lien ; aucun ne sait quoi faire d'un
+  // identifiant technique. C'est ce qui rend le scan possible sans installer
+  // de scanner dans l'app — impossible sur iPhone de toute façon.
+  const scanLink = sessionId ? `https://snappinbuddy.com/?scan=${sessionId}` : null;
+  const qrUrl = scanLink
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(scanLink)}&bgcolor=${darkMode ? '1A1A1A' : 'FFFFFF'}&color=${darkMode ? 'FFFFFF' : '0A0A0A'}`
     : null;
 
   // L'autre personne de la collab : l'expéditeur si j'ai reçu la proposition, sinon le destinataire
@@ -198,8 +203,10 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
               </div>
             )}
           </div>
-          <p style={{ color: subText, fontSize: '12px', marginTop: '16px', textAlign: 'center' }}>
-            Montre ce QR à {buddyName} pour qu&apos;il le scanne
+          <p style={{ color: subText, fontSize: '12px', marginTop: '16px', textAlign: 'center', lineHeight: 1.5 }}>
+            Montre ce QR à {buddyName}.<br />
+            Il le scanne avec l&apos;appareil photo de son téléphone, et votre
+            rencontre est validée tous les deux.
           </p>
         </div>
 
@@ -209,7 +216,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             '📍 Retrouvez-vous dans un lieu public',
             '📱 Partagez votre itinéraire à un proche',
             '🚗 Évitez les parkings isolés',
-            "✅ Scannez le QR de l'autre avant de commencer",
+            "✅ Scannez-vous mutuellement avant de commencer",
           ].map((rule, i) => (
             <p key={i} style={{ color: subText, fontSize: '12px', marginBottom: i < 3 ? '8px' : '0', lineHeight: 1.4 }}>{rule}</p>
           ))}
