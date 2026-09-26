@@ -7,6 +7,26 @@ import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 
+// Recherche : on ignore les accents, les majuscules et le @ du handle,
+// pour que « sofia », « Sofía » et « @sofia » trouvent la même personne.
+function normalizeSearch(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/^@/, '')
+    .trim();
+}
+
+/** 2 = le pseudo commence par la recherche, 1 = il la contient, 0 = aucun rapport. */
+function searchRank(profile, q) {
+  if (!q) return 0;
+  const fields = [profile.username, profile.handle].map(normalizeSearch);
+  if (fields.some(f => f && f.startsWith(q))) return 2;
+  if (fields.some(f => f && f.includes(q))) return 1;
+  return 0;
+}
+
 function getMatchScore(myStyles, theirStyles) {
   if (!myStyles || !theirStyles) return 0;
   const mine = myStyles.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
@@ -61,15 +81,15 @@ export default function ExploreScreen({ theme, active = true }) {
 
   function handleSearchChange(val) {
     setSearch(val);
-    if (val.length >= 1) {
-      const q = val.toLowerCase();
+    const q = normalizeSearch(val);
+    if (q.length >= 1) {
       const filtered = profiles
         .filter(p => myProfile ? p.user_id !== myProfile.user_id : true)
-        .filter(p =>
-          (p.username || '').toLowerCase().startsWith(q) ||
-          (p.handle || '').toLowerCase().startsWith(q)
-        )
-        .slice(0, 5);
+        .map(p => ({ p, rank: searchRank(p, q) }))
+        .filter(x => x.rank > 0)
+        .sort((a, b) => b.rank - a.rank)
+        .slice(0, 5)
+        .map(x => x.p);
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
     } else {
@@ -89,12 +109,14 @@ export default function ExploreScreen({ theme, active = true }) {
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
 
   if (search.trim()) {
-    const q = search.toLowerCase().trim();
-    displayed = displayed.filter(p =>
-      (p.username || '').toLowerCase().includes(q) ||
-      (p.handle || '').toLowerCase().includes(q) ||
-      (p.role || '').toLowerCase().includes(q)
-    );
+    const q = normalizeSearch(search);
+    // Les pseudos qui commencent par la recherche passent devant ceux qui la contiennent,
+    // et le rôle ne sert que de repêchage.
+    displayed = displayed
+      .map(p => ({ p, rank: searchRank(p, q) || (normalizeSearch(p.role).includes(q) ? 0.5 : 0) }))
+      .filter(x => x.rank > 0)
+      .sort((a, b) => b.rank - a.rank)
+      .map(x => x.p);
   } else {
     if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
     if (roleFilter) displayed = displayed.filter(p => hasRole(p.role, roleFilter));
@@ -142,7 +164,9 @@ export default function ExploreScreen({ theme, active = true }) {
             onChange={e => handleSearchChange(e.target.value)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             onFocus={() => search.length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder={tx('🔍 Search by username, role...', '🔍 Rechercher par username, rôle...')}
+            placeholder={tx('🔍 Search @handle, name, role...', '🔍 Chercher un @pseudo, un nom, un rôle...')}
+            autoCapitalize="none"
+            autoCorrect="off"
             style={{
               width: '100%', padding: '11px 16px', borderRadius: '24px',
               border: `1px solid ${cardBorder}`,

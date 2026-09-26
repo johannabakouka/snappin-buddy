@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx } from '../tx';
+import { uploadChatImage } from '../image-upload';
 
 export default function ChatScreen({ buddy, onBack, theme }) {
   const t = useT();
@@ -19,7 +20,12 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const [forwarding, setForwarding] = useState(null);
   const [buddies, setBuddies] = useState([]);
   const [buddyReceipts, setBuddyReceipts] = useState(true);
+  // Photos : envoi en cours, photo ouverte en plein écran, message d'erreur
+  const [sendingImage, setSendingImage] = useState(false);
+  const [fullImage, setFullImage] = useState(null);
+  const [imageError, setImageError] = useState('');
   const pressTimer = useRef(null);
+  const photoInputRef = useRef(null);
   const emojiInputRef = useRef(null);
   const bottomRef = useRef(null);
   const channelRef = useRef(null);
@@ -139,6 +145,31 @@ export default function ChatScreen({ buddy, onBack, theme }) {
     setReplyTo(null);
     const { error } = await supabase.from('messages').insert(payload);
     if (!error) notifyByEmail();
+  }
+
+  // Envoi d'une photo. Le texte tapé, s'il y en a, part en légende avec la photo.
+  async function sendImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';                 // permet de renvoyer deux fois la même photo
+    if (!file || !user || !buddyUserId) return;
+
+    setImageError('');
+    setSendingImage(true);
+    try {
+      const imageUrl = await uploadChatImage(file, user.id);
+      const caption = text.trim();
+      setText('');
+      const payload = { sender_id: user.id, receiver_id: buddyUserId, content: caption, image_url: imageUrl };
+      if (replyTo?.id) payload.reply_to = replyTo.id;
+      setReplyTo(null);
+      const { error } = await supabase.from('messages').insert(payload);
+      if (error) throw error;
+      notifyByEmail();
+    } catch (err) {
+      console.error('sendImage', err);
+      setImageError(tx("Couldn't send the photo. Try again.", "Envoi de la photo impossible. Réessaie."));
+    }
+    setSendingImage(false);
   }
 
   // Prévient la personne par email, seulement si elle n'a pas déjà un message non lu de notre part
@@ -301,7 +332,9 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: `1px solid ${border}`, background: inputBg }}>
           <span style={{ fontSize: '14px' }}>📌</span>
           <div style={{ flex: 1, minWidth: 0, fontSize: '12px', color: subText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {pinnedMsg.deleted ? tx('Message deleted', 'Message supprimé') : pinnedMsg.content}
+            {pinnedMsg.deleted
+              ? tx('Message deleted', 'Message supprimé')
+              : (pinnedMsg.content || (pinnedMsg.image_url ? tx('📷 Photo', '📷 Photo') : ''))}
           </div>
           <button onClick={() => togglePin(pinnedMsg)} style={{ background: 'none', border: 'none', color: subText, fontSize: '14px', cursor: 'pointer' }}>✕</button>
         </div>
@@ -336,7 +369,9 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
         {messages.map(m => {
           const isMe = m.sender_id === user?.id;
-          const isSystem = m.content.includes('Collab acceptée') || m.content.includes('Collab accepted') || m.content.includes('Créons');
+          // Attention : un message photo peut n'avoir aucun texte, d'où le (m.content || '').
+          const body = m.content || '';
+          const isSystem = !m.image_url && (body.includes('Collab acceptée') || body.includes('Collab accepted') || body.includes('Créons'));
           if (isSystem) return (
             <div key={m.id} style={{ textAlign: 'center', margin: '8px 0' }}>
               <span style={{ fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(46,204,113,0.08)' : 'rgba(46,204,113,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(46,204,113,0.2)' }}>
@@ -372,12 +407,26 @@ export default function ChatScreen({ buddy, onBack, theme }) {
                     maxHeight: '38px', overflow: 'hidden',
                   }}>
                     <b>{quoted.sender_id === user?.id ? tx('You', 'Toi') : buddy?.username}</b><br />
-                    {quoted.deleted ? tx('Message deleted', 'Message supprimé') : (quoted.content || '').slice(0, 90)}
+                    {quoted.deleted
+                      ? tx('Message deleted', 'Message supprimé')
+                      : (quoted.content || '').slice(0, 90) || (quoted.image_url ? tx('📷 Photo', '📷 Photo') : '')}
                   </div>
+                )}
+                {!m.deleted && m.image_url && (
+                  <img
+                    src={m.image_url}
+                    alt={tx('Shared photo', 'Photo partagée')}
+                    onClick={() => setFullImage(m.image_url)}
+                    style={{
+                      display: 'block', maxWidth: '100%', width: '220px',
+                      borderRadius: '12px', marginBottom: body ? '8px' : '0',
+                      cursor: 'zoom-in', background: darkMode ? '#222' : '#ccc',
+                    }}
+                  />
                 )}
                 {m.deleted
                   ? <i style={{ opacity: 0.55 }}>{tx('Message deleted', 'Message supprimé')}</i>
-                  : m.content}
+                  : body}
                 {(m.edited_at || (isMe && !m.deleted) || m.pinned) && (
                   <div style={{ fontSize: '10px', opacity: 0.5, marginTop: '4px', textAlign: 'right' }}>
                     {m.pinned && '📌 '}
@@ -423,7 +472,35 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         </div>
       )}
 
+      {imageError && (
+        <div style={{ padding: '8px 16px', fontSize: '12px', color: '#FF4D4D', background: inputBg, borderTop: `1px solid ${border}` }}>
+          {imageError}
+        </div>
+      )}
+
       <div style={{ padding: '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
+        {/* Le sélecteur natif déclenche lui-même la demande d'accès aux photos du téléphone. */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          onChange={sendImage}
+          style={{ display: 'none' }}
+        />
+        {!editing && (
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={sendingImage}
+            aria-label={tx('Send a photo', 'Envoyer une photo')}
+            style={{
+              width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
+              background: inputBg, border: `1px solid ${inputBorder}`, color,
+              fontSize: '18px', cursor: sendingImage ? 'default' : 'pointer', opacity: sendingImage ? 0.5 : 1,
+            }}
+          >
+            {sendingImage ? '…' : '📷'}
+          </button>
+        )}
         <input
           value={text}
           onChange={e => setText(e.target.value)}
@@ -434,6 +511,50 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         />
         <button onClick={() => (editing ? saveEdit() : sendMessage())} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>
       </div>
+
+      {fullImage && (
+        <div
+          onClick={() => setFullImage(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 4000, background: 'rgba(0,0,0,0.94)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 'calc(env(safe-area-inset-top) + 50px) 16px calc(env(safe-area-inset-bottom) + 70px)',
+          }}
+        >
+          <img
+            src={fullImage}
+            alt={tx('Shared photo', 'Photo partagée')}
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }}
+          />
+          <button
+            onClick={() => setFullImage(null)}
+            aria-label={tx('Close', 'Fermer')}
+            style={{
+              position: 'absolute', top: 'calc(env(safe-area-inset-top) + 12px)', right: '16px',
+              width: '36px', height: '36px', borderRadius: '50%', border: 'none',
+              background: 'rgba(255,255,255,0.15)', color: 'white', fontSize: '18px', cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
+          {/* Ouvrir dans un onglet : c'est de là qu'on enregistre la photo sur le téléphone. */}
+          <a
+            href={fullImage}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom) + 20px)', left: '50%',
+              transform: 'translateX(-50%)', padding: '10px 20px', borderRadius: '22px',
+              background: 'rgba(255,255,255,0.15)', color: 'white', fontSize: '13px',
+              fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+          >
+            {tx('Open to save', 'Ouvrir pour enregistrer')}
+          </a>
+        </div>
+      )}
 
       {copied && (
         <div style={{ position: 'fixed', bottom: '160px', left: '50%', transform: 'translateX(-50%)', zIndex: 3000,

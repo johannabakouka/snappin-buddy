@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '../supabase';
+import { LEGAL_SECTIONS } from '../legal-content';
 
 export default function LegalScreen({ theme, onBack }) {
   const darkMode = theme?.dark ?? true;
@@ -12,149 +13,39 @@ export default function LegalScreen({ theme, onBack }) {
   const [deleting, setDeleting] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
+  // La suppression est faite par le serveur : depuis l'app, les règles de sécurité
+  // de Supabase bloquaient une partie des effacements sans le dire, et le profil
+  // restait visible sur la carte.
   async function deleteAccount() {
     setDeleting(true);
+    setDeleteError('');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from('messages').delete().eq('sender_id', user.id);
-      await supabase.from('messages').delete().eq('receiver_id', user.id);
-      await supabase.from('collabs').delete().eq('sender_id', user.id);
-      await supabase.from('collabs').delete().eq('receiver_id', user.id);
-      await supabase.from('offers').delete().eq('user_id', user.id);
-      await supabase.from('follows').delete().eq('follower_id', user.id);
-      await supabase.from('follows').delete().eq('following_id', user.id);
-      await supabase.from('profiles').delete().eq('user_id', user.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('session expirée');
+
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `erreur ${res.status}`);
+      }
+
       await supabase.auth.signOut();
       setDeleted(true);
-      setTimeout(() => window.location.reload(), 2000);
+      setTimeout(() => window.location.reload(), 2500);
     } catch (e) {
-      console.error(e);
+      console.error('delete-account', e);
+      setDeleteError(
+        "La suppression n'a pas pu aboutir. Réessaie, et si le problème persiste écris à ateliers777.contact@gmail.com : ton compte sera supprimé manuellement sous 30 jours."
+      );
+      setDeleting(false);
     }
-    setDeleting(false);
   }
 
-  const sections = [
-    {
-      title: '📋 Mentions légales',
-      content: `Éditeur de l'application :
-Ateliers 777
-Entreprise individuelle
-SIRET : 995 320 264 00014
-Siège social : 59 rue de Ponthieu, 75008 Paris, France
-
-Directrice de la publication : Johanna Bakouka
-Contact : ateliers777.contact@gmail.com
-
-Hébergeur :
-Vercel Inc. — 340 Pine Street, Suite 701, San Francisco, CA 94104, USA
-Base de données : Supabase (infrastructure AWS, région Europe)`,
-    },
-    {
-      title: '📍 Données collectées',
-      content: `Pour fonctionner, Snappin'Buddy collecte :
-· Adresse email (authentification)
-· Nom, handle, rôle, bio, zone
-· Photo de profil et portfolio (optionnels)
-· Position géographique approximative (±400m)
-· Messages échangés entre utilisateurs
-
-Aucune donnée n'est vendue à des tiers.
-Aucune publicité ciblée n'est utilisée.`,
-    },
-    {
-      title: '🔒 Utilisation des données',
-      content: `Tes données sont utilisées uniquement pour :
-· Afficher ton profil aux autres créatifs
-· Te mettre en contact avec des collaborateurs
-· Améliorer l'expérience de l'application
-· Envoyer des notifications par email (propositions, projets)
-
-Ta position est volontairement floutée de ~400m pour protéger ta vie privée. Elle n'est jamais partagée avec précision.
-
-Base légale du traitement : exécution du contrat (CGU acceptées à l'inscription) et intérêt légitime.`,
-    },
-    {
-      title: '🍪 Cookies',
-      content: `Snappin'Buddy utilise des cookies techniques strictement nécessaires au fonctionnement de l'application :
-· Cookie de session (authentification Supabase)
-· Préférences locales (mode sombre, langue)
-
-Aucun cookie publicitaire ou de tracking tiers n'est utilisé.
-Ces cookies sont indispensables — l'app ne peut pas fonctionner sans eux.`,
-    },
-    {
-      title: '🗺 Géolocalisation',
-      content: `L'accès à ta position est demandé pour afficher les créatifs autour de toi sur la carte.
-
-Ta position exacte n'est jamais stockée ni partagée. Seule une position approximative (±400m) est enregistrée et visible des autres utilisateurs.
-
-Tu peux refuser la géolocalisation — certaines fonctionnalités de la carte seront alors limitées.`,
-    },
-    {
-      title: '🇪🇺 RGPD & Droits',
-      content: `Conformément au Règlement Général sur la Protection des Données (RGPD — UE 2016/679), tu disposes des droits suivants :
-· Droit d'accès à tes données
-· Droit de rectification
-· Droit à l'effacement ("droit à l'oubli")
-· Droit à la portabilité
-· Droit d'opposition au traitement
-· Droit de retirer ton consentement à tout moment
-
-Pour exercer ces droits : ateliers777.contact@gmail.com
-Délai de réponse : 30 jours maximum.
-
-Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
-
-Durée de conservation des données : jusqu'à suppression du compte + 30 jours de sauvegarde.`,
-    },
-    {
-      title: '⏰ Durée de vie des projets',
-      content: `Les projets publiés sur Snappin'Buddy expirent automatiquement après 30 jours.
-
-Un projet expiré reste visible avec le badge "Projet complet" mais n'apparaît plus dans le feed actif. Tu peux le rouvrir gratuitement à tout moment.
-
-Le Boost (payant) est une option de visibilité distincte : il remet ton projet en tête du feed pendant 1 ou 7 jours, indépendamment de la date d'expiration.`,
-    },
-    {
-      title: '🤝 Responsabilité des rencontres',
-      content: `Snappin'Buddy facilite la mise en contact entre créatifs mais n'est pas responsable des rencontres physiques organisées via la plateforme.
-
-Nous recommandons de :
-· Se retrouver dans un lieu public
-· Partager son itinéraire à un proche
-· Utiliser le QR de session avant chaque rencontre
-
-L'utilisation du QR code de session est fortement conseillée pour confirmer l'identité de votre interlocuteur.
-
-Snappin'Buddy et Ateliers 777 ne sauraient être tenus responsables des dommages directs ou indirects résultant d'une rencontre organisée via la plateforme.`,
-    },
-    {
-      title: '💳 Paiements',
-      content: `Le seul achat possible sur Snappin'Buddy est le Boost d'un projet, qui le remet en tête du feed :
-· Boost 1 jour — 1,99 € TTC
-· Boost 7 jours — 4,99 € TTC
-
-TVA non applicable, article 293 B du CGI.
-
-Les paiements sont traités par Stripe Inc. (stripe.com), prestataire de paiement sécurisé certifié PCI-DSS. Snappin'Buddy ne stocke jamais tes données bancaires : toutes les transactions sont chiffrées et gérées par Stripe.
-
-Le Boost est un service numérique exécuté immédiatement après le paiement. Conformément à l'article L221-28 du Code de la consommation, tu renonces à ton droit de rétractation de 14 jours en validant l'achat : le Boost est donc non remboursable une fois activé, sauf défaut technique avéré (dans ce cas : ateliers777.contact@gmail.com).
-
-Aucun abonnement, aucun prélèvement automatique : chaque Boost est un paiement unique.`,
-    },
-    {
-      title: '📝 Modification des CGU',
-      content: `Ces conditions peuvent être modifiées à tout moment. Les utilisateurs seront informés par email en cas de changement majeur.
-
-L'utilisation continue de l'application après modification vaut acceptation des nouvelles conditions.
-
-Dernière mise à jour : juin 2026
-Droit applicable : droit français
-Juridiction compétente : Tribunaux de Paris`,
-    },
-  ];
 
   if (deleted) return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
@@ -179,7 +70,7 @@ Juridiction compétente : Tribunaux de Paris`,
           </p>
         </div>
 
-        {sections.map((s, i) => (
+        {LEGAL_SECTIONS.map((s, i) => (
           <div key={i} style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid ${cardBorder}` }}>
             <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>{s.title}</p>
             <p style={{ color: subText, fontSize: '13px', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{s.content}</p>
@@ -204,6 +95,11 @@ Juridiction compétente : Tribunaux de Paris`,
               <p style={{ color: '#FF4D4D', fontSize: '13px', fontWeight: '700', marginBottom: '10px', textAlign: 'center' }}>
                 ⚠️ Cette action est irréversible !
               </p>
+              {deleteError && (
+                <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>
+                  {deleteError}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => setConfirm(false)} style={{
                   flex: 1, padding: '12px', borderRadius: '20px',

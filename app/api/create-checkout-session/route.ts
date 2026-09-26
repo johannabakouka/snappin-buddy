@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const label = days === 1 ? '1 jour' : `${days} jours`;
 
-    const session = await stripe().checkout.sessions.create({
-      mode: 'payment',
+    const params = {
+      mode: 'payment' as const,
       line_items: [{
         quantity: 1,
         price_data: {
@@ -50,7 +50,22 @@ export async function POST(request: Request) {
       },
       success_url: `${origin}/boost-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/`,
-    });
+    };
+
+    // Case « j'accepte les conditions générales », pour pouvoir prouver l'accord
+    // du client en cas de litige. Stripe la refuse tant que l'adresse des CGU n'est
+    // pas renseignée dans son tableau de bord : dans ce cas on réessaie sans la case
+    // plutôt que de bloquer le paiement.
+    let session;
+    try {
+      session = await stripe().checkout.sessions.create({
+        ...params,
+        consent_collection: { terms_of_service: 'required' },
+      });
+    } catch (consentError) {
+      console.warn('create-checkout-session : case CGU indisponible, paiement sans case', consentError);
+      session = await stripe().checkout.sessions.create(params);
+    }
 
     return Response.json({ url: session.url });
   } catch (err) {
