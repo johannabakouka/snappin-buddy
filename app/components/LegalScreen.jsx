@@ -14,6 +14,7 @@ export default function LegalScreen({ theme, onBack }) {
   const [confirm, setConfirm] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [deleteDetail, setDeleteDetail] = useState('');
 
   // La suppression est faite par le serveur : depuis l'app, les règles de sécurité
   // de Supabase bloquaient une partie des effacements sans le dire, et le profil
@@ -21,6 +22,7 @@ export default function LegalScreen({ theme, onBack }) {
   async function deleteAccount() {
     setDeleting(true);
     setDeleteError('');
+    setDeleteDetail('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('session expirée');
@@ -29,9 +31,10 @@ export default function LegalScreen({ theme, onBack }) {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `erreur ${res.status}`);
+        const where = body.step ? ` (étape : ${body.step})` : '';
+        throw new Error((body.error || `erreur ${res.status}`) + where);
       }
 
       await supabase.auth.signOut();
@@ -42,6 +45,8 @@ export default function LegalScreen({ theme, onBack }) {
       setDeleteError(
         "La suppression n'a pas pu aboutir. Réessaie, et si le problème persiste écris à ateliers777.contact@gmail.com : ton compte sera supprimé manuellement sous 30 jours."
       );
+      // Détail technique, affiché en petit : c'est ce qui permet de corriger la cause.
+      setDeleteDetail(e.message || '');
       setDeleting(false);
     }
   }
@@ -98,6 +103,11 @@ export default function LegalScreen({ theme, onBack }) {
               {deleteError && (
                 <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>
                   {deleteError}
+                </p>
+              )}
+              {deleteDetail && (
+                <p style={{ color: subText, fontSize: '10px', lineHeight: 1.4, marginBottom: '10px', wordBreak: 'break-word' }}>
+                  Détail technique : {deleteDetail}
                 </p>
               )}
               <div style={{ display: 'flex', gap: '8px' }}>
