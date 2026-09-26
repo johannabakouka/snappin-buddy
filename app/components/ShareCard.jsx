@@ -115,7 +115,16 @@ export default function ShareCard({ offer, profile, onClose }) {
     round(CX + PAD, y - 34, badgeW, 50, 25); strokeShape();
     ctx.fillStyle = '#F2E050';
     ft(badge, CX + PAD + 22, y);
-    y += 92;
+    y += 88;
+
+    // Auteur du projet : on voyait le projet sans savoir qui le proposait.
+    const authorLine = [profile?.username, profile?.handle].filter(Boolean).join('   ');
+    if (authorLine) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = font(600, 27);
+      ft(`Buddy   ${authorLine}`, CX + PAD, y);
+      y += 62;
+    }
 
     // Titre
     const wrap = (text, maxWidth, lineHeight, maxLines) => {
@@ -349,6 +358,13 @@ export default function ShareCard({ offer, profile, onClose }) {
               {tx('⚡ PROJECT', '⚡ PROJET')}
             </span>
           </div>
+
+          {/* Auteur, pour que l'aperçu corresponde à l'image partagée */}
+          {(profile?.username || profile?.handle) && (
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '10px' }}>
+              Buddy&nbsp;&nbsp; {[profile?.username, profile?.handle].filter(Boolean).join('   ')}
+            </p>
+          )}
 
           {/* Titre */}
           <h2 style={{

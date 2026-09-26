@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
+import ProfileShareCard from './ProfileShareCard';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
@@ -96,6 +97,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const ROLES = useRoles();
   const [editing, setEditing] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
+  const [sharingProfile, setSharingProfile] = useState(false);
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
@@ -188,12 +190,20 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   );
 
   if (showLegal) return <LegalScreen theme={theme} onBack={() => setShowLegal(false)} />;
+  if (sharingProfile) return (
+    <ProfileShareCard
+      profile={{ ...profile, avatar_url: avatarUrl }}
+      onClose={() => setSharingProfile(false)}
+    />
+  );
 
   return (
     <div style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
+      {/* La marge de l'encoche était absente ici (et en double plus bas) :
+          le bouton de thème passait sous la barre d'état de l'iPhone. */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '16px',
+        padding: 'calc(env(safe-area-inset-top) + 16px) 16px 16px',
         borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
         position: 'relative', flexShrink: 0,
       }}>
@@ -201,7 +211,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           Snappin&apos;Buddy
         </span>
         <div onClick={() => setDarkMode(!darkMode)} style={{
-          position: 'absolute', right: '16px',
+          position: 'absolute', right: '16px', bottom: '16px',
           width: '52px', height: '28px', borderRadius: '14px',
           background: darkMode ? '#333' : '#DDD',
           cursor: 'pointer', display: 'flex', alignItems: 'center',
@@ -218,7 +228,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
         </div>
       </div>
 
-      <div style={{ padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(110px + env(safe-area-inset-bottom))` }}>
+      <div style={{ padding: `24px 16px calc(110px + env(safe-area-inset-bottom))` }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div onClick={() => fileInputRef.current?.click()} style={{
             width: '88px', height: '88px', borderRadius: '50%',
@@ -260,6 +270,16 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             ))}
           </div>
         </div>
+
+        {/* Partager son profil : chaque inscrit devient une affiche pour l'app. */}
+        <button onClick={() => setSharingProfile(true)} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
+          padding: '14px 16px', marginBottom: '16px', cursor: 'pointer', color: theme.color,
+        }}>
+          <span style={{ fontSize: '15px', fontWeight: '800' }}>📸 {tx('Share my profile', 'Partager mon profil')}</span>
+          <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>→</span>
+        </button>
 
         {onOpenMyProjects && (
           <button onClick={onOpenMyProjects} style={{

@@ -12,6 +12,7 @@ import OnboardingScreen from './components/OnboardingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
 import NewPasswordScreen from './components/NewPasswordScreen';
 import ErrorBoundary from './components/ErrorBoundary';
+import BuddyProfileScreen from './components/BuddyProfileScreen';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
@@ -69,6 +70,13 @@ export default function Home() {
     return new URLSearchParams(window.location.search).get('offer');
   });
 
+  // Lien de profil partagé en story : snappinbuddy.com/?buddy=sofia
+  const [sharedBuddyHandle, setSharedBuddyHandle] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('buddy');
+  });
+  const [sharedBuddy, setSharedBuddy] = useState<Record<string, unknown> | null>(null);
+
   const [linkFor, setLinkFor] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('for');
@@ -82,6 +90,26 @@ export default function Home() {
   // Incrémenté pour demander à l'écran Match d'afficher « Mes projets »
   const [myProjectsSignal, setMyProjectsSignal] = useState(0);
   const userIdRef = useRef<string | null>(null);
+
+  // Le pseudo est unique : il suffit à retrouver la personne.
+  useEffect(() => {
+    if (!sharedBuddyHandle) return;
+    let alive = true;
+    supabase
+      .from('profiles')
+      .select('*')
+      .ilike('handle', `@${sharedBuddyHandle}`)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!alive) return;
+        if (data) setSharedBuddy(data);
+        setSharedBuddyHandle(null);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('buddy');
+        window.history.replaceState({}, '', url.pathname + url.search);
+      });
+    return () => { alive = false; };
+  }, [sharedBuddyHandle]);
 
   async function fetchProfile(userId: string) {
     const { data: p } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
@@ -249,6 +277,13 @@ export default function Home() {
         </div>
       ))}
       <Navbar screen={screen} setScreen={setScreen} theme={theme} />
+
+      {/* Profil ouvert depuis un lien partagé en story */}
+      {sharedBuddy && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500, background: theme.bg }}>
+          <BuddyProfileScreen buddy={sharedBuddy} theme={theme} onBack={() => setSharedBuddy(null)} />
+        </div>
+      )}
 
       {wrongAccount && (
         <div style={{

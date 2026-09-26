@@ -3,6 +3,16 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Sign out': 'Cerrar sesión',
+    'Share my profile': 'Compartir mi perfil',
+    'ROLES': 'ROLES',
+    'Create with me ⚡': 'Creemos juntos ⚡',
+    'Share your profile on your story 📸': 'Comparte tu perfil en tu historia 📸',
+    'Press and hold the image to save it': 'Mantén pulsada la imagen para guardarla',
+    'Preparing…': 'Preparando…',
+    '📸 Save the image': '📸 Guardar la imagen',
+    'Link copied ✓': 'Enlace copiado ✓',
+    '🔗 Copy my link': '🔗 Copiar mi enlace',
     'Account deleted': 'Cuenta eliminada',
     'Deleted account': 'Cuenta eliminada',
     'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Esta persona eliminó su cuenta. La conversación sigue aquí, pero ya no puedes responder.',
@@ -198,6 +208,16 @@ const TX = {
   },
 
   pt: {
+    'Sign out': 'Sair',
+    'Share my profile': 'Compartilhar meu perfil',
+    'ROLES': 'FUNÇÕES',
+    'Create with me ⚡': 'Vamos criar juntos ⚡',
+    'Share your profile on your story 📸': 'Compartilhe seu perfil no story 📸',
+    'Press and hold the image to save it': 'Segure a imagem para salvá-la',
+    'Preparing…': 'Preparando…',
+    '📸 Save the image': '📸 Salvar a imagem',
+    'Link copied ✓': 'Link copiado ✓',
+    '🔗 Copy my link': '🔗 Copiar meu link',
     'Account deleted': 'Conta excluída',
     'Deleted account': 'Conta excluída',
     'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Essa pessoa excluiu a conta. A conversa continua aqui, mas você não pode mais responder.',
@@ -393,6 +413,16 @@ const TX = {
   },
 
   de: {
+    'Sign out': 'Abmelden',
+    'Share my profile': 'Mein Profil teilen',
+    'ROLES': 'ROLLEN',
+    'Create with me ⚡': 'Lass uns zusammen was machen ⚡',
+    'Share your profile on your story 📸': 'Teile dein Profil in deiner Story 📸',
+    'Press and hold the image to save it': 'Halte das Bild gedrückt, um es zu speichern',
+    'Preparing…': 'Wird vorbereitet…',
+    '📸 Save the image': '📸 Bild speichern',
+    'Link copied ✓': 'Link kopiert ✓',
+    '🔗 Copy my link': '🔗 Meinen Link kopieren',
     'Account deleted': 'Konto gelöscht',
     'Deleted account': 'Gelöschtes Konto',
     'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Diese Person hat ihr Konto gelöscht. Die Unterhaltung bleibt hier, aber du kannst nicht mehr antworten.',
@@ -588,6 +618,16 @@ const TX = {
   },
 
   it: {
+    'Sign out': 'Esci',
+    'Share my profile': 'Condividi il mio profilo',
+    'ROLES': 'RUOLI',
+    'Create with me ⚡': 'Creiamo insieme ⚡',
+    'Share your profile on your story 📸': 'Condividi il tuo profilo nella storia 📸',
+    'Press and hold the image to save it': 'Tieni premuta l’immagine per salvarla',
+    'Preparing…': 'Preparazione…',
+    '📸 Save the image': '📸 Salva l’immagine',
+    'Link copied ✓': 'Link copiato ✓',
+    '🔗 Copy my link': '🔗 Copia il mio link',
     'Account deleted': 'Account eliminato',
     'Deleted account': 'Account eliminato',
     'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Questa persona ha eliminato il suo account. La conversazione resta qui, ma non puoi più rispondere.',

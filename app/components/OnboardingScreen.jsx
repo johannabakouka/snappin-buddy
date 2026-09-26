@@ -332,6 +332,20 @@ export default function OnboardingScreen({ user, onComplete }) {
           </div>
         </>
       )}
+
+      {/* Sortie de secours. Sans profil, la personne n'a aucun autre moyen de
+          quitter cet écran : ni retour, ni déconnexion. Quelqu'un interrompu
+          en pleine inscription resterait bloqué à chaque ouverture de l'app. */}
+      <button
+        onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
+        style={{
+          marginTop: '20px', alignSelf: 'center', background: 'none', border: 'none',
+          color: subText, fontSize: '12px', textDecoration: 'underline', cursor: 'pointer',
+          padding: '8px',
+        }}
+      >
+        {tx('Sign out', 'Se déconnecter')}
+      </button>
     </div>
   );
 }
