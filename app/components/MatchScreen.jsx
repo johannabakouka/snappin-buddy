@@ -364,7 +364,16 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     );
   }
 
-  if (sharingOffer) return <ShareCard offer={sharingOffer} profile={myProfile} onClose={() => setSharingOffer(null)} />;
+  // On partage aussi les projets des autres : la carte doit porter le nom de
+  // l'auteur du projet, pas celui de la personne qui partage. authorProfile est
+  // absent sur mes propres projets, d'où le repli sur mon profil.
+  if (sharingOffer) return (
+    <ShareCard
+      offer={sharingOffer}
+      profile={sharingOffer.authorProfile || myProfile}
+      onClose={() => setSharingOffer(null)}
+    />
+  );
 
   if (chatBuddy) return (
     <ChatScreen buddy={chatBuddy} onBack={() => { setChatBuddy(null); if (user) loadCollabs(user.id); }} theme={theme} />
