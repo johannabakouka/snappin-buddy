@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { LEGAL_SECTIONS } from '../legal-content';
 
@@ -15,6 +15,14 @@ export default function LegalScreen({ theme, onBack }) {
   const [deleted, setDeleted] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [deleteDetail, setDeleteDetail] = useState('');
+  // Confirmation : la personne doit retaper son adresse email.
+  // Deux taps ne doivent pas suffire pour une action définitive.
+  const [myEmail, setMyEmail] = useState('');
+  const [typedEmail, setTypedEmail] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMyEmail(data.user?.email || ''));
+  }, []);
 
   // La suppression est faite par le serveur : depuis l'app, les règles de sécurité
   // de Supabase bloquaient une partie des effacements sans le dire, et le profil
@@ -51,6 +59,9 @@ export default function LegalScreen({ theme, onBack }) {
     }
   }
 
+
+  const emailMatches =
+    myEmail.length > 0 && typedEmail.trim().toLowerCase() === myEmail.toLowerCase();
 
   if (deleted) return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
@@ -110,19 +121,45 @@ export default function LegalScreen({ theme, onBack }) {
                   Détail technique : {deleteDetail}
                 </p>
               )}
+              <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5, marginBottom: '8px' }}>
+                Pour confirmer, retape ton adresse email :{' '}
+                <span style={{ color, fontWeight: '700' }}>{myEmail}</span>
+              </p>
+              <input
+                value={typedEmail}
+                onChange={e => setTypedEmail(e.target.value)}
+                placeholder="ton@email.com"
+                autoCapitalize="none"
+                autoCorrect="off"
+                inputMode="email"
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: '12px',
+                  border: `1px solid ${emailMatches ? '#FF4D4D' : cardBorder}`,
+                  background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                  color, fontSize: '14px', boxSizing: 'border-box', outline: 'none',
+                  marginBottom: '10px',
+                }}
+              />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => setConfirm(false)} style={{
+                <button onClick={() => { setConfirm(false); setTypedEmail(''); }} style={{
                   flex: 1, padding: '12px', borderRadius: '20px',
                   border: `1px solid ${cardBorder}`, background: 'transparent',
                   color: subText, fontSize: '13px', fontWeight: '700', cursor: 'pointer',
                 }}>
                   Annuler
                 </button>
-                <button onClick={deleteAccount} disabled={deleting} style={{
-                  flex: 1, padding: '12px', borderRadius: '20px',
-                  border: 'none', background: '#FF4D4D',
-                  color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-                }}>
+                <button
+                  onClick={deleteAccount}
+                  disabled={deleting || !emailMatches}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '20px',
+                    border: 'none',
+                    background: emailMatches ? '#FF4D4D' : (darkMode ? '#2A2A2A' : '#DDD'),
+                    color: emailMatches ? 'white' : subText,
+                    fontSize: '13px', fontWeight: '700',
+                    cursor: emailMatches ? 'pointer' : 'default',
+                  }}
+                >
                   {deleting ? 'Suppression...' : 'Confirmer'}
                 </button>
               </div>

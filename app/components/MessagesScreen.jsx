@@ -52,9 +52,13 @@ export default function MessagesScreen({ theme, active = true }) {
     const convs = buddyIds.map(buddyId => {
       const profile = profiles?.find(p => p.user_id === buddyId);
       const lastMsg = msgs.find(m => (m.sender_id === userId && m.receiver_id === buddyId) || (m.sender_id === buddyId && m.receiver_id === userId));
+      // Pas de profil = la personne a supprimé son compte. On garde la
+      // conversation, mais sans nom, sans photo et sans lien vers un profil.
+      const gone = !profile;
       return {
         id: buddyId, user_id: buddyId,
-        username: profile?.username || (tx('Creative', 'Créatif')),
+        deletedAccount: gone,
+        username: profile?.username || tx('Deleted account', 'Compte supprimé'),
         handle: profile?.handle || '',
         avatar_url: profile?.avatar_url || null,
         last: lastMsg?.deleted ? tx('Message deleted', 'Message supprimé') : (lastMsg?.content || ''),

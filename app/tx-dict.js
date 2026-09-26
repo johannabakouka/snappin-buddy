@@ -3,6 +3,9 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Account deleted': 'Cuenta eliminada',
+    'Deleted account': 'Cuenta eliminada',
+    'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Esta persona eliminó su cuenta. La conversación sigue aquí, pero ya no puedes responder.',
     'Please confirm your age and accept the terms to continue.': 'Confirma tu edad y acepta las condiciones para continuar.',
     'I confirm I am 18 or over': 'Confirmo que tengo 18 años o más',
     ' and I accept the ': ' y acepto las ',
@@ -195,6 +198,9 @@ const TX = {
   },
 
   pt: {
+    'Account deleted': 'Conta excluída',
+    'Deleted account': 'Conta excluída',
+    'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Essa pessoa excluiu a conta. A conversa continua aqui, mas você não pode mais responder.',
     'Please confirm your age and accept the terms to continue.': 'Confirme sua idade e aceite os termos para continuar.',
     'I confirm I am 18 or over': 'Confirmo que tenho 18 anos ou mais',
     ' and I accept the ': ' e aceito os ',
@@ -387,6 +393,9 @@ const TX = {
   },
 
   de: {
+    'Account deleted': 'Konto gelöscht',
+    'Deleted account': 'Gelöschtes Konto',
+    'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Diese Person hat ihr Konto gelöscht. Die Unterhaltung bleibt hier, aber du kannst nicht mehr antworten.',
     'Please confirm your age and accept the terms to continue.': 'Bestätige dein Alter und akzeptiere die Bedingungen, um fortzufahren.',
     'I confirm I am 18 or over': 'Ich bestätige, dass ich 18 Jahre oder älter bin',
     ' and I accept the ': ' und ich akzeptiere die ',
@@ -579,6 +588,9 @@ const TX = {
   },
 
   it: {
+    'Account deleted': 'Account eliminato',
+    'Deleted account': 'Account eliminato',
+    'This person deleted their account. The conversation stays here, but you can no longer reply.': 'Questa persona ha eliminato il suo account. La conversazione resta qui, ma non puoi più rispondere.',
     'Please confirm your age and accept the terms to continue.': 'Conferma la tua età e accetta le condizioni per continuare.',
     'I confirm I am 18 or over': 'Confermo di avere 18 anni o più',
     ' and I accept the ': ' e accetto le ',

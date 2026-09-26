@@ -33,8 +33,13 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
   const buddyUserId = buddy?.user_id || buddy?.id;
 
-  const statusColor = buddyStatus === 'shoot' ? '#FFD700' : buddyStatus === 'indispo' ? '#FF4D4D' : '#2ECC71';
-  const statusLabel = buddyStatus === 'shoot'
+  // La personne a supprimé son compte : plus de profil, donc plus de statut,
+  // plus de photo, et on ne peut plus lui écrire.
+  const buddyGone = buddy?.deletedAccount === true;
+  const statusColor = buddyGone ? '#666' : buddyStatus === 'shoot' ? '#FFD700' : buddyStatus === 'indispo' ? '#FF4D4D' : '#2ECC71';
+  const statusLabel = buddyGone
+    ? tx('Account deleted', 'Compte supprimé')
+    : buddyStatus === 'shoot'
     ? (tx('On shoot', 'En shoot'))
     : buddyStatus === 'indispo'
     ? (tx('Unavailable', 'Indisponible'))
@@ -318,7 +323,9 @@ export default function ChatScreen({ buddy, onBack, theme }) {
       <div style={{ padding: `calc(env(safe-area-inset-top) + 16px) 16px 16px`, borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}` }}>
-          {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+          {!buddyGone && buddy?.avatar_url
+            ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : '◉'}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: '700', fontSize: '15px', color }}>{buddy?.username}</div>
@@ -478,6 +485,18 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         </div>
       )}
 
+      {/* On ne peut plus écrire à un compte supprimé : la conversation reste lisible,
+          mais l'envoi n'a plus de destinataire. */}
+      {buddyGone ? (
+        <div style={{ padding: '18px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, textAlign: 'center' }}>
+          <p style={{ color: subText, fontSize: '13px', lineHeight: 1.5 }}>
+            {tx(
+              'This person deleted their account. The conversation stays here, but you can no longer reply.',
+              'Cette personne a supprimé son compte. La conversation reste visible, mais tu ne peux plus répondre.'
+            )}
+          </p>
+        </div>
+      ) : (
       <div style={{ padding: '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
         {/* Le sélecteur natif déclenche lui-même la demande d'accès aux photos du téléphone. */}
         <input
@@ -511,6 +530,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
         />
         <button onClick={() => (editing ? saveEdit() : sendMessage())} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>
       </div>
+      )}
 
       {fullImage && (
         <div
