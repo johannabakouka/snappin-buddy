@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 // Ni position exacte, ni email, ni quoi que ce soit d'autre.
 
 type Row = {
-  id: number;
+  id: number | string;
   title: string | null;
   description: string | null;
   role_needed: string | null;
@@ -37,13 +37,19 @@ function withAt(handle: string | null | undefined): string {
 }
 
 async function getOffer(id: string): Promise<{ offer: Row; author: Author | null } | null> {
-  if (!/^\d+$/.test(id)) return null;
+  // L'identifiant part tel quel : selon la base il peut être un nombre ou un
+  // uuid, et forcer un format ici renvoyait « page introuvable » sur des liens
+  // parfaitement valides. Une valeur aberrante ne trouve simplement rien.
+  const clean = decodeURIComponent(String(id || '')).trim();
+  if (!clean || clean.length > 64) return null;
+
   const db = supabaseAdmin();
-  const { data: offer } = await db
+  const { data: offer, error } = await db
     .from('offers')
     .select('id, title, description, role_needed, styles_needed, zone, date, status, created_at, user_id')
-    .eq('id', Number(id))
+    .eq('id', clean)
     .maybeSingle();
+  if (error) console.error('page projet', clean, error.message);
   if (!offer) return null;
 
   const { data: author } = await db

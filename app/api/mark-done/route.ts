@@ -2,11 +2,13 @@ export const dynamic = 'force-dynamic';
 
 import { requireUser, supabaseAdmin } from '../../lib/server';
 
-// « Marquer le projet comme réalisé », pour les collabs faites à distance.
+// « Marquer le projet comme réalisé ».
 //
-// Le QR couvre les rencontres physiques. Ici, chacun confirme de son côté,
-// et le projet n'est validé que quand les deux l'ont fait — même règle que
-// le scan : on ne peut pas faire monter son compteur tout seul.
+// Ça note que la collab est finie, des deux côtés. Ça ne fait PAS monter le
+// compteur « Projets validés » : seul le scan d'un QR, donc une vraie
+// rencontre, compte. Deux personnes peuvent se mettre d'accord pour cliquer
+// un bouton, elles ne peuvent pas se scanner sans se voir — c'est toute la
+// différence entre un chiffre déclaré et un chiffre prouvé.
 
 export async function POST(request: Request) {
   try {
@@ -37,44 +39,16 @@ export async function POST(request: Request) {
     const patch = iAmSender ? { done_by_sender: true } : { done_by_receiver: true };
     await db.from('collabs').update(patch).eq('id', collab.id);
 
-    const mineNow = true;
     const theirs = iAmSender ? collab.done_by_receiver : collab.done_by_sender;
-    const both = mineNow && Boolean(theirs);
+    const both = Boolean(theirs);
 
-    // Les deux ont confirmé et ce n'était pas déjà validé : ça compte.
-    let counted = false;
-    if (both && !collab.validated_at) {
-      const { data: updated } = await db
-        .from('collabs')
-        .update({ validated_at: new Date().toISOString() })
-        .eq('id', collab.id)
-        .is('validated_at', null)
-        .select('id');
-
-      // Le compteur ne monte que si c'est bien nous qui avons posé la date :
-      // deux confirmations simultanées ne comptent pas deux fois.
-      if (updated?.length) {
-        counted = true;
-        for (const id of [collab.sender_id, collab.receiver_id]) {
-          const { data: p } = await db
-            .from('profiles')
-            .select('validated_projects')
-            .eq('user_id', id)
-            .maybeSingle();
-          if (p) {
-            await db
-              .from('profiles')
-              .update({ validated_projects: (p.validated_projects || 0) + 1 })
-              .eq('user_id', id);
-          }
-        }
-      }
-    }
-
+    // On ne touche pas à validated_at : cette date appartient au scan du QR.
+    // Si on la posait ici, un scan ultérieur ne compterait plus.
     return Response.json({
       ok: true,
       both,
-      counted,
+      counted: false,
+      alreadyScanned: Boolean(collab.validated_at),
       waitingForBuddy: !both,
     });
   } catch (err) {

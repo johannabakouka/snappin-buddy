@@ -161,8 +161,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
   useEffect(() => onBlocksChanged(() => { if (user?.id) loadOffers(user.id); }), [user]);
 
-  // « Marquer comme réalisé » : la validation quand la collab s'est faite à
-  // distance et qu'aucun QR n'a pu être scanné. Il faut les deux confirmations.
+  // « Marquer comme réalisé » : ferme la collab quand les deux l'ont confirmée.
+  // Ça ne fait pas monter le compteur « Projets validés » — ça, c'est réservé au
+  // scan du QR, parce qu'on ne peut pas se scanner sans se rencontrer.
   const [markingDone, setMarkingDone] = useState(null);
   const [doneMessage, setDoneMessage] = useState(null);
 
@@ -179,11 +180,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       if (!res.ok) throw new Error(body.error || res.status);
       setDoneMessage({
         id: collab.id,
-        text: body.counted
-          ? tx('Project validated! It now counts for both of you.', 'Projet validé ! Il compte pour vous deux.')
-          : body.both
-          ? tx('Already validated.', 'Déjà validé.')
-          : tx('Noted. It will count once your buddy confirms too.', 'C’est noté. Ça comptera quand ton buddy aura confirmé aussi.'),
+        text: body.both
+          ? body.alreadyScanned
+            ? tx('Project done ✓', 'Projet réalisé ✓')
+            : tx('Project done ✓ To add it to your validated projects, scan the QR code when you meet.', 'Projet réalisé ✓ Pour qu’il compte dans tes projets validés, scannez le QR code quand vous vous voyez.')
+          : tx('Noted. Waiting for your buddy to confirm too.', 'C’est noté. On attend que ton buddy confirme aussi.'),
       });
       if (user) loadCollabs(user.id);
     } catch (e) {
@@ -198,10 +199,23 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const validated = Boolean(collab.validated_at);
     const note = doneMessage?.id === collab.id ? doneMessage.text : null;
 
+    // Validé = QR scanné, donc rencontre prouvée : c'est ça qui compte.
     if (validated) return (
       <p style={{ color: '#2ECC71', fontSize: '12px', fontWeight: '700', marginTop: '10px', textAlign: 'center' }}>
         🤝 {tx('Project validated', 'Projet validé')}
       </p>
+    );
+
+    // Réalisé = les deux l'ont dit. Le compteur, lui, attend le QR.
+    if (collab.done_by_sender && collab.done_by_receiver) return (
+      <div style={{ marginTop: '10px', textAlign: 'center' }}>
+        <p style={{ color: theme?.color, fontSize: '12px', fontWeight: '700' }}>
+          ✓ {tx('Project done', 'Projet réalisé')}
+        </p>
+        <p style={{ color: subText, fontSize: '11px', marginTop: '4px', lineHeight: 1.4 }}>
+          {tx('Scan the QR code when you meet so it counts in your validated projects.', 'Scannez le QR code quand vous vous voyez pour qu’il compte dans vos projets validés.')}
+        </p>
+      </div>
     );
 
     return (
@@ -418,8 +432,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     await closeOffer(offer.id);
     setSkippedPast(skipFollowUp(offer.id));   // la question est réglée, on ne la repose pas
     setFollowUpNote(tx(
-      'Now confirm with your buddy in the 🤝 tab so it counts for both of you.',
-      'Confirme maintenant avec ton buddy dans l’onglet 🤝 pour qu’il compte pour vous deux.',
+      'Now confirm it with your buddy in the 🤝 tab. It counts in your validated projects once you scan the QR code together.',
+      'Confirme-le avec ton buddy dans l’onglet 🤝. Il comptera dans tes projets validés quand vous aurez scanné le QR ensemble.',
     ));
     setTab('match');
   }

@@ -8,65 +8,75 @@ export default function Navbar({ screen, setScreen, theme }) {
   const darkMode = theme?.dark ?? true;
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingCollabs, setPendingCollabs] = useState(0);
-  // Écran affiché, lu dans les abonnements temps réel (sans relancer l'abonnement)
-  const screenRef = useRef(screen);
+  const refreshRef = useRef(null);
 
+  // Les pastilles sont toujours recomptées dans la base, jamais devinées.
+  //
+  // Avant, elles étaient chargées une seule fois au démarrage puis incrémentées
+  // par le temps réel, et remises à zéro dès qu'on ouvrait l'onglet. Résultat :
+  // si le temps réel ne passait pas — ce qui arrive dès que la connexion
+  // hoquette — plus aucune pastille n'apparaissait de la session. Maintenant on
+  // recompte à l'ouverture, à chaque changement d'écran, au retour sur l'app et
+  // toutes les minutes. Deux comptages, rien n'est téléchargé.
   useEffect(() => {
+    let alive = true;
     let msgChannel, collabChannel;
 
-    async function loadBadges() {
+    async function refresh() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!alive || !user) return;
 
-      const { data: msgs } = await supabase.from('messages').select('id').eq('receiver_id', user.id).eq('read', false);
-      setUnreadMessages(msgs?.length || 0);
-
-      const { data: collabs } = await supabase.from('collabs').select('id').eq('receiver_id', user.id).eq('status', 'pending');
-      setPendingCollabs(collabs?.length || 0);
-
-      msgChannel = supabase.channel('navbar-messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
-          // Pas de pastille si on est déjà dans Messages
-          if (screenRef.current !== 'messages') setUnreadMessages(n => n + 1);
-        }).subscribe();
-
-      collabChannel = supabase.channel('navbar-collabs')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'collabs', filter: `receiver_id=eq.${user.id}` }, () => {
-          setPendingCollabs(n => n + 1);
-        }).subscribe();
+      const [{ count: unread }, { count: pending }] = await Promise.all([
+        // read.is.null couvre les messages d'avant la colonne : sans ça ils ne
+        // sont ni lus ni non lus, et la pastille les oublie.
+        supabase.from('messages').select('id', { count: 'exact', head: true })
+          .eq('receiver_id', user.id).or('read.is.null,read.eq.false'),
+        supabase.from('collabs').select('id', { count: 'exact', head: true })
+          .eq('receiver_id', user.id).eq('status', 'pending'),
+      ]);
+      if (!alive) return;
+      setUnreadMessages(unread || 0);
+      setPendingCollabs(pending || 0);
     }
+    refreshRef.current = refresh;
 
-    loadBadges();
+    refresh();
+
+    // Le temps réel n'est qu'un bonus : quand il passe, la pastille arrive tout
+    // de suite au lieu d'attendre le prochain recomptage.
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!alive || !user) return;
+      msgChannel = supabase.channel('navbar-messages')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, refresh)
+        .subscribe();
+      collabChannel = supabase.channel('navbar-collabs')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'collabs', filter: `receiver_id=eq.${user.id}` }, refresh)
+        .subscribe();
+    });
+
+    const onWake = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onWake);
+    const timer = setInterval(refresh, 60000);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refresh());
 
     return () => {
+      alive = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onWake);
+      subscription?.unsubscribe();
       if (msgChannel) supabase.removeChannel(msgChannel);
       if (collabChannel) supabase.removeChannel(collabChannel);
     };
   }, []);
 
+  // On recompte en changeant d'écran : une proposition à laquelle on vient de
+  // répondre, un message qu'on vient de lire, et la pastille tombe d'elle-même.
   useEffect(() => {
-    const previous = screenRef.current;
-    screenRef.current = screen;
-    if (screen === 'messages') setUnreadMessages(0);
-    if (screen === 'match') setPendingCollabs(0);
-    // En quittant Match, la pastille revient s'il reste des propositions sans réponse
-    if (previous === 'match' && screen !== 'match') {
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) return;
-        const { count } = await supabase.from('collabs').select('id', { count: 'exact', head: true })
-          .eq('receiver_id', user.id).eq('status', 'pending');
-        setPendingCollabs(count || 0);
-      });
-    }
-    // En quittant Messages, on recompte les vrais non-lus (les conversations ouvertes sont marquées lues)
-    if (previous === 'messages' && screen !== 'messages') {
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) return;
-        const { count } = await supabase.from('messages').select('id', { count: 'exact', head: true })
-          .eq('receiver_id', user.id).eq('read', false);
-        setUnreadMessages(count || 0);
-      });
-    }
+    const id = setTimeout(() => refreshRef.current?.(), 400);
+    return () => clearTimeout(id);
   }, [screen]);
 
   const tabs = [

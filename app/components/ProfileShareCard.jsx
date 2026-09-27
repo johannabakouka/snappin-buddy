@@ -22,9 +22,13 @@ export default function ProfileShareCard({ profile, onClose }) {
   const univers = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
   // Le pseudo est unique : il fait un lien propre et lisible.
+  //
+  // Ce lien pointe vers la page publique du profil, pas vers l'app : quelqu'un
+  // qui n'a pas de compte tombait sur l'écran de connexion sans même savoir
+  // quel profil on lui partageait.
   const handleSlug = String(profile?.handle || '').replace(/^@/, '');
   const link = handleSlug
-    ? `https://snappinbuddy.com/?buddy=${encodeURIComponent(handleSlug)}`
+    ? `https://snappinbuddy.com/u/${encodeURIComponent(handleSlug)}`
     : 'https://snappinbuddy.com';
 
   function universLabel(u) {

@@ -39,13 +39,19 @@ async function getProfile(handle: string): Promise<PublicProfile | null> {
   if (!clean) return null;
   // Les pseudos créés avant le nettoyage automatique sont enregistrés sans le @.
   // On cherche donc les deux formes, sinon ces profils sont introuvables.
+  // Le tiret bas est un joker dans une recherche ilike : @jo_stuff pourrait
+  // renvoyer @joXstuff. On ramène donc quelques candidats et on garde celui
+  // dont le pseudo correspond vraiment.
   const { data } = await supabaseAdmin()
     .from('profiles')
     .select('username, handle, bio, role, styles, zone, avatar_url, portfolio_urls, validated_projects')
     .or(`handle.ilike.@${clean},handle.ilike.${clean}`)
-    .limit(1)
-    .maybeSingle();
-  return (data as PublicProfile) || null;
+    .limit(5);
+
+  const exact = (data as PublicProfile[] | null)?.find(
+    p => String(p.handle || '').replace(/^@+/, '').toLowerCase() === clean.toLowerCase(),
+  );
+  return exact || null;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
