@@ -11,6 +11,7 @@ import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
+import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
 import { hasRole, roleLabels, splitRoles } from '../constants';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
@@ -62,6 +63,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   // Projet ouvert depuis un lien partagé (snappinbuddy.com/?offer=123)
   const [sharedOffer, setSharedOffer] = useState(null);
 
+  // Projets passés que l'auteur a repoussés à « plus tard ». Gardé sur
+  // l'appareil : au premier rendu côté serveur il n'y a rien à lire.
+  const [skippedPast, setSkippedPast] = useState(() => (typeof window === 'undefined' ? new Set() : loadSkipped()));
+  const [followUpNote, setFollowUpNote] = useState('');
+
   const [filterRole, setFilterRole] = useState(null);
   const [filterUnivers, setFilterUnivers] = useState(null);
   const [filterZone, setFilterZone] = useState('');
@@ -87,7 +93,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       const { data } = await supabase.from('offers').select('*').eq('id', sharedOfferId).maybeSingle();
       if (!alive || !data) return;
       const { data: author } = await supabase.from('profiles')
-        .select('user_id, username, avatar_url, role').eq('user_id', data.user_id).maybeSingle();
+        .select('user_id, username, handle, avatar_url, role').eq('user_id', data.user_id).maybeSingle();
       setSharedOffer({ ...data, authorProfile: author || null });
       setTab('offres');
       scrollBoxRef.current?.scrollTo({ top: 0 });
@@ -364,6 +370,13 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   if (sharedOffer && !displayedOffers.some(o => o.id === sharedOffer.id)) {
     displayedOffers = [sharedOffer, ...displayedOffers];
   }
+  // Le feed ne montre que ce à quoi on peut encore se proposer : ni les projets
+  // dont la date est passée, ni ceux que leur auteur a fermés. Celui qu'on vient
+  // d'ouvrir par un lien reste affiché : la personne a cliqué exprès, mieux vaut
+  // lui montrer le projet marqué « passé » qu'une page vide.
+  displayedOffers = displayedOffers.filter(o =>
+    (o.status !== 'closed' && !isPast(o)) || (sharedOffer && o.id === sharedOffer.id),
+  );
   if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
   if (filterUnivers) {
     const filterFR = isEn ? (() => { try { const { UNIVERS_FR: fr, UNIVERS_EN: en } = require('../constants'); const i = en.indexOf(filterUnivers); return i >= 0 ? fr[i] : filterUnivers; } catch { return filterUnivers; } })() : filterUnivers;
@@ -393,6 +406,23 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     if (boostedB !== boostedA) return boostedB - boostedA;
     return getMatchScore(b) - getMatchScore(a);
   });
+
+  // Un projet passé, toujours ouvert : on demande à son auteur ce qu'il devient.
+  // Une seule question à la fois, sinon on transforme l'ouverture de l'app en corvée.
+  const followUpOffer = needsFollowUp(myOffers).filter(o => !skippedPast.has(o.id))[0] || null;
+
+  // « Oui, c'est fait » ferme le projet et renvoie vers l'onglet 🤝, où la
+  // validation se fait à deux. On ne touche pas au compteur ici : un projet ne
+  // compte que quand les deux buddies ont confirmé.
+  async function followUpDone(offer) {
+    await closeOffer(offer.id);
+    setSkippedPast(skipFollowUp(offer.id));   // la question est réglée, on ne la repose pas
+    setFollowUpNote(tx(
+      'Now confirm with your buddy in the 🤝 tab so it counts for both of you.',
+      'Confirme maintenant avec ton buddy dans l’onglet 🤝 pour qu’il compte pour vous deux.',
+    ));
+    setTab('match');
+  }
 
   const statusBadge = (status) => {
     if (status === 'accepted') return { label: tx('Accepted ✓', 'Accepté ✓'), color: '#2ECC71' };
@@ -547,17 +577,47 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
       <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px calc(110px + env(safe-area-inset-bottom))' }}>
 
+        {followUpNote && (
+          <div onClick={() => setFollowUpNote('')} style={{ background: 'rgba(46,204,113,0.12)', border: '1px solid rgba(46,204,113,0.35)', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', color: theme?.color, fontSize: '12px', fontWeight: '600', lineHeight: 1.5, cursor: 'pointer' }}>
+            {followUpNote}
+          </div>
+        )}
+
         {tab === 'offres' && (
           <>
             <button onClick={() => setShowNewOffer(true)} style={{ width: '100%', padding: '14px', borderRadius: '14px', marginBottom: '16px', border: `1.5px dashed ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`, background: 'transparent', color: theme?.color, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
               {t.postOffer}
             </button>
 
+            {/* La date est passée : qu'est-ce que ce projet devient ? */}
+            {followUpOffer && (
+              <div style={{ background: card, border: '1px solid rgba(240,180,41,0.5)', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: theme?.color, marginBottom: '4px' }}>
+                  ⏳ « {followUpOffer.title} » {tx('is past', 'est passé')}
+                </p>
+                <p style={{ fontSize: '12px', color: subText, marginBottom: '12px', lineHeight: 1.5 }}>
+                  {tx('It is no longer in the feed. Did it happen?', 'Il n’est plus dans le feed. Il a été réalisé ?')}
+                </p>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button onClick={() => followUpDone(followUpOffer)} style={{ flex: '1 1 40%', padding: '9px', borderRadius: '20px', border: 'none', background: '#2ECC71', color: '#000', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                    {tx('✅ Yes, it happened', '✅ Oui, réalisé')}
+                  </button>
+                  <button onClick={() => setEditingOffer(followUpOffer)} style={{ flex: '1 1 40%', padding: '9px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: 'transparent', color: theme?.color, fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                    {tx('🔁 New date', '🔁 Nouvelle date')}
+                  </button>
+                  <button onClick={() => setSkippedPast(skipFollowUp(followUpOffer.id))} style={{ flex: '1 1 100%', padding: '7px', borderRadius: '20px', border: 'none', background: 'transparent', color: subText, fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                    {tx('Later', 'Plus tard')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {myOffers.length > 0 && (
               <>
                 <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>{t.myOffers}</p>
                 {myOffers.map(o => {
                   const isBoosted = o.boosted_until && new Date(o.boosted_until) > new Date();
+                  const past = isPast(o);
                   return (
                     <div key={o.id} onClick={() => openOfferCandidates(o)} style={{ background: card, border: `1px solid ${isBoosted ? '#F0B429' : cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -578,8 +638,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', color: o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
-                            {o.status === 'open' ? (tx('Open', 'Ouvert')) : (tx('Closed', 'Fermé'))}
+                          <span style={{ fontSize: '11px', color: past ? '#F0B429' : o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
+                            {past ? (tx('⏳ Past', '⏳ Passé')) : o.status === 'open' ? (tx('Open', 'Ouvert')) : (tx('Closed', 'Fermé'))}
                           </span>
                           <span style={{ fontSize: '10px', color: subText }}>
                             {tx('See proposals →', 'Voir propositions →')}
@@ -590,7 +650,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           <button onClick={e => { e.stopPropagation(); setSharingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}>
                             📸 {tx('Share', 'Partager')}
                           </button>
-                          {o.status === 'open' && !isBoosted && (
+                          {/* Pas de boost sur un projet passé : on ne fait pas payer une mise en avant qui ne servira à personne. */}
+                          {o.status === 'open' && !isBoosted && !past && (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button onClick={e => { e.stopPropagation(); boostOffer(o, 1, 199); }} style={{ background: 'linear-gradient(135deg, #F0B429, #FF6B35)', border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                                 🚀 1j 1,99€
@@ -684,7 +745,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
                         {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
                       </div>
-                      {o.status === 'open' ? (
+                      {isPast(o) ? (
+                        <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>
+                          ⏳ {tx('This project is past', 'Ce projet est passé')}
+                        </div>
+                      ) : o.status === 'open' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           {hasApplied ? (
                             <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(46,204,113,0.1)' : 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>

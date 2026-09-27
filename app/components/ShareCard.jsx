@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { useRoles, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { withAt } from '../handles';
+import { isPast } from '../offers-life';
 
 export default function ShareCard({ offer, profile, onClose }) {
   const t = useT();
@@ -314,6 +315,18 @@ export default function ShareCard({ offer, profile, onClose }) {
       padding: 'calc(env(safe-area-inset-top) + 24px) 24px calc(40px + env(safe-area-inset-bottom))',
     }}>
       <div style={{ width: '100%', maxWidth: '340px', marginBottom: '20px' }}>
+        {/* Partager un projet dont la date est passée envoie les gens dans le vide. */}
+        {isPast(offer) && (
+          <div style={{ background: 'rgba(240,180,41,0.12)', border: '1px solid rgba(240,180,41,0.45)', borderRadius: '14px', padding: '12px 14px', marginBottom: '14px' }}>
+            <p style={{ color: '#F0B429', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+              ⏳ {tx('This project is past', 'Ce projet est passé')}
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', lineHeight: 1.5 }}>
+              {tx('Give it a new date before sharing, otherwise the link leads nowhere.', 'Donne-lui une nouvelle date avant de le partager, sinon le lien ne mène nulle part.')}
+            </p>
+          </div>
+        )}
+
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>
           {tx('📸 Screenshot this card and share it on your story!', '📸 Screenshot cette carte et partage-la en story !')}
         </p>

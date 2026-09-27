@@ -170,16 +170,25 @@ export function applicationAcceptedMail(to: string, poster: string, offerTitle: 
   };
 }
 
-export function offerExpiringMail(to: string, offerTitle: string, expiryDate: string, expired: boolean, forUser?: string): Mail {
+// reason : 'date' quand la date du projet est passée, 'age' quand un projet
+// sans date a vécu ses 30 jours. Le message n'est pas le même : dans le premier
+// cas, le projet a peut-être été réalisé, et c'est le moment de le valider.
+export function offerExpiringMail(to: string, offerTitle: string, expiryDate: string, expired: boolean, forUser?: string, reason: 'date' | 'age' = 'age'): Mail {
   const o = escapeHtml(offerTitle), d = escapeHtml(expiryDate);
   return expired
     ? {
         to,
-        subject: `Ton projet est clôturé · ${offerTitle}`.slice(0, 120),
-        titleFr: 'Ton projet est arrivé à échéance',
-        bodyFr: `Ton projet <b>« ${o} »</b> a été clôturé après 30 jours. Tu peux en lancer un nouveau à tout moment.`,
-        titleEn: 'Your project has ended',
-        bodyEn: `Your project <b>“${o}”</b> was closed after 30 days. You can launch a new one anytime.`,
+        subject: reason === 'date'
+          ? `Ton projet est passé · ${offerTitle}`.slice(0, 120)
+          : `Ton projet est clôturé · ${offerTitle}`.slice(0, 120),
+        titleFr: reason === 'date' ? 'Ton projet est passé' : 'Ton projet est arrivé à échéance',
+        bodyFr: reason === 'date'
+          ? `La date de ton projet <b>« ${o} »</b> est passée, il n’est donc plus dans le feed.<br><br>S’il a été réalisé, ouvre l’app et confirme-le avec ton buddy : le projet comptera dans vos deux profils. Sinon, donne-lui une nouvelle date et il repart.`
+          : `Ton projet <b>« ${o} »</b> a été clôturé après 30 jours. Tu peux en lancer un nouveau à tout moment.`,
+        titleEn: reason === 'date' ? 'Your project is past' : 'Your project has ended',
+        bodyEn: reason === 'date'
+          ? `Your project <b>“${o}”</b> is past its date, so it left the feed.<br><br>If it happened, open the app and confirm it with your buddy: it will count on both your profiles. Otherwise, give it a new date and it is back.`
+          : `Your project <b>“${o}”</b> was closed after 30 days. You can launch a new one anytime.`,
         cta: '',
         forUser,
       }

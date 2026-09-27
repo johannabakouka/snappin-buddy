@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '../../lib/server';
 import { ROLES_FR } from '../../constants';
+import { isPast } from '../../offers-life';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ type Row = {
   zone: string | null;
   date: string | null;
   status: string | null;
+  created_at: string | null;
   user_id: string;
 };
 
@@ -39,7 +41,7 @@ async function getOffer(id: string): Promise<{ offer: Row; author: Author | null
   const db = supabaseAdmin();
   const { data: offer } = await db
     .from('offers')
-    .select('id, title, description, role_needed, styles_needed, zone, date, status, user_id')
+    .select('id, title, description, role_needed, styles_needed, zone, date, status, created_at, user_id')
     .eq('id', Number(id))
     .maybeSingle();
   if (!offer) return null;
@@ -76,6 +78,8 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
     .map(r => (ROLES_FR.find((x: Role) => x.id === r) as Role) || { id: r, label: r, icon: '' });
   const univers = (offer.styles_needed || '').split(',').map(s => s.trim()).filter(Boolean);
   const closed = offer.status === 'closed';
+  // Une story peut être postée après la date : la personne doit le voir tout de suite.
+  const past = isPast(offer);
   const authorSlug = withAt(author?.handle).replace(/^@/, '');
 
   return (
@@ -88,11 +92,12 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
 
         <p style={{
           display: 'inline-block', marginTop: '24px', marginBottom: '14px',
-          background: 'rgba(242,224,80,0.12)', border: '1px solid rgba(242,224,80,0.45)',
-          color: '#F2E050', borderRadius: '20px', padding: '5px 14px',
+          background: past ? 'rgba(240,180,41,0.12)' : 'rgba(242,224,80,0.12)',
+          border: `1px solid ${past ? 'rgba(240,180,41,0.45)' : 'rgba(242,224,80,0.45)'}`,
+          color: past ? '#F0B429' : '#F2E050', borderRadius: '20px', padding: '5px 14px',
           fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
         }}>
-          {closed ? 'PROJET COMPLET' : '⚡ PROJET'}
+          {past ? '⏳ PROJET PASSÉ' : closed ? 'PROJET COMPLET' : '⚡ PROJET'}
         </p>
 
         {author && (
@@ -162,11 +167,18 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
           {offer.zone ? `📍 ${offer.zone}` : ''}{offer.zone && offer.date ? '    ' : ''}{offer.date ? `📅 ${offer.date}` : ''}
         </p>
 
-        <Link href={`/?offer=${offer.id}`} style={{
+        {past && (
+          <p style={{ color: '#F0B429', fontSize: '13px', marginBottom: '20px', lineHeight: 1.6 }}>
+            Ce projet a déjà eu lieu. Il reste visible parce que quelqu’un a partagé le lien,
+            mais il n’est plus dans le feed.
+          </p>
+        )}
+
+        <Link href={past ? '/' : `/?offer=${offer.id}`} style={{
           display: 'block', textAlign: 'center', background: '#F2E050', color: '#0A0A0D',
           borderRadius: '26px', padding: '15px', fontSize: '15px', fontWeight: 900, textDecoration: 'none',
         }}>
-          {closed ? 'Voir sur Snappin’Buddy' : 'Je me propose ⚡'}
+          {past ? 'Voir les projets en cours ⚡' : closed ? 'Voir sur Snappin’Buddy' : 'Je me propose ⚡'}
         </Link>
 
         <p style={{ color: '#8C8B83', fontSize: '12px', textAlign: 'center', marginTop: '14px', lineHeight: 1.6 }}>

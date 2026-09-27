@@ -3,6 +3,15 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Now confirm with your buddy in the 🤝 tab so it counts for both of you.': 'Ahora confírmalo con tu buddy en la pestaña 🤝 para que cuente para los dos.',
+    'is past': 'ha pasado',
+    'It is no longer in the feed. Did it happen?': 'Ya no está en el feed. ¿Se realizó?',
+    '✅ Yes, it happened': '✅ Sí, realizado',
+    '🔁 New date': '🔁 Nueva fecha',
+    'Later': 'Más tarde',
+    '⏳ Past': '⏳ Pasado',
+    'This project is past': 'Este proyecto ya pasó',
+    'Give it a new date before sharing, otherwise the link leads nowhere.': 'Dale una nueva fecha antes de compartirlo, si no el enlace no lleva a ninguna parte.',
     'My applications': 'Mis candidaturas',
     'sent': 'enviadas',
     'Project validated! It now counts for both of you.': '¡Proyecto validado! Ahora cuenta para los dos.',
@@ -257,6 +266,15 @@ const TX = {
   },
 
   pt: {
+    'Now confirm with your buddy in the 🤝 tab so it counts for both of you.': 'Agora confirme com seu buddy na aba 🤝 para contar para vocês dois.',
+    'is past': 'já passou',
+    'It is no longer in the feed. Did it happen?': 'Não está mais no feed. Aconteceu?',
+    '✅ Yes, it happened': '✅ Sim, aconteceu',
+    '🔁 New date': '🔁 Nova data',
+    'Later': 'Mais tarde',
+    '⏳ Past': '⏳ Passado',
+    'This project is past': 'Este projeto já passou',
+    'Give it a new date before sharing, otherwise the link leads nowhere.': 'Coloque uma nova data antes de compartilhar, senão o link não leva a nada.',
     'My applications': 'Minhas candidaturas',
     'sent': 'enviadas',
     'Project validated! It now counts for both of you.': 'Projeto validado! Agora conta para vocês dois.',
@@ -511,6 +529,15 @@ const TX = {
   },
 
   de: {
+    'Now confirm with your buddy in the 🤝 tab so it counts for both of you.': 'Bestätige es jetzt mit deinem Buddy im Tab 🤝, damit es für euch beide zählt.',
+    'is past': 'ist vorbei',
+    'It is no longer in the feed. Did it happen?': 'Es ist nicht mehr im Feed. Hat es stattgefunden?',
+    '✅ Yes, it happened': '✅ Ja, hat stattgefunden',
+    '🔁 New date': '🔁 Neues Datum',
+    'Later': 'Später',
+    '⏳ Past': '⏳ Vorbei',
+    'This project is past': 'Dieses Projekt ist vorbei',
+    'Give it a new date before sharing, otherwise the link leads nowhere.': 'Gib ihm ein neues Datum, bevor du ihn teilst, sonst führt der Link ins Leere.',
     'My applications': 'Meine Bewerbungen',
     'sent': 'gesendet',
     'Project validated! It now counts for both of you.': 'Projekt bestätigt! Es zählt jetzt für euch beide.',
@@ -765,6 +792,15 @@ const TX = {
   },
 
   it: {
+    'Now confirm with your buddy in the 🤝 tab so it counts for both of you.': 'Ora conferma con il tuo buddy nella scheda 🤝 così conta per entrambi.',
+    'is past': 'è passato',
+    'It is no longer in the feed. Did it happen?': 'Non è più nel feed. È stato realizzato?',
+    '✅ Yes, it happened': '✅ Sì, realizzato',
+    '🔁 New date': '🔁 Nuova data',
+    'Later': 'Più tardi',
+    '⏳ Past': '⏳ Passato',
+    'This project is past': 'Questo progetto è passato',
+    'Give it a new date before sharing, otherwise the link leads nowhere.': 'Dagli una nuova data prima di condividerlo, altrimenti il link non porta a nulla.',
     'My applications': 'Le mie candidature',
     'sent': 'inviate',
     'Project validated! It now counts for both of you.': 'Progetto validato! Ora conta per entrambi.',
