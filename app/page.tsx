@@ -168,8 +168,15 @@ export default function Home() {
 
     supabase.auth.getSession().then(({ data }) => handleUser(data.session?.user ?? null));
 
+    // On ne déconnecte QUE sur une vraie déconnexion.
+    //
+    // Avant, n'importe quelle notification sans session sortait la personne de
+    // l'app — y compris un renouvellement de jeton qui rate une fois, ce qui
+    // arrive quand deux onglets se réveillent en même temps. Résultat :
+    // déconnexions spontanées au bout de quelques minutes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+      if (!session && event !== 'SIGNED_OUT') return;
       handleUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();

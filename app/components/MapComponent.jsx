@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
-import { loadBlockedIds } from '../blocks';
+import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
 import { ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels } from '../constants';
@@ -211,6 +211,18 @@ export default function MapComponent({ theme, active = true }) {
     }
     wasActive.current = active;
   }, [active]);
+
+  // Blocage : la personne doit disparaître de la carte tout de suite.
+  useEffect(() => onBlocksChanged(async () => {
+    const [{ data: profileData }, { data: { user } }] = await Promise.all([
+      supabase.from('profiles').select('*'),
+      supabase.auth.getUser(),
+    ]);
+    const blocked = await loadBlockedIds(user?.id);
+    if (profileData) setProfiles(profileData
+      .filter(p => !blocked.has(p.user_id))
+      .map(p => ({ ...p, _isMe: user && p.user_id === user.id })));
+  }), []);
 
   function handleAllow() {
     localStorage.setItem('geoAsked', 'true');

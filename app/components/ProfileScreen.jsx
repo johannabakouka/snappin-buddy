@@ -5,6 +5,7 @@ import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import ProfileShareCard from './ProfileShareCard';
 import { loadMyBlocks, unblockUser } from '../blocks';
+import { withAt } from '../handles';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
@@ -288,7 +289,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
               ✨ Early Adopter
             </span>
           )}
-          <p style={{ color: subText, fontSize: '13px' }}>{profile?.handle}</p>
+          <p style={{ color: subText, fontSize: '13px' }}>{withAt(profile?.handle)}</p>
           {roleLabel && <p style={{ color: subText, fontSize: '12px', marginTop: '4px' }}>{roleLabel}</p>}
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
@@ -451,7 +452,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '13px', fontWeight: '700', color: theme.color }}>{p.username || tx('Creative', 'Créatif')}</p>
-                    <p style={{ fontSize: '11px', color: subText }}>{p.handle || ''}</p>
+                    <p style={{ fontSize: '11px', color: subText }}>{withAt(p.handle)}</p>
                   </div>
                   <button onClick={() => removeBlock(p.user_id)} style={{
                     background: 'none', border: `1px solid ${tagBorder}`, borderRadius: '16px',

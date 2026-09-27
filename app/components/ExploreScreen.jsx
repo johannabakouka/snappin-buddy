@@ -6,7 +6,7 @@ import Header from './Header';
 import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
-import { loadBlockedIds } from '../blocks';
+import { loadBlockedIds, onBlocksChanged } from '../blocks';
 
 // Recherche : on ignore les accents, les majuscules et le @ du handle,
 // pour que « sofia », « Sofía » et « @sofia » trouvent la même personne.
@@ -73,6 +73,8 @@ export default function ExploreScreen({ theme, active = true }) {
   useEffect(() => {
     Promise.resolve().then(loadData);
   }, []);
+
+  useEffect(() => onBlocksChanged(() => { Promise.resolve().then(loadData); }), []);
 
   // Retour sur l'onglet : mise à jour silencieuse des profils
   const wasActive = useRef(active);

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRoles } from '../i18n';
 import { tx } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, splitRoles } from '../constants';
+import { withAt } from '../handles';
 import { isNotFrench } from '../tx';
 
 // Carte de partage d'un profil, au format story 1080x1920.
@@ -155,7 +156,7 @@ export default function ProfileShareCard({ profile, onClose }) {
       // Pseudo
       ctx.fillStyle = '#F2E050';
       ctx.font = font(700, 30);
-      ft(profile?.handle || '', textX, y + 56);
+      ft(withAt(profile?.handle), textX, y + 56);
 
       y += hasAvatar ? 150 : 110;
 
@@ -365,7 +366,7 @@ export default function ProfileShareCard({ profile, onClose }) {
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ color: 'white', fontSize: '19px', fontWeight: '900' }}>{profile?.username}</p>
-              <p style={{ color: '#F2E050', fontSize: '13px', fontWeight: '700' }}>{profile?.handle}</p>
+              <p style={{ color: '#F2E050', fontSize: '13px', fontWeight: '700' }}>{withAt(profile?.handle)}</p>
             </div>
           </div>
 

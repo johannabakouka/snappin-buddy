@@ -20,6 +20,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const subText = darkMode ? '#666' : '#888';
 
   const [sessionId, setSessionId] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     createSession();
@@ -208,6 +209,27 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             Il le scanne avec l&apos;appareil photo de son téléphone, et votre
             rencontre est validée tous les deux.
           </p>
+
+          {/* Le même lien, copiable : pour valider quand on n'est pas au même
+              endroit, ou quand l'autre est sur un ordinateur sans caméra. */}
+          {scanLink && (
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(scanLink);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                } catch (e) { console.error('copy', e); }
+              }}
+              style={{
+                marginTop: '12px', background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                borderRadius: '20px', padding: '8px 14px', color: subText,
+                fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+              }}
+            >
+              {linkCopied ? 'Lien copié ✓' : '🔗 Copier le lien à la place'}
+            </button>
+          )}
         </div>
 
         <div style={{ background: 'rgba(255,154,61,0.08)', border: '1px solid rgba(255,154,61,0.2)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>

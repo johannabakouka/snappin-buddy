@@ -45,9 +45,14 @@ export default function LegalScreen({ theme, onBack }) {
         throw new Error((body.error || `erreur ${res.status}`) + where);
       }
 
-      await supabase.auth.signOut();
+      // On affiche la confirmation AVANT de déconnecter : la déconnexion fait
+      // basculer l'app sur l'écran de connexion, et le message n'avait jamais
+      // le temps d'apparaître.
       setDeleted(true);
-      setTimeout(() => window.location.reload(), 2500);
+      setTimeout(async () => {
+        try { await supabase.auth.signOut(); } catch (e) { console.error(e); }
+        window.location.href = '/';
+      }, 2600);
     } catch (e) {
       console.error('delete-account', e);
       setDeleteError(

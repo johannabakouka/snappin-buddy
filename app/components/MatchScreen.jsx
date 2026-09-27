@@ -9,7 +9,8 @@ import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
-import { loadBlockedIds } from '../blocks';
+import { loadBlockedIds, onBlocksChanged } from '../blocks';
+import { withAt } from '../handles';
 import { hasRole, roleLabels, splitRoles } from '../constants';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
@@ -144,6 +145,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     } else setSent([]);
   }
 
+  useEffect(() => onBlocksChanged(() => { if (user?.id) loadOffers(user.id); }), [user]);
+
   async function loadOffers(userId) {
     const { data: allRaw } = await supabase.from('offers').select('*').neq('user_id', userId).order('created_at', { ascending: false });
     // Les projets des personnes bloquées ne remontent pas dans le feed.
@@ -152,7 +155,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (all) {
       const userIds = all.map(o => o.user_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, avatar_url, role').in('user_id', userIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role').in('user_id', userIds);
       setOffers(all.map(o => ({ ...o, authorProfile: profiles?.find(p => p.user_id === o.user_id) })));
     }
     if (mine) setMyOffers(mine);
@@ -399,7 +402,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
   if (selectedOffer) return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
-      <div style={{ padding: '16px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+      <div style={{ padding: 'calc(env(safe-area-inset-top) + 16px) 16px 16px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
         <button onClick={() => setSelectedOffer(null)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color }}>{selectedOffer.title}</p>
@@ -555,12 +558,21 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           🔗 {tx('Shared project', 'Projet partagé')}
                         </p>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      {/* L'auteur est cliquable : on veut savoir qui propose avant de se proposer. */}
+                      <div
+                        onClick={() => o.authorProfile && setViewingBuddy(o.authorProfile)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: o.authorProfile ? 'pointer' : 'default' }}
+                      >
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                           {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{o.authorProfile?.username || (tx('Creative', 'Créatif'))}</p>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>
+                            {o.authorProfile?.username || (tx('Creative', 'Créatif'))}
+                            {o.authorProfile?.handle && (
+                              <span style={{ color: subText, fontWeight: '600' }}>  {withAt(o.authorProfile.handle)}</span>
+                            )}
+                          </p>
                           <p style={{ fontSize: '11px', color: subText }}>{roleLabels(o.authorProfile?.role, ROLES)}</p>
                         </div>
                         {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '2px 8px', fontWeight: '700' }}>🚀 Boost</span>}

@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import { useRoles, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { withAt } from '../handles';
 
 export default function ShareCard({ offer, profile, onClose }) {
   const t = useT();
@@ -118,7 +119,7 @@ export default function ShareCard({ offer, profile, onClose }) {
     y += 88;
 
     // Auteur du projet : on voyait le projet sans savoir qui le proposait.
-    const authorLine = profile?.handle || profile?.username || '';
+    const authorLine = withAt(profile?.handle) || profile?.username || '';
     if (authorLine) {
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.font = font(600, 27);
@@ -362,7 +363,7 @@ export default function ShareCard({ offer, profile, onClose }) {
           {/* Auteur, pour que l'aperçu corresponde à l'image partagée */}
           {(profile?.handle || profile?.username) && (
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '10px' }}>
-              Buddy&nbsp;&nbsp; {profile?.handle || profile?.username}
+              Buddy&nbsp;&nbsp; {withAt(profile?.handle) || profile?.username}
             </p>
           )}
 

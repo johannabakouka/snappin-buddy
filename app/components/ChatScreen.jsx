@@ -4,8 +4,9 @@ import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx } from '../tx';
 import { uploadChatImage } from '../image-upload';
+import { hasBlockedMe } from '../blocks';
 
-export default function ChatScreen({ buddy, onBack, theme }) {
+export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   const t = useT();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
@@ -24,6 +25,8 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   const [sendingImage, setSendingImage] = useState(false);
   const [fullImage, setFullImage] = useState(null);
   const [imageError, setImageError] = useState('');
+  // Cette personne m'a bloqué : la conversation reste lisible, l'envoi est coupé.
+  const [blockedByBuddy, setBlockedByBuddy] = useState(false);
   const pressTimer = useRef(null);
   const photoInputRef = useRef(null);
   const emojiInputRef = useRef(null);
@@ -36,6 +39,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
   // La personne a supprimé son compte : plus de profil, donc plus de statut,
   // plus de photo, et on ne peut plus lui écrire.
   const buddyGone = buddy?.deletedAccount === true;
+  const cannotWrite = buddyGone || blockedByBuddy;
   const statusColor = buddyGone ? '#666' : buddyStatus === 'shoot' ? '#FFD700' : buddyStatus === 'indispo' ? '#FF4D4D' : '#2ECC71';
   const statusLabel = buddyGone
     ? tx('Account deleted', 'Compte supprimé')
@@ -79,6 +83,7 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
   async function loadBuddyStatus() {
     if (!buddyUserId) return;
+    hasBlockedMe(user?.id, buddyUserId).then(setBlockedByBuddy);
     const { data } = await supabase.from('profiles').select('status, read_receipts').eq('user_id', buddyUserId).single();
     if (data?.status) setBuddyStatus(data.status);
     setBuddyReceipts(data?.read_receipts !== false);
@@ -322,12 +327,18 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
       <div style={{ padding: `calc(env(safe-area-inset-top) + 16px) 16px 16px`, borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}` }}>
+        <div
+          onClick={() => { if (!buddyGone) onOpenProfile?.(); }}
+          style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}`, cursor: onOpenProfile && !buddyGone ? 'pointer' : 'default', flexShrink: 0 }}
+        >
           {!buddyGone && buddy?.avatar_url
             ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : '◉'}
         </div>
-        <div style={{ flex: 1 }}>
+        <div
+          onClick={() => { if (!buddyGone) onOpenProfile?.(); }}
+          style={{ flex: 1, cursor: onOpenProfile && !buddyGone ? 'pointer' : 'default' }}
+        >
           <div style={{ fontWeight: '700', fontSize: '15px', color }}>{buddy?.username}</div>
           <div style={{ color: statusColor, fontSize: '11px', fontWeight: '600' }}>
             ● {statusLabel}
@@ -487,13 +498,18 @@ export default function ChatScreen({ buddy, onBack, theme }) {
 
       {/* On ne peut plus écrire à un compte supprimé : la conversation reste lisible,
           mais l'envoi n'a plus de destinataire. */}
-      {buddyGone ? (
+      {cannotWrite ? (
         <div style={{ padding: '18px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, textAlign: 'center' }}>
           <p style={{ color: subText, fontSize: '13px', lineHeight: 1.5 }}>
-            {tx(
-              'This person deleted their account. The conversation stays here, but you can no longer reply.',
-              'Cette personne a supprimé son compte. La conversation reste visible, mais tu ne peux plus répondre.'
-            )}
+            {buddyGone
+              ? tx(
+                  'This person deleted their account. The conversation stays here, but you can no longer reply.',
+                  'Cette personne a supprimé son compte. La conversation reste visible, mais tu ne peux plus répondre.'
+                )
+              : tx(
+                  'You can no longer write to this person. The conversation stays here.',
+                  'Tu ne peux plus écrire à cette personne. La conversation reste visible.'
+                )}
           </p>
         </div>
       ) : (

@@ -20,6 +20,12 @@ export function cleanHandle(value) {
   return body ? `@${body}` : '';
 }
 
+/** Affiche toujours le pseudo avec son @, même si l'ancien est enregistré sans. */
+export function withAt(handle) {
+  const clean = String(handle || '').replace(/^@+/, '');
+  return clean ? `@${clean}` : '';
+}
+
 /** Un pseudo valide fait au moins 3 caractères après le @. */
 export function isHandleValid(handle) {
   return /^@[a-z0-9][a-z0-9._]{2,}$/.test(handle || '');

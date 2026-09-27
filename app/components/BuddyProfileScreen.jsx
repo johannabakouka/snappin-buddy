@@ -6,6 +6,7 @@ import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
 import { blockUser, unblockUser } from '../blocks';
+import { withAt } from '../handles';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -187,7 +188,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
               ✨ Early Adopter
             </span>
           )}
-          <p style={{ color: subText, fontSize: '13px' }}>{buddy?.handle}</p>
+          <p style={{ color: subText, fontSize: '13px' }}>{withAt(buddy?.handle)}</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor }}/>
             <span style={{ color: statusColor, fontSize: '12px' }}>{statusLabel}</span>

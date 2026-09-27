@@ -2,16 +2,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import ChatScreen from './ChatScreen';
+import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { roleLabels } from '../constants';
-import { loadBlockedIds } from '../blocks';
+import { loadIBlockedIds, onBlocksChanged } from '../blocks';
+import { withAt } from '../handles';
 
 export default function MessagesScreen({ theme, active = true }) {
   const t = useT();
   const isEn = isNotFrench();
   const [activeBuddy, setActiveBuddy] = useState(null);
+  // Profil ouvert depuis une conversation ou depuis la liste des buddies
+  const [viewingBuddy, setViewingBuddy] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [buddies, setBuddies] = useState([]);
   const [following, setFollowing] = useState([]);
@@ -34,6 +38,11 @@ export default function MessagesScreen({ theme, active = true }) {
     });
   }, []);
 
+  // Un blocage vient d'avoir lieu : on recharge sans attendre le changement d'onglet.
+  useEffect(() => onBlocksChanged(() => {
+    if (user) { loadConversations(user.id); loadBuddies(user.id); }
+  }), [user]);
+
   // Retour sur l'onglet : mise à jour silencieuse
   const wasActive = useRef(active);
   useEffect(() => {
@@ -48,8 +57,9 @@ export default function MessagesScreen({ theme, active = true }) {
   async function loadConversations(userId) {
     const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
     if (!msgs || msgs.length === 0) return;
-    // Une conversation avec une personne bloquée n'a plus à s'afficher.
-    const blocked = await loadBlockedIds(userId);
+    // Comme sur Instagram : celui qui bloque perd la conversation, la personne
+    // bloquée la garde mais ne pourra plus écrire.
+    const blocked = await loadIBlockedIds(userId);
     const buddyIds = [...new Set(msgs.map(m => m.sender_id === userId ? m.receiver_id : m.sender_id))]
       .filter(id => !blocked.has(id));
     const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url').in('user_id', buddyIds);
@@ -76,7 +86,7 @@ export default function MessagesScreen({ theme, active = true }) {
   async function loadBuddies(userId) {
     const { data: collabs } = await supabase.from('collabs').select('*').eq('status', 'accepted').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
     if (!collabs || collabs.length === 0) return;
-    const blocked = await loadBlockedIds(userId);
+    const blocked = await loadIBlockedIds(userId);
     const buddyIds = [...new Set(collabs.map(c => c.sender_id === userId ? c.receiver_id : c.sender_id))]
       .filter(id => !blocked.has(id));
     const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').in('user_id', buddyIds);
@@ -118,13 +128,16 @@ export default function MessagesScreen({ theme, active = true }) {
   const ROLES = useRoles();
     const styles = (p.styles || '').split(',').map(s => s.trim()).filter(Boolean);
     return (
-      <div style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div
+        onClick={() => setViewingBuddy(p)}
+        style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+      >
         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
           {p.avatar_url ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{p.username}</p>
-          <p style={{ color: subText, fontSize: '11px' }}>{roleLabels(p.role, ROLES)}{p.handle ? ` · ${p.handle}` : ''}</p>
+          <p style={{ color: subText, fontSize: '11px' }}>{roleLabels(p.role, ROLES)}{p.handle ? ` · ${withAt(p.handle)}` : ''}</p>
           {styles.length > 0 && (
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
               {styles.slice(0, 3).map(s => (
@@ -152,9 +165,18 @@ export default function MessagesScreen({ theme, active = true }) {
     );
   }
 
+  if (viewingBuddy) return (
+    <BuddyProfileScreen buddy={viewingBuddy} onBack={() => setViewingBuddy(null)} theme={theme} />
+  );
+
   if (activeBuddy) return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: theme?.bg }}>
-      <ChatScreen buddy={activeBuddy} onBack={() => { setActiveBuddy(null); if (user) loadConversations(user.id); }} theme={theme} />
+      <ChatScreen
+        buddy={activeBuddy}
+        onBack={() => { setActiveBuddy(null); if (user) loadConversations(user.id); }}
+        onOpenProfile={() => setViewingBuddy(activeBuddy)}
+        theme={theme}
+      />
     </div>
   );
 

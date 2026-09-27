@@ -3,6 +3,7 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'You can no longer write to this person. The conversation stays here.': 'Ya no puedes escribir a esta persona. La conversación permanece aquí.',
     'Check your emails': 'Revisa tus emails',
     'We sent a confirmation link to': 'Hemos enviado un enlace de confirmación a',
     'Click the link to activate your account, then come back here. Check your spam folder if you don’t see it.': 'Haz clic en el enlace para activar tu cuenta y vuelve aquí. Mira en spam si no lo ves.',
@@ -247,6 +248,7 @@ const TX = {
   },
 
   pt: {
+    'You can no longer write to this person. The conversation stays here.': 'Você não pode mais escrever para essa pessoa. A conversa continua aqui.',
     'Check your emails': 'Confira seus emails',
     'We sent a confirmation link to': 'Enviamos um link de confirmação para',
     'Click the link to activate your account, then come back here. Check your spam folder if you don’t see it.': 'Clique no link para ativar sua conta e volte aqui. Olhe no spam se não achar.',
@@ -491,6 +493,7 @@ const TX = {
   },
 
   de: {
+    'You can no longer write to this person. The conversation stays here.': 'Du kannst dieser Person nicht mehr schreiben. Die Unterhaltung bleibt hier.',
     'Check your emails': 'Sieh in deine E-Mails',
     'We sent a confirmation link to': 'Wir haben einen Bestätigungslink geschickt an',
     'Click the link to activate your account, then come back here. Check your spam folder if you don’t see it.': 'Klicke auf den Link, um dein Konto zu aktivieren, und komm zurück. Schau im Spam nach, falls er fehlt.',
@@ -735,6 +738,7 @@ const TX = {
   },
 
   it: {
+    'You can no longer write to this person. The conversation stays here.': 'Non puoi più scrivere a questa persona. La conversazione resta qui.',
     'Check your emails': 'Controlla le tue email',
     'We sent a confirmation link to': 'Abbiamo inviato un link di conferma a',
     'Click the link to activate your account, then come back here. Check your spam folder if you don’t see it.': 'Clicca sul link per attivare il tuo account, poi torna qui. Controlla lo spam se non lo trovi.',

@@ -16,6 +16,12 @@ export const dynamic = 'force-dynamic';
 // ne sortent pas. C'est aussi pour ça qu'on a pu resserrer l'accès aux profils
 // côté application sans perdre le partage public.
 
+/** Affiche toujours le pseudo avec son @, même s'il est enregistré sans. */
+function withAt(handle: string | null | undefined): string {
+  const clean = String(handle || '').replace(/^@+/, '');
+  return clean ? `@${clean}` : '';
+}
+
 type PublicProfile = {
   username: string | null;
   handle: string | null;
@@ -31,10 +37,13 @@ type PublicProfile = {
 async function getProfile(handle: string): Promise<PublicProfile | null> {
   const clean = decodeURIComponent(handle).replace(/^@+/, '');
   if (!clean) return null;
+  // Les pseudos créés avant le nettoyage automatique sont enregistrés sans le @.
+  // On cherche donc les deux formes, sinon ces profils sont introuvables.
   const { data } = await supabaseAdmin()
     .from('profiles')
     .select('username, handle, bio, role, styles, zone, avatar_url, portfolio_urls, validated_projects')
-    .ilike('handle', `@${clean}`)
+    .or(`handle.ilike.@${clean},handle.ilike.${clean}`)
+    .limit(1)
     .maybeSingle();
   return (data as PublicProfile) || null;
 }
@@ -95,7 +104,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             <h1 style={{ fontSize: '26px', fontWeight: 900, lineHeight: 1.1, marginBottom: '4px' }}>
               {profile.username}
             </h1>
-            <p style={{ color: '#F2E050', fontSize: '14px', fontWeight: 700 }}>{profile.handle}</p>
+            <p style={{ color: '#F2E050', fontSize: '14px', fontWeight: 700 }}>{withAt(profile.handle)}</p>
           </div>
         </div>
 
