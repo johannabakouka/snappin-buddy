@@ -21,9 +21,10 @@ export default function Navbar({ screen, setScreen, theme }) {
   useEffect(() => {
     let alive = true;
     let msgChannel, collabChannel;
+    let userId = null;
 
     async function refresh() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = userId ? { id: userId } : null;
       if (!alive || !user) return;
 
       const [{ count: unread }, { count: pending }] = await Promise.all([
@@ -40,12 +41,12 @@ export default function Navbar({ screen, setScreen, theme }) {
     }
     refreshRef.current = refresh;
 
-    refresh();
-
     // Le temps réel n'est qu'un bonus : quand il passe, la pastille arrive tout
     // de suite au lieu d'attendre le prochain recomptage.
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!alive || !user) return;
+      userId = user.id;
+      refresh();
       msgChannel = supabase.channel('navbar-messages')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, refresh)
         .subscribe();
@@ -59,7 +60,20 @@ export default function Navbar({ screen, setScreen, theme }) {
     document.addEventListener('visibilitychange', onWake);
     const timer = setInterval(refresh, 60000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refresh());
+    // RÈGLE À NE PAS OUBLIER : on n'appelle JAMAIS Supabase depuis ce rappel.
+    // Il s'exécute à l'intérieur du verrou d'authentification ; un appel fait
+    // ici attend ce verrou, qui attend la fin du rappel — et plus rien ne
+    // répond, à commencer par la déconnexion. D'où le setTimeout, qui rend la
+    // main avant de recompter.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      userId = session?.user?.id || null;
+      if (!userId) {
+        setUnreadMessages(0);
+        setPendingCollabs(0);
+        return;
+      }
+      setTimeout(() => { if (alive) refresh(); }, 0);
+    });
 
     return () => {
       alive = false;

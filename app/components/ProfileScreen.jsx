@@ -203,30 +203,33 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     }
   }
 
+  // La déconnexion ne doit JAMAIS rester bloquée. Si Supabase ne répond pas,
+  // on n'attend pas indéfiniment : on efface la session gardée sur l'appareil
+  // et on repart à l'écran de connexion. Rester coincé sur un bouton qui
+  // tourne, en croyant être encore connecté, est le pire des deux mondes.
+  async function signOutSafely(options) {
+    try {
+      await Promise.race([
+        options ? supabase.auth.signOut(options) : supabase.auth.signOut(),
+        new Promise(resolve => setTimeout(resolve, 4000)),
+      ]);
+    } catch (e) {
+      console.error('signOut', e);
+    }
+    try { localStorage.clear(); } catch { /* navigation privée */ }
+    window.location.href = '/';
+  }
+
   // Déconnecte toutes les sessions, sur tous les appareils. C'est le geste à
   // faire quand on pense que quelqu'un d'autre a eu accès à son compte.
   async function signOutEverywhere() {
     setSigningOutAll(true);
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (e) {
-      console.error('signOut global', e);
-    } finally {
-      localStorage.clear();
-      window.location.href = '/';
-    }
+    await signOutSafely({ scope: 'global' });
   }
 
   async function handleLogout() {
     setLoggingOut(true);
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      localStorage.clear();
-      window.location.href = '/';
-    }
+    await signOutSafely();
   }
 
   if (editing) return (
