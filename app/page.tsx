@@ -96,6 +96,8 @@ export default function Home() {
   const [recovery, setRecovery] = useState(false);
   // Incrémenté pour demander à l'écran Match d'afficher « Mes projets »
   const [myProjectsSignal, setMyProjectsSignal] = useState(0);
+  // Même mécanique pour « Mes candidatures », qui ouvre l'onglet Match
+  const [myApplicationsSignal, setMyApplicationsSignal] = useState(0);
   const userIdRef = useRef<string | null>(null);
 
   // Le pseudo est unique : il suffit à retrouver la personne.
@@ -247,6 +249,11 @@ export default function Home() {
     setScreen('match');
   }
 
+  function openMyApplications() {
+    setMyApplicationsSignal(n => n + 1);
+    setScreen('match');
+  }
+
   function renderScreen(name: string) {
     const active = screen === name;
     switch (name) {
@@ -258,6 +265,7 @@ export default function Home() {
           setScreen={setScreen}
           active={active}
           myProjectsSignal={myProjectsSignal}
+          myApplicationsSignal={myApplicationsSignal}
           sharedOfferId={sharedOfferId || ''}
           onSharedOfferSeen={() => {
             setSharedOfferId(null);
@@ -268,7 +276,7 @@ export default function Home() {
         />
       );
       case 'messages': return <MessagesScreen theme={theme} active={active} />;
-      case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} />;
+      case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} onOpenMyApplications={openMyApplications} />;
       default: return null;
     }
   }

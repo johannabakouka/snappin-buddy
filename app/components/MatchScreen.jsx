@@ -29,7 +29,7 @@ async function sendEmail(type, payload) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0, sharedOfferId = '', onSharedOfferSeen }) {
+export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0, myApplicationsSignal = 0, sharedOfferId = '', onSharedOfferSeen }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -119,6 +119,14 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     if (myProjectsSignal) scrollBoxRef.current?.scrollTo({ top: 0 });
   }, [myProjectsSignal]);
 
+  // Bouton « Mes candidatures » du profil : ouvre l'onglet Match
+  const [seenAppSignal, setSeenAppSignal] = useState(myApplicationsSignal);
+  if (myApplicationsSignal !== seenAppSignal) {
+    setSeenAppSignal(myApplicationsSignal);
+    setTab('match');
+    setSelectedOffer(null);
+  }
+
   async function loadApplied(userId) {
     const { data } = await supabase.from('collabs').select('message').eq('sender_id', userId);
     if (data) {
@@ -146,6 +154,72 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   useEffect(() => onBlocksChanged(() => { if (user?.id) loadOffers(user.id); }), [user]);
+
+  // « Marquer comme réalisé » : la validation quand la collab s'est faite à
+  // distance et qu'aucun QR n'a pu être scanné. Il faut les deux confirmations.
+  const [markingDone, setMarkingDone] = useState(null);
+  const [doneMessage, setDoneMessage] = useState(null);
+
+  async function markDone(collab) {
+    setMarkingDone(collab.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/mark-done', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ collabId: collab.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || res.status);
+      setDoneMessage({
+        id: collab.id,
+        text: body.counted
+          ? tx('Project validated! It now counts for both of you.', 'Projet validé ! Il compte pour vous deux.')
+          : body.both
+          ? tx('Already validated.', 'Déjà validé.')
+          : tx('Noted. It will count once your buddy confirms too.', 'C’est noté. Ça comptera quand ton buddy aura confirmé aussi.'),
+      });
+      if (user) loadCollabs(user.id);
+    } catch (e) {
+      console.error('mark-done', e);
+      setDoneMessage({ id: collab.id, text: tx('Could not save, try again.', 'Impossible d’enregistrer, réessaie.') });
+    }
+    setMarkingDone(null);
+  }
+
+  function DoneButton({ collab }) {
+    const mine = collab.sender_id === user?.id ? collab.done_by_sender : collab.done_by_receiver;
+    const validated = Boolean(collab.validated_at);
+    const note = doneMessage?.id === collab.id ? doneMessage.text : null;
+
+    if (validated) return (
+      <p style={{ color: '#2ECC71', fontSize: '12px', fontWeight: '700', marginTop: '10px', textAlign: 'center' }}>
+        🤝 {tx('Project validated', 'Projet validé')}
+      </p>
+    );
+
+    return (
+      <>
+        <button
+          onClick={() => markDone(collab)}
+          disabled={markingDone === collab.id || mine}
+          style={{
+            width: '100%', marginTop: '8px', padding: '9px', borderRadius: '20px',
+            border: `1px solid ${cardBorder}`, background: 'transparent',
+            color: mine ? subText : theme?.color, fontWeight: '700', fontSize: '12px',
+            cursor: mine ? 'default' : 'pointer',
+          }}
+        >
+          {markingDone === collab.id
+            ? '…'
+            : mine
+            ? tx('Waiting for your buddy', 'En attente de ton buddy')
+            : tx('✓ Mark as done', '✓ Marquer comme réalisé')}
+        </button>
+        {note && <p style={{ color: subText, fontSize: '11px', marginTop: '6px', textAlign: 'center', lineHeight: 1.4 }}>{note}</p>}
+      </>
+    );
+  }
 
   async function loadOffers(userId) {
     const { data: allRaw } = await supabase.from('offers').select('*').neq('user_id', userId).order('created_at', { ascending: false });
@@ -295,7 +369,20 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const filterFR = isEn ? (() => { try { const { UNIVERS_FR: fr, UNIVERS_EN: en } = require('../constants'); const i = en.indexOf(filterUnivers); return i >= 0 ? fr[i] : filterUnivers; } catch { return filterUnivers; } })() : filterUnivers;
     displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterFR.toLowerCase()));
   }
-  if (filterZone) displayedOffers = displayedOffers.filter(o => (o.zone || '').toLowerCase().includes(filterZone.toLowerCase()));
+  // La recherche cherche dans la ville, mais aussi dans le pseudo et le nom de
+  // l'auteur, et dans le titre : on cherche souvent « le projet de @keyliagkn ».
+  if (filterZone) {
+    const q = filterZone.toLowerCase().replace(/^@/, '').trim();
+    displayedOffers = displayedOffers.filter(o => {
+      const author = o.authorProfile || {};
+      return [
+        o.zone,
+        o.title,
+        author.username,
+        String(author.handle || '').replace(/^@/, ''),
+      ].some(v => String(v || '').toLowerCase().includes(q));
+    });
+  }
   if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => {
     if (sharedOffer) {
       if (a.id === sharedOffer.id) return -1;
@@ -524,7 +611,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
             <div style={{ marginBottom: '12px' }}>
               <input value={filterZone} onChange={e => setFilterZone(e.target.value)}
-                placeholder={tx('📍 City or country...', '📍 Ville ou pays...')}
+                placeholder={tx('🔎 City, @handle, project...', '🔎 Ville, @pseudo, projet...')}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
@@ -662,6 +749,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         </button>
                       </div>
                     )}
+                    {c.status === 'accepted' && <DoneButton collab={c} />}
                   </div>
                 ))}
               </>
@@ -687,6 +775,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         </button>
                       </div>
                     )}
+                    {c.status === 'accepted' && <DoneButton collab={c} />}
                   </div>
                 ))}
               </>

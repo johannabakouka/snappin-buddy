@@ -13,7 +13,9 @@ export default function ShareCard({ offer, profile, onClose }) {
   const roles = (offer.role_needed || '').split(',').map(r => r.trim()).filter(Boolean);
   const [copied, setCopied] = useState(false);
   // Lien direct vers le projet : à coller dans le sticker lien de la story
-  const link = `https://snappinbuddy.com/?offer=${offer.id}`;
+  // On partage la page publique du projet : un lien vers l'app tombait sur
+  // l'écran de connexion pour quelqu'un qui n'a pas de compte.
+  const link = `https://snappinbuddy.com/p/${offer.id}`;
 
   const [saving, setSaving] = useState(false);
   const [cardImage, setCardImage] = useState(null);

@@ -4,7 +4,7 @@ import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import ProfileShareCard from './ProfileShareCard';
-import { loadMyBlocks, unblockUser } from '../blocks';
+import { loadMyBlocks, unblockUser, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
@@ -94,7 +94,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   );
 }
 
-export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode, onOpenMyProjects }) {
+export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode, onOpenMyProjects, onOpenMyApplications }) {
   const t = useT();
   const ROLES = useRoles();
   const [editing, setEditing] = useState(false);
@@ -110,6 +110,14 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [loggingOut, setLoggingOut] = useState(false);
   const fileInputRef = useRef(null);
   const [openProjects, setOpenProjects] = useState(null);
+
+  const [sentCount, setSentCount] = useState(null);
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    supabase.from('collabs').select('id', { count: 'exact', head: true })
+      .eq('sender_id', profile.user_id)
+      .then(({ count }) => setSentCount(count ?? 0));
+  }, [profile?.user_id]);
 
   // Nombre de projets en cours, affiché sur le bouton « Mes projets »
   useEffect(() => {
@@ -174,12 +182,17 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     setUploading(false);
   }
 
+  // La liste était chargée une seule fois : si on l'avait ouverte avant de
+  // bloquer quelqu'un, elle restait vide pour toujours. On recharge à chaque
+  // ouverture, et aussi dès qu'un blocage change ailleurs dans l'app.
   async function openBlocked() {
     setShowBlocked(true);
-    if (blockedList === null && profile?.user_id) {
-      setBlockedList(await loadMyBlocks(profile.user_id));
-    }
+    if (profile?.user_id) setBlockedList(await loadMyBlocks(profile.user_id));
   }
+
+  useEffect(() => onBlocksChanged(async () => {
+    if (profile?.user_id) setBlockedList(await loadMyBlocks(profile.user_id));
+  }), [profile?.user_id]);
 
   async function removeBlock(targetId) {
     try {
@@ -350,6 +363,19 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             <span style={{ fontSize: '15px', fontWeight: '800' }}>⚡ {tx('My projects', 'Mes projets')}</span>
             <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>
               {openProjects === null ? '' : `${openProjects} ${tx('active', 'en cours')}`} →
+            </span>
+          </button>
+        )}
+
+        {onOpenMyApplications && (
+          <button onClick={onOpenMyApplications} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
+            padding: '14px 16px', marginBottom: '16px', cursor: 'pointer', color: theme.color,
+          }}>
+            <span style={{ fontSize: '15px', fontWeight: '800' }}>🤝 {tx('My applications', 'Mes candidatures')}</span>
+            <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>
+              {sentCount === null ? '' : `${sentCount} ${tx('sent', 'envoyées')}`} →
             </span>
           </button>
         )}
