@@ -15,6 +15,8 @@ export const ROLES_FR = [
   { id: 'chanteur', label: 'Chanteur·se', icon: '🎤' },
   { id: 'beatmaker', label: 'Beatmaker', icon: '🎛️' },
   { id: 'brand owner', label: 'Brand Owner', icon: '🏷️' },
+  { id: 'wedding planner', label: 'Wedding planner', icon: '💍' },
+  { id: 'organisateur événements', label: 'Organisateur·rice d’événements', icon: '🎉' },
   { id: 'autre', label: 'Autre', icon: '✨' },
 ];
 
@@ -35,6 +37,8 @@ export const ROLES_EN = [
   { id: 'chanteur', label: 'Singer', icon: '🎤' },
   { id: 'beatmaker', label: 'Beatmaker', icon: '🎛️' },
   { id: 'brand owner', label: 'Brand Owner', icon: '🏷️' },
+  { id: 'wedding planner', label: 'Wedding Planner', icon: '💍' },
+  { id: 'organisateur événements', label: 'Event Planner', icon: '🎉' },
   { id: 'autre', label: 'Other', icon: '✨' },
 ];
 
@@ -59,7 +63,8 @@ export const ROLE_ICONS = {
   'directeur créatif': '🎯', 'monteur vidéo': '🎞️', 'éditeur photo': '🖼️',
   'styliste': '👗', 'maquilleur': '💄', 'modèle': '🧍',
   'designer': '✏️', 'musicien': '🎵', 'chanteur': '🎤',
-  'beatmaker': '🎛️', 'brand owner': '🏷️', 'autre': '✨',
+  'beatmaker': '🎛️', 'brand owner': '🏷️',
+  'wedding planner': '💍', 'organisateur événements': '🎉', 'autre': '✨',
 };
 
 export const ROLE_FILTERS = [
@@ -79,6 +84,8 @@ export const ROLE_FILTERS = [
   { id: 'chanteur', label: 'Chant', icon: '🎤' },
   { id: 'beatmaker', label: 'Beatmaker', icon: '🎛️' },
   { id: 'brand owner', label: 'Brand', icon: '🏷️' },
+  { id: 'wedding planner', label: 'Mariage', icon: '💍' },
+  { id: 'organisateur événements', label: 'Événements', icon: '🎉' },
 ];
 
 export const COLORS = {

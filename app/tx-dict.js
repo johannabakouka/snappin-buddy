@@ -3,6 +3,11 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Project': 'Proyecto',
+    'Visible on your profile · tap to see them': 'Visible en tu perfil · toca para verlos',
+    'No validated project yet.': 'Aún no hay ningún proyecto validado.',
+    'with': 'con',
+    'a creative': 'un creativo',
     'Project done ✓': 'Proyecto realizado ✓',
     'Project done ✓ To add it to your validated projects, scan the QR code when you meet.': 'Proyecto realizado ✓ Para que cuente en tus proyectos validados, escanead el código QR cuando os veáis.',
     'Noted. Waiting for your buddy to confirm too.': 'Anotado. Esperamos a que tu buddy lo confirme también.',
@@ -39,7 +44,6 @@ const TX = {
     'Block this person': 'Bloquear a esta persona',
     'They won’t be able to message you, propose a collab, or see you on the map. You can undo this at any time.': 'No podrá escribirte, proponerte una colaboración ni verte en el mapa. Puedes deshacerlo cuando quieras.',
     'Block': 'Bloquear',
-    'Visible on your profile': 'Visible en tu perfil',
     'Scan your buddy’s QR when you meet to validate a project': 'Escanea el QR de tu buddy al encontraros para validar un proyecto',
     'Blocked accounts': 'Cuentas bloqueadas',
     'Loading…': 'Cargando…',
@@ -268,6 +272,11 @@ const TX = {
   },
 
   pt: {
+    'Project': 'Projeto',
+    'Visible on your profile · tap to see them': 'Visível no seu perfil · toque para ver',
+    'No validated project yet.': 'Nenhum projeto validado por enquanto.',
+    'with': 'com',
+    'a creative': 'um criativo',
     'Project done ✓': 'Projeto realizado ✓',
     'Project done ✓ To add it to your validated projects, scan the QR code when you meet.': 'Projeto realizado ✓ Para contar nos seus projetos validados, escaneiem o QR code quando se encontrarem.',
     'Noted. Waiting for your buddy to confirm too.': 'Anotado. Esperando seu buddy confirmar também.',
@@ -304,7 +313,6 @@ const TX = {
     'Block this person': 'Bloquear essa pessoa',
     'They won’t be able to message you, propose a collab, or see you on the map. You can undo this at any time.': 'Ela não poderá te escrever, propor uma collab nem te ver no mapa. Você pode desfazer quando quiser.',
     'Block': 'Bloquear',
-    'Visible on your profile': 'Visível no seu perfil',
     'Scan your buddy’s QR when you meet to validate a project': 'Escaneie o QR do seu buddy no encontro para validar um projeto',
     'Blocked accounts': 'Contas bloqueadas',
     'Loading…': 'Carregando…',
@@ -533,6 +541,11 @@ const TX = {
   },
 
   de: {
+    'Project': 'Projekt',
+    'Visible on your profile · tap to see them': 'Auf deinem Profil sichtbar · tippen zum Ansehen',
+    'No validated project yet.': 'Noch kein bestätigtes Projekt.',
+    'with': 'mit',
+    'a creative': 'einem Kreativen',
     'Project done ✓': 'Projekt erledigt ✓',
     'Project done ✓ To add it to your validated projects, scan the QR code when you meet.': 'Projekt erledigt ✓ Damit es zu deinen bestätigten Projekten zählt, scannt den QR-Code, wenn ihr euch trefft.',
     'Noted. Waiting for your buddy to confirm too.': 'Notiert. Wir warten auf die Bestätigung deines Buddys.',
@@ -569,7 +582,6 @@ const TX = {
     'Block this person': 'Diese Person blockieren',
     'They won’t be able to message you, propose a collab, or see you on the map. You can undo this at any time.': 'Sie kann dir nicht mehr schreiben, keine Collab vorschlagen und dich nicht auf der Karte sehen. Du kannst das jederzeit rückgängig machen.',
     'Block': 'Blockieren',
-    'Visible on your profile': 'Auf deinem Profil sichtbar',
     'Scan your buddy’s QR when you meet to validate a project': 'Scanne beim Treffen den QR deines Buddys, um ein Projekt zu bestätigen',
     'Blocked accounts': 'Blockierte Konten',
     'Loading…': 'Wird geladen…',
@@ -798,6 +810,11 @@ const TX = {
   },
 
   it: {
+    'Project': 'Progetto',
+    'Visible on your profile · tap to see them': 'Visibile sul tuo profilo · tocca per vederli',
+    'No validated project yet.': 'Nessun progetto validato per ora.',
+    'with': 'con',
+    'a creative': 'un creativo',
     'Project done ✓': 'Progetto realizzato ✓',
     'Project done ✓ To add it to your validated projects, scan the QR code when you meet.': 'Progetto realizzato ✓ Perché conti nei tuoi progetti validati, scansionate il QR code quando vi vedete.',
     'Noted. Waiting for your buddy to confirm too.': 'Annotato. Aspettiamo che anche il tuo buddy confermi.',
@@ -834,7 +851,6 @@ const TX = {
     'Block this person': 'Blocca questa persona',
     'They won’t be able to message you, propose a collab, or see you on the map. You can undo this at any time.': 'Non potrà scriverti, proporti una collab né vederti sulla mappa. Puoi annullare quando vuoi.',
     'Block': 'Blocca',
-    'Visible on your profile': 'Visibile sul tuo profilo',
     'Scan your buddy’s QR when you meet to validate a project': 'Scansiona il QR del tuo buddy quando vi incontrate per validare un progetto',
     'Blocked accounts': 'Account bloccati',
     'Loading…': 'Caricamento…',

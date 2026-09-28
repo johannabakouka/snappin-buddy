@@ -104,6 +104,9 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [blockedList, setBlockedList] = useState(null);
   const [showBlocked, setShowBlocked] = useState(false);
   const [signingOutAll, setSigningOutAll] = useState(false);
+  // Liste des projets validés, ouverte depuis la carte du compteur
+  const [showValidated, setShowValidated] = useState(false);
+  const [validatedList, setValidatedList] = useState(null);
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
@@ -118,6 +121,48 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
       .eq('sender_id', profile.user_id)
       .then(({ count }) => setSentCount(count ?? 0));
   }, [profile?.user_id]);
+
+  // Le titre du projet est dans le message de candidature : « Je me propose pour : X ».
+  function projectTitle(message) {
+    const m = String(message || '');
+    const i = m.indexOf(':');
+    const title = (i >= 0 ? m.slice(i + 1) : m).trim();
+    return title || tx('Project', 'Projet');
+  }
+
+  // Un compteur sans la liste derrière ne veut rien dire : on veut revoir avec
+  // qui, et sur quoi. Rechargé à chaque ouverture, jamais mis en cache.
+  async function openValidated() {
+    setShowValidated(true);
+    if (!profile?.user_id) return;
+    setValidatedList(null);
+    try {
+      const { data } = await supabase
+        .from('collabs')
+        .select('id, sender_id, receiver_id, message, validated_at')
+        .or(`sender_id.eq.${profile.user_id},receiver_id.eq.${profile.user_id}`)
+        .not('validated_at', 'is', null)
+        .order('validated_at', { ascending: false });
+
+      const rows = data || [];
+      const otherId = c => (c.sender_id === profile.user_id ? c.receiver_id : c.sender_id);
+      const others = [...new Set(rows.map(otherId))];
+
+      let people = [];
+      if (others.length) {
+        const { data: ps } = await supabase
+          .from('profiles')
+          .select('user_id, username, handle, avatar_url')
+          .in('user_id', others);
+        people = ps || [];
+      }
+
+      setValidatedList(rows.map(c => ({ ...c, buddy: people.find(p => p.user_id === otherId(c)) || null })));
+    } catch (e) {
+      console.error('projets validés', e);
+      setValidatedList([]);
+    }
+  }
 
   // Nombre de projets en cours, affiché sur le bouton « Mes projets »
   useEffect(() => {
@@ -325,12 +370,17 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         {/* Projets validés. Affiché même à zéro, avec l'explication : c'est ce
             qui donne une raison de scanner le QR lors des rencontres. */}
-        <div style={{
-          background: profile?.validated_projects > 0 ? 'rgba(46,204,113,0.08)' : card,
-          border: `1px solid ${profile?.validated_projects > 0 ? 'rgba(46,204,113,0.25)' : tagBorder}`,
-          borderRadius: '16px', padding: '14px 16px', marginBottom: '16px',
-          display: 'flex', alignItems: 'center', gap: '12px',
-        }}>
+        <div
+          onClick={(profile?.validated_projects || 0) > 0 ? openValidated : undefined}
+          style={{
+            background: profile?.validated_projects > 0 ? 'rgba(46,204,113,0.08)' : card,
+            border: `1px solid ${profile?.validated_projects > 0 ? 'rgba(46,204,113,0.25)' : tagBorder}`,
+            borderRadius: '16px', padding: '14px 16px',
+            marginBottom: showValidated ? '8px' : '16px',
+            display: 'flex', alignItems: 'center', gap: '12px',
+            cursor: (profile?.validated_projects || 0) > 0 ? 'pointer' : 'default',
+          }}
+        >
           <span style={{ fontSize: '22px' }}>🤝</span>
           <div style={{ flex: 1 }}>
             <p style={{ color: profile?.validated_projects > 0 ? '#2ECC71' : theme.color, fontSize: '15px', fontWeight: '900' }}>
@@ -341,11 +391,54 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             </p>
             <p style={{ color: subText, fontSize: '11px', lineHeight: 1.4 }}>
               {(profile?.validated_projects || 0) > 0
-                ? tx('Visible on your profile', 'Visible sur ton profil')
+                ? tx('Visible on your profile · tap to see them', 'Visible sur ton profil · touche pour les voir')
                 : tx('Scan your buddy’s QR when you meet to validate a project', 'Scanne le QR de ton buddy quand vous vous rencontrez pour valider un projet')}
             </p>
           </div>
+          {(profile?.validated_projects || 0) > 0 && (
+            <span style={{ fontSize: '12px', color: '#2ECC71', fontWeight: '700' }}>{showValidated ? '▴' : '→'}</span>
+          )}
         </div>
+
+        {showValidated && (
+          <div style={{ background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
+            {validatedList === null ? (
+              <p style={{ color: subText, fontSize: '13px' }}>{tx('Loading…', 'Chargement…')}</p>
+            ) : validatedList.length === 0 ? (
+              <p style={{ color: subText, fontSize: '13px', lineHeight: 1.5 }}>
+                {tx('No validated project yet.', 'Aucun projet validé pour le moment.')}
+              </p>
+            ) : (
+              validatedList.map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
+                    {c.buddy?.avatar_url
+                      ? <img src={c.buddy.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : '◉'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: '700', color: theme.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {projectTitle(c.message)}
+                    </p>
+                    <p style={{ fontSize: '11px', color: subText }}>
+                      {tx('with', 'avec')} {c.buddy?.username || tx('a creative', 'un créatif')}
+                      {c.buddy?.handle ? ` ${withAt(c.buddy.handle)}` : ''}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '11px', color: subText, flexShrink: 0 }}>
+                    {c.validated_at ? new Date(c.validated_at).toLocaleDateString() : ''}
+                  </span>
+                </div>
+              ))
+            )}
+            <button onClick={() => setShowValidated(false)} style={{
+              background: 'none', border: 'none', color: subText, fontSize: '12px',
+              textDecoration: 'underline', cursor: 'pointer', marginTop: '4px',
+            }}>
+              {tx('Close', 'Fermer')}
+            </button>
+          </div>
+        )}
 
         {/* Partager son profil : chaque inscrit devient une affiche pour l'app. */}
         <button onClick={() => setSharingProfile(true)} style={{
