@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
+import AccountScreen from './AccountScreen';
 import ProfileShareCard from './ProfileShareCard';
 import { loadMyBlocks, unblockUser, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
@@ -99,6 +100,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const ROLES = useRoles();
   const [editing, setEditing] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [sharingProfile, setSharingProfile] = useState(false);
   // Comptes bloqués et déconnexion de toutes les sessions
   const [blockedList, setBlockedList] = useState(null);
@@ -287,6 +289,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   );
 
   if (showLegal) return <LegalScreen theme={theme} onBack={() => setShowLegal(false)} />;
+  if (showAccount) return <AccountScreen theme={theme} onBack={() => setShowAccount(false)} />;
   if (sharingProfile) return (
     <ProfileShareCard
       profile={{ ...profile, avatar_url: avatarUrl }}
@@ -544,7 +547,17 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           {t.editProfile}
         </button>
 
-        <button onClick={() => setShowLegal(true)} style={{ width: '100%', background: 'transparent', color: subText, border: `1px solid ${tagBorder}`, borderRadius: '24px', padding: '14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' }}>
+        {/* Compte & sécurité : adresse email et mot de passe */}
+        <button onClick={() => setShowAccount(true)} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
+          padding: '14px 16px', marginTop: '8px', marginBottom: '12px', cursor: 'pointer', color: theme.color,
+        }}>
+          <span style={{ fontSize: '14px', fontWeight: '700' }}>🔐 {tx('Account & security', 'Compte & sécurité')}</span>
+          <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>→</span>
+        </button>
+
+        <button onClick={() => setShowLegal(true)} style={{ width: '100%', background: 'transparent', color: subText, border: `1px solid ${tagBorder}`, borderRadius: '24px', padding: '14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}>
           {t.legal}
         </button>
 
