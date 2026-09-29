@@ -56,7 +56,7 @@ export default function LegalScreen({ theme, onBack }) {
     } catch (e) {
       console.error('delete-account', e);
       setDeleteError(
-        "La suppression n'a pas pu aboutir. Réessaie, et si le problème persiste écris à ateliers777.contact@gmail.com : ton compte sera supprimé manuellement sous 30 jours."
+        "La suppression n'a pas pu aboutir. Réessaie, et si le problème persiste écris à contact@snappinbuddy.com : ton compte sera supprimé manuellement sous 30 jours."
       );
       // Détail technique, affiché en petit : c'est ce qui permet de corriger la cause.
       setDeleteDetail(e.message || '');

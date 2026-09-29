@@ -253,7 +253,7 @@ export default function AuthScreen({ onLogin, theme }) {
           <div style={{ background: darkMode ? '#1A1A1A' : '#E8E8E8', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
             <p style={{ color: subText, fontSize: '13px', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{`Éditeur : Ateliers 777 — SIRET 995 320 264 00014
 59 rue de Ponthieu, 75008 Paris, France
-Contact : ateliers777.contact@gmail.com
+Contact : contact@snappinbuddy.com
 
 Snappin'Buddy collecte ton email, ton profil créatif et ta position approximative (±400m) pour te mettre en contact avec d'autres créatifs.
 
@@ -265,7 +265,7 @@ Les paiements sont sécurisés par Stripe (PCI-DSS). Les offres expirent après 
 
 Droit applicable : droit français. Juridiction : Tribunaux de Paris.
 
-Pour toute question : ateliers777.contact@gmail.com`}</p>
+Pour toute question : contact@snappinbuddy.com`}</p>
           </div>
           <button
             onClick={() => { setCguAccepted(true); setShowLegal(false); }}

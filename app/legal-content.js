@@ -23,7 +23,7 @@ SIRET : 995 320 264 00014
 Siège social : 59 rue de Ponthieu, 75008 Paris, France
 
 Directrice de la publication : Johanna Bakouka
-Contact : ateliers777.contact@gmail.com
+Contact : contact@snappinbuddy.com
 
 Hébergeur :
 Vercel Inc. — 340 Pine Street, Suite 701, San Francisco, CA 94104, USA
@@ -84,7 +84,7 @@ Tu peux refuser la géolocalisation — certaines fonctionnalités de la carte s
 · Droit d'opposition au traitement
 · Droit de retirer ton consentement à tout moment
 
-Pour exercer ces droits : ateliers777.contact@gmail.com
+Pour exercer ces droits : contact@snappinbuddy.com
 Délai de réponse : 30 jours maximum.
 
 Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
@@ -107,7 +107,7 @@ L'application met en relation des créatifs qui se rencontrent ensuite dans la v
 
 En créant un compte, tu certifies avoir 18 ans ou plus. Tout compte dont il apparaît qu'il appartient à une personne mineure est supprimé sans préavis, et les données associées sont effacées.
 
-Si tu penses qu'un compte appartient à un mineur, signale-le : ateliers777.contact@gmail.com`,
+Si tu penses qu'un compte appartient à un mineur, signale-le : contact@snappinbuddy.com`,
   },
   {
     title: '🛡 Règles de contenu et modération',
@@ -119,13 +119,13 @@ Si tu penses qu'un compte appartient à un mineur, signale-le : ateliers777.cont
 · Les annonces mensongères, les arnaques et le démarchage commercial
 · Tout contenu illégal
 
-Comment signaler : chaque profil comporte un bouton de signalement, et tu peux aussi écrire à ateliers777.contact@gmail.com. Chaque signalement est examiné, et les contenus manifestement illégaux sont retirés sans délai.
+Comment signaler : chaque profil comporte un bouton de signalement, et tu peux aussi écrire à contact@snappinbuddy.com. Chaque signalement est examiné, et les contenus manifestement illégaux sont retirés sans délai.
 
 Ce qui peut arriver à un compte : avertissement, retrait du contenu, suspension ou suppression définitive selon la gravité. Toute personne dont le contenu est retiré ou dont le compte est suspendu en est informée par email, avec le motif, et peut contester la décision en répondant à cet email.
 
 Les infractions graves peuvent être signalées aux autorités compétentes.
 
-Point de contact (règlement européen sur les services numériques, dit DSA) : ateliers777.contact@gmail.com — en français ou en anglais.`,
+Point de contact (règlement européen sur les services numériques, dit DSA) : contact@snappinbuddy.com — en français ou en anglais.`,
   },
   {
     title: '🤝 Responsabilité des rencontres',
@@ -150,13 +150,13 @@ TVA non applicable, article 293 B du CGI.
 
 Les paiements sont traités par Stripe Inc. (stripe.com), prestataire de paiement sécurisé certifié PCI-DSS. Snappin'Buddy ne stocke jamais tes données bancaires : toutes les transactions sont chiffrées et gérées par Stripe.
 
-Le Boost est un service numérique exécuté immédiatement après le paiement. Conformément à l'article L221-28 du Code de la consommation, tu renonces à ton droit de rétractation de 14 jours en validant l'achat : le Boost est donc non remboursable une fois activé, sauf défaut technique avéré (dans ce cas : ateliers777.contact@gmail.com).
+Le Boost est un service numérique exécuté immédiatement après le paiement. Conformément à l'article L221-28 du Code de la consommation, tu renonces à ton droit de rétractation de 14 jours en validant l'achat : le Boost est donc non remboursable une fois activé, sauf défaut technique avéré (dans ce cas : contact@snappinbuddy.com).
 
 Aucun abonnement, aucun prélèvement automatique : chaque Boost est un paiement unique.`,
   },
   {
     title: '⚖️ Réclamation et médiation',
-    content: `En cas de problème avec un achat (Boost), écris d'abord à ateliers777.contact@gmail.com en décrivant la situation. Une réponse te sera apportée sous 30 jours maximum.${MEDIATEUR ? `
+    content: `En cas de problème avec un achat (Boost), écris d'abord à contact@snappinbuddy.com en décrivant la situation. Une réponse te sera apportée sous 30 jours maximum.${MEDIATEUR ? `
 
 Si cette réponse ne te satisfait pas, tu peux saisir gratuitement le médiateur de la consommation dont relève Snappin'Buddy :
 ${MEDIATEUR.nom}
