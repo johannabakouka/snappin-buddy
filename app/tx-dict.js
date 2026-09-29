@@ -3,6 +3,12 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'La conversación desaparece de tu lista. Los mensajes se quedan con la otra persona, y vuelve si te escribe de nuevo.',
+    'Remove the conversation': 'Quitar la conversación',
+    'Mark as unread': 'Marcar como no leída',
+    'Turn notifications back on': 'Reactivar las notificaciones',
+    'Mute': 'Silenciar',
+    'Remove from my list': 'Quitar de mi lista',
     'Project': 'Proyecto',
     'Visible on your profile · tap to see them': 'Visible en tu perfil · toca para verlos',
     'No validated project yet.': 'Aún no hay ningún proyecto validado.',
@@ -272,6 +278,12 @@ const TX = {
   },
 
   pt: {
+    'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'A conversa sai da sua lista. As mensagens ficam com a outra pessoa, e ela volta se te escreverem de novo.',
+    'Remove the conversation': 'Remover a conversa',
+    'Mark as unread': 'Marcar como não lida',
+    'Turn notifications back on': 'Reativar as notificações',
+    'Mute': 'Silenciar',
+    'Remove from my list': 'Remover da minha lista',
     'Project': 'Projeto',
     'Visible on your profile · tap to see them': 'Visível no seu perfil · toque para ver',
     'No validated project yet.': 'Nenhum projeto validado por enquanto.',
@@ -541,6 +553,12 @@ const TX = {
   },
 
   de: {
+    'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'Die Unterhaltung verschwindet aus deiner Liste. Die Nachrichten bleiben bei der anderen Person, und sie kommt zurück, wenn sie dir wieder schreibt.',
+    'Remove the conversation': 'Unterhaltung entfernen',
+    'Mark as unread': 'Als ungelesen markieren',
+    'Turn notifications back on': 'Benachrichtigungen wieder einschalten',
+    'Mute': 'Stummschalten',
+    'Remove from my list': 'Aus meiner Liste entfernen',
     'Project': 'Projekt',
     'Visible on your profile · tap to see them': 'Auf deinem Profil sichtbar · tippen zum Ansehen',
     'No validated project yet.': 'Noch kein bestätigtes Projekt.',
@@ -810,6 +828,12 @@ const TX = {
   },
 
   it: {
+    'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'La conversazione esce dalla tua lista. I messaggi restano all’altra persona, e torna se ti scrive di nuovo.',
+    'Remove the conversation': 'Rimuovi la conversazione',
+    'Mark as unread': 'Segna come non letta',
+    'Turn notifications back on': 'Riattiva le notifiche',
+    'Mute': 'Silenzia',
+    'Remove from my list': 'Rimuovi dalla mia lista',
     'Project': 'Progetto',
     'Visible on your profile · tap to see them': 'Visibile sul tuo profilo · tocca per vederli',
     'No validated project yet.': 'Nessun progetto validato per ora.',

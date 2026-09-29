@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
+import { loadMutedIds } from '../conversations';
 import { useT } from '../i18n';
 
 export default function Navbar({ screen, setScreen, theme }) {
@@ -27,11 +28,17 @@ export default function Navbar({ screen, setScreen, theme }) {
       const user = userId ? { id: userId } : null;
       if (!alive || !user) return;
 
-      const [{ count: unread }, { count: pending }] = await Promise.all([
+      // Une conversation en sourdine ne fait pas de pastille : c'est tout
+      // l'intérêt de la sourdine.
+      const muted = await loadMutedIds(user.id);
+      let unreadQuery = supabase.from('messages').select('id', { count: 'exact', head: true })
         // read.is.null couvre les messages d'avant la colonne : sans ça ils ne
         // sont ni lus ni non lus, et la pastille les oublie.
-        supabase.from('messages').select('id', { count: 'exact', head: true })
-          .eq('receiver_id', user.id).or('read.is.null,read.eq.false'),
+        .eq('receiver_id', user.id).or('read.is.null,read.eq.false');
+      if (muted.size) unreadQuery = unreadQuery.not('sender_id', 'in', `(${[...muted].join(',')})`);
+
+      const [{ count: unread }, { count: pending }] = await Promise.all([
+        unreadQuery,
         supabase.from('collabs').select('id', { count: 'exact', head: true })
           .eq('receiver_id', user.id).eq('status', 'pending'),
       ]);

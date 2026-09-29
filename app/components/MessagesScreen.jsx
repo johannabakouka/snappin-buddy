@@ -9,11 +9,17 @@ import { tx, isNotFrench } from '../tx';
 import { roleLabels } from '../constants';
 import { loadIBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
+import { loadPrefs, pinConversation, muteConversation, hideConversation, markUnread, clearUnread } from '../conversations';
 
 export default function MessagesScreen({ theme, active = true }) {
   const t = useT();
   const isEn = isNotFrench();
   const [activeBuddy, setActiveBuddy] = useState(null);
+  // Appui long sur une conversation : épingler, sourdine, non lue, retirer
+  const [menuFor, setMenuFor] = useState(null);
+  const [confirmHide, setConfirmHide] = useState(false);
+  const pressTimer = useRef(null);
+  const longPressed = useRef(false);
   // Profil ouvert depuis une conversation ou depuis la liste des buddies
   const [viewingBuddy, setViewingBuddy] = useState(null);
   const [conversations, setConversations] = useState([]);
@@ -56,7 +62,8 @@ export default function MessagesScreen({ theme, active = true }) {
 
   async function loadConversations(userId) {
     const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
-    if (!msgs || msgs.length === 0) return;
+    if (!msgs || msgs.length === 0) { setConversations([]); return; }
+    const prefs = await loadPrefs(userId);
     // Comme sur Instagram : celui qui bloque perd la conversation, la personne
     // bloquée la garde mais ne pourra plus écrire.
     const blocked = await loadIBlockedIds(userId);
@@ -69,6 +76,14 @@ export default function MessagesScreen({ theme, active = true }) {
       // Pas de profil = la personne a supprimé son compte. On garde la
       // conversation, mais sans nom, sans photo et sans lien vers un profil.
       const gone = !profile;
+      const pref = prefs[buddyId] || {};
+      const lastAt = lastMsg ? new Date(lastMsg.created_at).getTime() : 0;
+      const hiddenAt = pref.hidden_at ? new Date(pref.hidden_at).getTime() : 0;
+
+      // Conversation retirée de ma liste : elle ne revient qu'avec un message
+      // plus récent que le moment où je l'ai retirée.
+      if (hiddenAt && lastAt <= hiddenAt) return null;
+
       return {
         id: buddyId, user_id: buddyId,
         deletedAccount: gone,
@@ -77,10 +92,49 @@ export default function MessagesScreen({ theme, active = true }) {
         avatar_url: profile?.avatar_url || null,
         last: lastMsg?.deleted ? tx('Message deleted', 'Message supprimé') : (lastMsg?.content || ''),
         time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString(tx('en-GB', 'fr-FR'), { hour: '2-digit', minute: '2-digit' }) : '',
+        lastAt,
         unread: msgs.filter(m => m.sender_id === buddyId && m.receiver_id === userId && m.read === false).length,
+        pinned: Boolean(pref.pinned_at),
+        pinnedAt: pref.pinned_at ? new Date(pref.pinned_at).getTime() : 0,
+        muted: Boolean(pref.muted),
+        forcedUnread: Boolean(pref.unread_forced),
       };
-    });
+    }).filter(Boolean);
+
+    // Épinglées d'abord, puis la plus récente en haut.
+    convs.sort((a, b) => (b.pinnedAt - a.pinnedAt) || (b.lastAt - a.lastAt));
     setConversations(convs);
+  }
+
+  // Appui long : 450 ms, comme sur Instagram. On annule dès que le doigt
+  // bouge, sinon un simple défilement ouvrirait le menu.
+  function startPress(c) {
+    longPressed.current = false;
+    clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      longPressed.current = true;
+      setConfirmHide(false);
+      setMenuFor(c);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25);
+    }, 450);
+  }
+
+  function cancelPress() {
+    clearTimeout(pressTimer.current);
+  }
+
+  function openConversation(c) {
+    // Un appui long vient d'ouvrir le menu : on n'ouvre pas la conversation derrière.
+    if (longPressed.current) { longPressed.current = false; return; }
+    if (user) clearUnread(user.id, c.id);
+    setActiveBuddy(c);
+  }
+
+  async function runAction(action) {
+    try { await action(); } catch (e) { console.error('conversation', e); }
+    setMenuFor(null);
+    setConfirmHide(false);
+    if (user) loadConversations(user.id);
   }
 
   async function loadBuddies(userId) {
@@ -115,6 +169,13 @@ export default function MessagesScreen({ theme, active = true }) {
   }
 
   const isFollowingUser = (uid) => following.some(f => f.user_id === uid);
+
+  const sheetButton = {
+    width: '100%', textAlign: 'left', padding: '14px 12px',
+    background: 'transparent', border: 'none', borderRadius: '12px',
+    color: theme?.color, fontSize: '14px', fontWeight: '700',
+    cursor: 'pointer', marginBottom: '4px',
+  };
 
   const tabStyle = (active) => ({
     flex: 1, padding: '10px', border: 'none', background: 'transparent',
@@ -201,20 +262,41 @@ export default function MessagesScreen({ theme, active = true }) {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {conversations.map(c => (
-                <div key={c.id} onClick={() => setActiveBuddy(c)} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 12px', borderRadius: '12px', cursor: 'pointer' }}>
+                <div
+                  key={c.id}
+                  onClick={() => openConversation(c)}
+                  onTouchStart={() => startPress(c)}
+                  onTouchEnd={cancelPress}
+                  onTouchMove={cancelPress}
+                  onTouchCancel={cancelPress}
+                  onMouseDown={() => startPress(c)}
+                  onMouseUp={cancelPress}
+                  onMouseLeave={cancelPress}
+                  onContextMenu={e => { e.preventDefault(); setConfirmHide(false); setMenuFor(c); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    padding: '14px 12px', borderRadius: '12px', cursor: 'pointer',
+                    background: c.pinned ? (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)') : 'transparent',
+                    WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
+                  }}
+                >
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
                     {c.avatar_url ? <img src={c.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color }}>{c.username}</span>
-                      <span style={{ color: subText, fontSize: '11px' }}>{c.time}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: '700', fontSize: '15px', color: theme?.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.pinned && '📌 '}{c.username}{c.muted && ' 🔕'}
+                      </span>
+                      <span style={{ color: subText, fontSize: '11px', flexShrink: 0 }}>{c.time}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                      <div style={{ flex: 1, minWidth: 0, color: c.unread ? theme?.color : subText, fontWeight: c.unread ? '700' : '400', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last}</div>
-                      {c.unread > 0 && (
+                      <div style={{ flex: 1, minWidth: 0, color: (c.unread || c.forcedUnread) ? theme?.color : subText, fontWeight: (c.unread || c.forcedUnread) ? '700' : '400', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.last}</div>
+                      {c.unread > 0 ? (
                         <span style={{ minWidth: '20px', height: '20px', padding: '0 6px', borderRadius: '10px', background: '#F2E050', color: '#0A0A0A', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.unread}</span>
-                      )}
+                      ) : c.forcedUnread ? (
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#F2E050', flexShrink: 0 }} />
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -257,6 +339,77 @@ export default function MessagesScreen({ theme, active = true }) {
           </>
         )}
       </div>
+
+      {/* Menu d'appui long sur une conversation */}
+      {menuFor && (
+        <div
+          onClick={() => { setMenuFor(null); setConfirmHide(false); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '390px',
+              background: darkMode ? '#141414' : '#FFFFFF',
+              borderRadius: '20px 20px 0 0',
+              padding: '18px 16px calc(24px + env(safe-area-inset-bottom))',
+            }}
+          >
+            <p style={{ color: subText, fontSize: '12px', fontWeight: '700', marginBottom: '14px', textAlign: 'center' }}>
+              {menuFor.username}
+            </p>
+
+            {confirmHide ? (
+              <>
+                <p style={{ color: theme?.color, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
+                  {tx(
+                    'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.',
+                    'La conversation quitte ta liste. Les messages restent chez l’autre personne, et elle revient si elle t’écrit à nouveau.',
+                  )}
+                </p>
+                <button
+                  onClick={() => runAction(() => hideConversation(user.id, menuFor.id))}
+                  style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: '#FF4D4D', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', marginBottom: '8px' }}
+                >
+                  {tx('Remove the conversation', 'Retirer la conversation')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => runAction(() => pinConversation(user.id, menuFor.id, !menuFor.pinned))} style={sheetButton}>
+                  📌 {menuFor.pinned ? tx('Unpin', 'Désépingler') : tx('Pin', 'Épingler')}
+                </button>
+
+                {menuFor.unread === 0 && !menuFor.forcedUnread && (
+                  <button onClick={() => runAction(() => markUnread(user.id, menuFor.id))} style={sheetButton}>
+                    🔵 {tx('Mark as unread', 'Marquer comme non lu')}
+                  </button>
+                )}
+
+                <button onClick={() => runAction(() => muteConversation(user.id, menuFor.id, !menuFor.muted))} style={sheetButton}>
+                  {menuFor.muted
+                    ? `🔔 ${tx('Turn notifications back on', 'Réactiver les notifications')}`
+                    : `🔕 ${tx('Mute', 'Mettre en sourdine')}`}
+                </button>
+
+                <button onClick={() => setConfirmHide(true)} style={{ ...sheetButton, color: '#FF4D4D' }}>
+                  🗑 {tx('Remove from my list', 'Retirer de ma liste')}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => { setMenuFor(null); setConfirmHide(false); }}
+              style={{ ...sheetButton, color: subText, marginBottom: 0 }}
+            >
+              {tx('Cancel', 'Annuler')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

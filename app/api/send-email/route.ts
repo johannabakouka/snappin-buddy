@@ -23,6 +23,15 @@ export async function POST(request: Request) {
       if (!toUserId || toUserId === user.id) return Response.json({ error: 'destinataire invalide' }, { status: 400 });
 
       const db = supabaseAdmin();
+
+      // Conversation mise en sourdine par le destinataire : pas de mail.
+      // C'est sa préférence, et lui seul peut la lire ou la changer.
+      const { data: pref } = await db.from('conversation_prefs')
+        .select('muted')
+        .eq('user_id', toUserId).eq('buddy_id', user.id)
+        .maybeSingle();
+      if (pref?.muted) return Response.json({ ok: true, skipped: 'sourdine' });
+
       const { count } = await db.from('messages')
         .select('id', { count: 'exact', head: true })
         .eq('sender_id', user.id).eq('receiver_id', toUserId).eq('read', false);
