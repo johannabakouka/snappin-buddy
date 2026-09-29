@@ -43,13 +43,13 @@ export const ROLES_EN = [
 ];
 
 export const UNIVERS_FR = [
-  'mode', 'beauté', 'street', 'corporate', 'art',
+  'mode', 'beauté', 'portrait', 'street', 'corporate', 'art',
   'musique', 'sport', 'nature', 'voyage', 'architecture',
   'mariage', 'food', 'culture', 'entertainment',
 ];
 
 export const UNIVERS_EN = [
-  'fashion', 'beauty', 'street', 'corporate', 'art',
+  'fashion', 'beauty', 'portrait', 'street', 'corporate', 'art',
   'music', 'sport', 'nature', 'travel', 'architecture',
   'wedding', 'food', 'culture', 'entertainment',
 ];

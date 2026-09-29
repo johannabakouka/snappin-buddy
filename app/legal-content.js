@@ -6,7 +6,12 @@
 // on laisse à null : la section n'apparaît pas, plutôt que d'annoncer un médiateur
 // qui ne couvrirait pas réellement Snappin'Buddy.
 // Pour l'activer : remplacer par { nom: '...', adresse: '...', site: '...' }
-export const MEDIATEUR = null;
+export const MEDIATEUR = {
+  nom: 'CM2C — Centre de la Médiation de la Consommation de Conciliateurs de Justice',
+  adresse: '49 rue de Ponthieu, 75008 Paris',
+  site: 'https://cm2c.net',
+  email: 'cm2c@cm2c.net',
+};
 
 export const LEGAL_SECTIONS = [
   {
@@ -157,8 +162,9 @@ Si cette réponse ne te satisfait pas, tu peux saisir gratuitement le médiateur
 ${MEDIATEUR.nom}
 ${MEDIATEUR.adresse}
 ${MEDIATEUR.site}
+${MEDIATEUR.email}
 
-La saisine du médiateur est gratuite pour toi et ne peut intervenir qu'après une réclamation écrite restée sans réponse satisfaisante, dans un délai d'un an à compter de cette réclamation.` : ''}
+La saisine se fait en ligne sur ${MEDIATEUR.site} ou par courrier à l'adresse ci-dessus. Elle est gratuite pour toi et ne peut intervenir qu'après une réclamation écrite restée sans réponse satisfaisante, dans un délai d'un an à compter de cette réclamation.` : ''}
 
 Pour toute question relative à tes données personnelles, tu peux également saisir la CNIL (cnil.fr).`,
   },
@@ -168,7 +174,7 @@ Pour toute question relative à tes données personnelles, tu peux également sa
 
 L'utilisation continue de l'application après modification vaut acceptation des nouvelles conditions.
 
-Dernière mise à jour : juin 2026
+Dernière mise à jour : septembre 2026
 Droit applicable : droit français
 Juridiction compétente : Tribunaux de Paris`,
   },
