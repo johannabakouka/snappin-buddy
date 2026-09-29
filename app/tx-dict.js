@@ -3,6 +3,15 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Wrong email or password.': 'Email o contraseña incorrectos.',
+    'Your address is not confirmed yet. Check your emails, and your spam folder.': 'Tu dirección aún no está confirmada. Revisa tus correos, y la carpeta de spam.',
+    'An account already exists with this email.': 'Ya existe una cuenta con este email.',
+    'This email address looks invalid.': 'Esta dirección de email no parece válida.',
+    'Choose a password different from the old one.': 'Elige una contraseña distinta de la anterior.',
+    'Too many emails sent. Try again in a few minutes.': 'Demasiados correos enviados. Inténtalo en unos minutos.',
+    'Sign-ups are closed for the moment.': 'Las inscripciones están cerradas por ahora.',
+    'Connection failed. Check your internet.': 'Sin conexión. Comprueba tu red.',
+    'This link has expired. Ask for a new one.': 'Este enlace ha caducado. Pide uno nuevo.',
     'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'La conversación desaparece de tu lista. Los mensajes se quedan con la otra persona, y vuelve si te escribe de nuevo.',
     'Remove the conversation': 'Quitar la conversación',
     'Mark as unread': 'Marcar como no leída',
@@ -278,6 +287,15 @@ const TX = {
   },
 
   pt: {
+    'Wrong email or password.': 'Email ou senha incorretos.',
+    'Your address is not confirmed yet. Check your emails, and your spam folder.': 'Seu endereço ainda não foi confirmado. Veja seus emails, e a pasta de spam.',
+    'An account already exists with this email.': 'Já existe uma conta com este email.',
+    'This email address looks invalid.': 'Este endereço de email parece inválido.',
+    'Choose a password different from the old one.': 'Escolha uma senha diferente da anterior.',
+    'Too many emails sent. Try again in a few minutes.': 'Muitos emails enviados. Tente de novo em alguns minutos.',
+    'Sign-ups are closed for the moment.': 'As inscrições estão fechadas no momento.',
+    'Connection failed. Check your internet.': 'Sem conexão. Verifique sua internet.',
+    'This link has expired. Ask for a new one.': 'Este link expirou. Peça um novo.',
     'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'A conversa sai da sua lista. As mensagens ficam com a outra pessoa, e ela volta se te escreverem de novo.',
     'Remove the conversation': 'Remover a conversa',
     'Mark as unread': 'Marcar como não lida',
@@ -553,6 +571,15 @@ const TX = {
   },
 
   de: {
+    'Wrong email or password.': 'E-Mail oder Passwort falsch.',
+    'Your address is not confirmed yet. Check your emails, and your spam folder.': 'Deine Adresse ist noch nicht bestätigt. Sieh in deinen Mails nach, auch im Spam-Ordner.',
+    'An account already exists with this email.': 'Mit dieser E-Mail existiert bereits ein Konto.',
+    'This email address looks invalid.': 'Diese E-Mail-Adresse sieht ungültig aus.',
+    'Choose a password different from the old one.': 'Wähle ein anderes Passwort als das alte.',
+    'Too many emails sent. Try again in a few minutes.': 'Zu viele Mails verschickt. Versuch es in ein paar Minuten erneut.',
+    'Sign-ups are closed for the moment.': 'Registrierungen sind derzeit geschlossen.',
+    'Connection failed. Check your internet.': 'Keine Verbindung. Prüfe dein Netz.',
+    'This link has expired. Ask for a new one.': 'Dieser Link ist abgelaufen. Fordere einen neuen an.',
     'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'Die Unterhaltung verschwindet aus deiner Liste. Die Nachrichten bleiben bei der anderen Person, und sie kommt zurück, wenn sie dir wieder schreibt.',
     'Remove the conversation': 'Unterhaltung entfernen',
     'Mark as unread': 'Als ungelesen markieren',
@@ -828,6 +855,15 @@ const TX = {
   },
 
   it: {
+    'Wrong email or password.': 'Email o password errati.',
+    'Your address is not confirmed yet. Check your emails, and your spam folder.': 'Il tuo indirizzo non è ancora confermato. Controlla le tue email, e la cartella spam.',
+    'An account already exists with this email.': 'Esiste già un account con questa email.',
+    'This email address looks invalid.': 'Questo indirizzo email sembra non valido.',
+    'Choose a password different from the old one.': 'Scegli una password diversa dalla precedente.',
+    'Too many emails sent. Try again in a few minutes.': 'Troppe email inviate. Riprova tra qualche minuto.',
+    'Sign-ups are closed for the moment.': 'Le iscrizioni sono chiuse per il momento.',
+    'Connection failed. Check your internet.': 'Connessione assente. Controlla la rete.',
+    'This link has expired. Ask for a new one.': 'Questo link è scaduto. Richiedine uno nuovo.',
     'This conversation leaves your list. The messages stay with the other person, and it comes back if they write to you again.': 'La conversazione esce dalla tua lista. I messaggi restano all’altra persona, e torna se ti scrive di nuovo.',
     'Remove the conversation': 'Rimuovi la conversazione',
     'Mark as unread': 'Segna come non letta',

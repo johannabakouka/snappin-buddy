@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { authErrorMessage } from '../auth-errors';
 
 export default function AuthScreen({ onLogin, theme }) {
   const t = useT();
@@ -35,7 +36,7 @@ export default function AuthScreen({ onLogin, theme }) {
     setMessage('');
     if (mode === 'signup') {
       const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) setMessage(error.message);
+      if (error) setMessage(authErrorMessage(error));
       else if (data?.session) {
         // La confirmation par email n'est pas exigée : on entre directement.
         onLogin();
@@ -44,7 +45,7 @@ export default function AuthScreen({ onLogin, theme }) {
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMessage(error.message);
+      if (error) setMessage(authErrorMessage(error));
       else onLogin();
     }
     setLoading(false);
@@ -53,7 +54,7 @@ export default function AuthScreen({ onLogin, theme }) {
   async function resendConfirmation() {
     setLoading(true);
     const { error } = await supabase.auth.resend({ type: 'signup', email });
-    if (error) setMessage(error.message);
+    if (error) setMessage(authErrorMessage(error));
     else { setResent(true); setTimeout(() => setResent(false), 4000); }
     setLoading(false);
   }
@@ -64,7 +65,7 @@ export default function AuthScreen({ onLogin, theme }) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://snappinbuddy.com',
     });
-    if (error) setMessage(error.message);
+    if (error) setMessage(authErrorMessage(error));
     else setMessage(t.resetSent);
     setLoading(false);
   }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx } from '../tx';
+import { authErrorMessage } from '../auth-errors';
 
 // Affiché quand on arrive depuis le lien « Mot de passe oublié » reçu par email.
 // Supabase connecte la personne avec une session de récupération : il reste à choisir le nouveau mot de passe.
@@ -29,7 +30,7 @@ export default function NewPasswordScreen({ theme, onDone }) {
     setSaving(true);
     const { error: e } = await supabase.auth.updateUser({ password });
     setSaving(false);
-    if (e) setError(e.message);
+    if (e) setError(authErrorMessage(e));
     else setDone(true);
   }
 
