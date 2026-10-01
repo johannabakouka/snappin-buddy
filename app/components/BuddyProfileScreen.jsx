@@ -6,6 +6,7 @@ import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
 import PhotoViewer from './PhotoViewer';
+import ProfileShareCard from './ProfileShareCard';
 import { blockUser, unblockUser } from '../blocks';
 import { cleanUrl, prettyUrl } from '../links';
 import { uploadProfileImage, AVATAR_BUCKET } from '../image-upload';
@@ -68,6 +69,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
   const [nudgeBusy, setNudgeBusy] = useState(false);
   const [nudgeError, setNudgeError] = useState('');
   const [sendError, setSendError] = useState('');
+  // Partage du profil de quelqu'un d'autre : « regarde ce photographe » est la
+  // recommandation la plus naturelle, et le bouton n'existait que sur son
+  // propre profil.
+  const [sharing, setSharing] = useState(false);
   const [photoJustAdded, setPhotoJustAdded] = useState(false);
   const nudgeInputRef = useRef(null);
   const [sending, setSending] = useState(false);
@@ -275,10 +280,27 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
     }
   }
 
+  if (sharing) return (
+    <ProfileShareCard profile={buddy} mine={false} onClose={() => setSharing(false)} />
+  );
+
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(110px + env(safe-area-inset-bottom))` }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: preview ? '14px' : '24px' }}>←</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: preview ? '14px' : '24px' }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+          <button
+            onClick={() => setSharing(true)}
+            aria-label={tx('Share this profile', 'Partager ce profil')}
+            title={tx('Share this profile', 'Partager ce profil')}
+            style={{
+              background: 'none', border: `1px solid ${tagBorder}`, borderRadius: '20px',
+              padding: '6px 14px', color, fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+            }}
+          >
+            ↗ {tx('Share', 'Partager')}
+          </button>
+        </div>
 
         {preview && (
           <div style={{

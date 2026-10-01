@@ -11,7 +11,7 @@ import { isNotFrench } from '../tx';
 // même fond, même halo, même pied de carte. Si tu changes la charte
 // graphique de l'une, pense à l'autre.
 
-export default function ProfileShareCard({ profile, onClose }) {
+export default function ProfileShareCard({ profile, onClose, mine = true }) {
   const ROLES = useRoles();
   const isEn = isNotFrench();
   const [saving, setSaving] = useState(false);
@@ -349,7 +349,9 @@ export default function ProfileShareCard({ profile, onClose }) {
     }}>
       <div style={{ width: '100%', maxWidth: '340px', marginBottom: '20px' }}>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>
-          {tx('Share your profile on your story 📸', 'Partage ton profil en story 📸')}
+          {mine
+            ? tx('Share your profile on your story 📸', 'Partage ton profil en story 📸')
+            : tx('Share this profile on your story 📸', 'Partage ce profil en story 📸')}
         </p>
 
         {/* Aperçu, fidèle à l'image enregistrée */}
