@@ -18,6 +18,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  // Adresse de base du site. Sans elle, une image d'aperçu donnée en chemin
+  // relatif n'est pas retrouvée par Facebook, WhatsApp ou Instagram.
+  metadataBase: new URL("https://snappinbuddy.com"),
   title: "Snappin\u2019Buddy",
   description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
   manifest: "/manifest.json",
@@ -35,6 +38,16 @@ export const metadata: Metadata = {
     description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
     type: "website",
     url: "https://snappinbuddy.com",
+    // Sans cette image, un lien partagé en message ou en story arrivait nu :
+    // du texte sur un rectangle vide, au moment précis où il faut donner
+    // envie de cliquer.
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Snappin\u2019Buddy" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Snappin\u2019Buddy",
+    description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
+    images: ["/og.png"],
   },
 };
 

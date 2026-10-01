@@ -3,7 +3,7 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
-    'Preview my profile': 'Ver mi perfil como los demás',
+    'See how others see me': 'Ver cómo me ven los demás',
     'This is how others see you': 'Así te ven los demás',
     'Exactly the screen that opens when someone taps your pin on the map.': 'Exactamente la pantalla que se abre cuando alguien toca tu pin en el mapa.',
     'See my public page': 'Ver mi página pública',
@@ -337,7 +337,7 @@ const TX = {
   },
 
   pt: {
-    'Preview my profile': 'Ver meu perfil como os outros',
+    'See how others see me': 'Ver como os outros me veem',
     'This is how others see you': 'É assim que os outros te veem',
     'Exactly the screen that opens when someone taps your pin on the map.': 'Exatamente a tela que abre quando alguém toca no seu pin no mapa.',
     'See my public page': 'Ver minha página pública',
@@ -671,7 +671,7 @@ const TX = {
   },
 
   de: {
-    'Preview my profile': 'Mein Profil als Vorschau',
+    'See how others see me': 'Sehen, wie andere mich sehen',
     'This is how others see you': 'So sehen dich die anderen',
     'Exactly the screen that opens when someone taps your pin on the map.': 'Genau der Bildschirm, der sich öffnet, wenn jemand auf deinen Pin auf der Karte tippt.',
     'See my public page': 'Meine öffentliche Seite ansehen',
@@ -1005,7 +1005,7 @@ const TX = {
   },
 
   it: {
-    'Preview my profile': 'Anteprima del mio profilo',
+    'See how others see me': 'Vedi come mi vedono gli altri',
     'This is how others see you': 'Ecco come ti vedono gli altri',
     'Exactly the screen that opens when someone taps your pin on the map.': 'Esattamente la schermata che si apre quando qualcuno tocca il tuo pin sulla mappa.',
     'See my public page': 'Vedi la mia pagina pubblica',

@@ -399,6 +399,14 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           <p style={{ color: subText, fontSize: '13px' }}>{withAt(profile?.handle)}</p>
           {roleLabel && <p style={{ color: subText, fontSize: '12px', marginTop: '4px' }}>{roleLabel}</p>}
 
+          <button onClick={() => setPreviewing(true)} style={{
+            marginTop: '10px', padding: '6px 14px', borderRadius: '20px',
+            border: `1px solid ${tagBorder}`, background: 'transparent',
+            color: theme.color, fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+          }}>
+            👁 {tx('See how others see me', 'Voir comme les autres')}
+          </button>
+
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
             {STATUTS.map(s => (
               <button key={s.id} onClick={() => updateStatus(s.id)} style={{
@@ -588,16 +596,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         <button onClick={() => setEditing(true)} style={{ width: '100%', background: theme.color, color: theme.bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
           {t.editProfile}
-        </button>
-
-        {/* Aperçu : son propre profil, tel que les autres le voient */}
-        <button onClick={() => setPreviewing(true)} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
-          padding: '14px 16px', marginTop: '8px', marginBottom: '12px', cursor: 'pointer', color: theme.color,
-        }}>
-          <span style={{ fontSize: '14px', fontWeight: '700' }}>👁 {tx('Preview my profile', 'Aperçu de mon profil')}</span>
-          <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>→</span>
         </button>
 
         {/* Compte & sécurité : adresse email et mot de passe */}

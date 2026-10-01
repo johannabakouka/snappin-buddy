@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
     openGraph: {
       title: `${profile.username || ''} ${profile.handle || ''}`.trim(),
       description: profile.bio || roles,
-      images: profile.avatar_url ? [profile.avatar_url] : undefined,
+      images: [profile.avatar_url || 'https://snappinbuddy.com/og.png'],
     },
   };
 }
@@ -96,7 +96,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     <main style={{ background: '#0A0A0A', color: 'white', minHeight: '100dvh' }}>
       <div style={{ maxWidth: '520px', margin: '0 auto', padding: 'calc(env(safe-area-inset-top) + 32px) 20px calc(40px + env(safe-area-inset-bottom))' }}>
 
-        <Link href="/" style={{ color: '#F2E050', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#F2E050', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" width={28} height={28} style={{ borderRadius: '7px', display: 'block' }} />
           Snappin&apos;Buddy
         </Link>
 

@@ -132,11 +132,17 @@ export default function ExploreScreen({ theme, active = true }) {
       const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
       displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
     }
-    // Les profils avec photo passent devant, mais seulement à égalité
-    // d'affinité : c'est une incitation à compléter son profil, pas une raison
-    // d'enterrer quelqu'un qui correspond vraiment. Rien de visible, rien de
-    // vexant — on voit juste que les profils complets sont en haut.
-    const photoFirst = (a, b) => (b.avatar_url ? 1 : 0) - (a.avatar_url ? 1 : 0);
+    // Les profils qui ont quelque chose à montrer passent devant, mais
+    // seulement à égalité d'affinité : c'est une incitation à compléter son
+    // profil, pas une raison d'enterrer quelqu'un qui correspond vraiment.
+    // Rien de visible, rien de vexant — on voit juste que les profils complets
+    // sont en haut.
+    //
+    // Photo + portfolio, puis photo seule, puis portfolio sans photo, puis le
+    // reste : quelqu'un sans photo mais qui montre son travail vaut mieux
+    // qu'un profil vide.
+    const aMontrer = (p) => (p.avatar_url ? 2 : 0) + ((p.portfolio_urls || []).length ? 1 : 0);
+    const photoFirst = (a, b) => aMontrer(b) - aMontrer(a);
 
     if (filter === 'match') {
       displayed = [...displayed].sort((a, b) => {
