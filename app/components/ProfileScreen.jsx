@@ -4,6 +4,8 @@ import { supabase } from '../supabase';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import AccountScreen from './AccountScreen';
+import BuddyProfileScreen from './BuddyProfileScreen';
+import ErrorBoundary from './ErrorBoundary';
 import ProfileShareCard from './ProfileShareCard';
 import { loadMyBlocks, unblockUser, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
@@ -102,6 +104,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [editing, setEditing] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [sharingProfile, setSharingProfile] = useState(false);
   // Comptes bloqués et déconnexion de toutes les sessions
   const [blockedList, setBlockedList] = useState(null);
@@ -313,6 +316,20 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
   if (showLegal) return <LegalScreen theme={theme} onBack={() => setShowLegal(false)} />;
   if (showAccount) return <AccountScreen theme={theme} onBack={() => setShowAccount(false)} />;
+
+  // Enveloppé dans ErrorBoundary : l'aperçu est une nouveauté, et si jamais il
+  // plante il doit planter SEUL. Le reste de l'app continue de tourner, avec un
+  // message et un bouton pour recharger — pas une page blanche.
+  if (previewing) return (
+    <ErrorBoundary theme={theme}>
+      <BuddyProfileScreen
+        buddy={{ ...profile, avatar_url: avatarUrl }}
+        preview
+        theme={theme}
+        onBack={() => setPreviewing(false)}
+      />
+    </ErrorBoundary>
+  );
   if (sharingProfile) return (
     <ProfileShareCard
       profile={{ ...profile, avatar_url: avatarUrl }}
@@ -571,6 +588,16 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
         <button onClick={() => setEditing(true)} style={{ width: '100%', background: theme.color, color: theme.bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
           {t.editProfile}
+        </button>
+
+        {/* Aperçu : son propre profil, tel que les autres le voient */}
+        <button onClick={() => setPreviewing(true)} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: card, border: `1px solid ${tagBorder}`, borderRadius: '16px',
+          padding: '14px 16px', marginTop: '8px', marginBottom: '12px', cursor: 'pointer', color: theme.color,
+        }}>
+          <span style={{ fontSize: '14px', fontWeight: '700' }}>👁 {tx('Preview my profile', 'Aperçu de mon profil')}</span>
+          <span style={{ fontSize: '12px', color: subText, fontWeight: '600' }}>→</span>
         </button>
 
         {/* Compte & sécurité : adresse email et mot de passe */}

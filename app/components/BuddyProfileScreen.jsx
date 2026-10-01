@@ -41,7 +41,12 @@ function translateTag(tag, isEn) {
   return idx >= 0 ? UNIVERS_EN[idx] : tag;
 }
 
-export default function BuddyProfileScreen({ buddy, onBack, theme }) {
+// preview : on affiche SON PROPRE profil, tel que les autres le voient.
+// C'est volontairement le même composant, pas une copie : un aperçu recopié à
+// la main divergerait du vrai écran au premier changement, et finirait par
+// montrer un profil impeccable pendant que les autres en voient un cassé.
+// Le mode aperçu masque seulement ce qui n'a aucun sens sur soi-même.
+export default function BuddyProfileScreen({ buddy, onBack, theme, preview = false }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -127,10 +132,18 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const buddyLink = cleanUrl(buddy?.portfolio_url) || '';
 
   const roleLabel = roleLabels(buddy?.role, ROLES);
+  // Troisième visage du profil : la page publique, lue par des gens qui n'ont
+  // pas l'app. Elle n'affiche pas la même chose que cet écran, donc l'aperçu y
+  // renvoie plutôt que de laisser croire qu'il n'y en a qu'un.
+  const publicSlug = String(buddy?.handle || '').replace(/^@+/, '').trim();
+  const publicLink = preview && publicSlug
+    ? `https://snappinbuddy.com/u/${encodeURIComponent(publicSlug)}`
+    : '';
 
   // On a besoin de savoir si J'AI une photo de profil, pour le rappel affiché
   // au moment d'envoyer une proposition.
   useEffect(() => {
+    if (preview) return;   // en aperçu, aucune requête : l'écran est en lecture seule
     let alive = true;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -139,7 +152,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
       if (alive) setMyAvatar(data?.avatar_url || '');
     })();
     return () => { alive = false; };
-  }, []);
+  }, [preview]);
 
   // Ajouter sa photo sans quitter l'envoi de la proposition : le rappel porte
   // sa propre solution, sinon il ne sert qu'à culpabiliser les gens.
@@ -265,7 +278,36 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000, background: bg, overflowY: 'auto' }}>
       <div style={{ padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(110px + env(safe-area-inset-bottom))` }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: '24px' }}>←</button>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer', marginBottom: preview ? '14px' : '24px' }}>←</button>
+
+        {preview && (
+          <div style={{
+            background: darkMode ? 'rgba(242,224,80,0.08)' : 'rgba(242,224,80,0.18)',
+            border: `1px solid ${darkMode ? 'rgba(242,224,80,0.3)' : 'rgba(180,150,0,0.3)'}`,
+            borderRadius: '14px', padding: '12px 14px', marginBottom: '20px',
+          }}>
+            <p style={{ fontSize: '13px', fontWeight: '800', color, marginBottom: '4px' }}>
+              👁 {tx('This is how others see you', 'Voici comment les autres te voient')}
+            </p>
+            <p style={{ fontSize: '11px', color: subText, lineHeight: 1.5 }}>
+              {tx('Exactly the screen that opens when someone taps your pin on the map.',
+                  'Exactement l’écran qui s’ouvre quand quelqu’un appuie sur ton pin sur la carte.')}
+            </p>
+            {publicLink && (
+              <a
+                href={publicLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block', marginTop: '10px', fontSize: '12px', fontWeight: '700',
+                  color, textDecoration: 'underline',
+                }}
+              >
+                {tx('See my public page', 'Voir ma page publique')} ↗
+              </a>
+            )}
+          </div>
+        )}
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: avatarBg, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${avatarBorder}`, overflow: 'hidden' }}>
@@ -482,8 +524,9 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
         )}
 
         {/* Blocage. Séparé du signalement : signaler s'adresse à la modération,
-            bloquer agit tout de suite et sans attendre personne. */}
-        <div style={{ marginTop: '24px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px' }}>
+            bloquer agit tout de suite et sans attendre personne.
+            Masqué en aperçu : on ne se bloque pas, on ne se signale pas. */}
+        <div style={{ marginTop: '24px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px', display: preview ? 'none' : 'block' }}>
           {blocked ? (
             <div style={{ textAlign: 'center' }}>
               <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', lineHeight: 1.5 }}>

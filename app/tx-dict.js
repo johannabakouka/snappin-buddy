@@ -3,6 +3,10 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Preview my profile': 'Ver mi perfil como los demás',
+    'This is how others see you': 'Así te ven los demás',
+    'Exactly the screen that opens when someone taps your pin on the map.': 'Exactamente la pantalla que se abre cuando alguien toca tu pin en el mapa.',
+    'See my public page': 'Ver mi página pública',
     'Your session expired. Sign in again.': 'Tu sesión ha caducado. Vuelve a iniciar sesión.',
     'Couldn\'t send the proposal. Try again.': 'No se ha podido enviar la propuesta. Inténtalo de nuevo.',
     'Couldn\'t send the message. Try again.': 'No se ha podido enviar el mensaje. Inténtalo de nuevo.',
@@ -333,6 +337,10 @@ const TX = {
   },
 
   pt: {
+    'Preview my profile': 'Ver meu perfil como os outros',
+    'This is how others see you': 'É assim que os outros te veem',
+    'Exactly the screen that opens when someone taps your pin on the map.': 'Exatamente a tela que abre quando alguém toca no seu pin no mapa.',
+    'See my public page': 'Ver minha página pública',
     'Your session expired. Sign in again.': 'Sua sessão expirou. Entre novamente.',
     'Couldn\'t send the proposal. Try again.': 'Não foi possível enviar a proposta. Tente de novo.',
     'Couldn\'t send the message. Try again.': 'Não foi possível enviar a mensagem. Tente de novo.',
@@ -663,6 +671,10 @@ const TX = {
   },
 
   de: {
+    'Preview my profile': 'Mein Profil als Vorschau',
+    'This is how others see you': 'So sehen dich die anderen',
+    'Exactly the screen that opens when someone taps your pin on the map.': 'Genau der Bildschirm, der sich öffnet, wenn jemand auf deinen Pin auf der Karte tippt.',
+    'See my public page': 'Meine öffentliche Seite ansehen',
     'Your session expired. Sign in again.': 'Deine Sitzung ist abgelaufen. Melde dich neu an.',
     'Couldn\'t send the proposal. Try again.': 'Der Vorschlag konnte nicht gesendet werden. Versuche es erneut.',
     'Couldn\'t send the message. Try again.': 'Die Nachricht konnte nicht gesendet werden. Versuche es erneut.',
@@ -993,6 +1005,10 @@ const TX = {
   },
 
   it: {
+    'Preview my profile': 'Anteprima del mio profilo',
+    'This is how others see you': 'Ecco come ti vedono gli altri',
+    'Exactly the screen that opens when someone taps your pin on the map.': 'Esattamente la schermata che si apre quando qualcuno tocca il tuo pin sulla mappa.',
+    'See my public page': 'Vedi la mia pagina pubblica',
     'Your session expired. Sign in again.': 'La tua sessione è scaduta. Accedi di nuovo.',
     'Couldn\'t send the proposal. Try again.': 'Non è stato possibile inviare la proposta. Riprova.',
     'Couldn\'t send the message. Try again.': 'Non è stato possibile inviare il messaggio. Riprova.',
