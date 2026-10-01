@@ -13,6 +13,9 @@ export default function Header({ theme, onLogoClick }) {
       <span
         onClick={onLogoClick}
         style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '9px',
           fontFamily: 'var(--font-nunito)',
           fontSize: '22px',
           fontWeight: '900',
@@ -21,6 +24,8 @@ export default function Header({ theme, onLogoClick }) {
           cursor: onLogoClick ? 'pointer' : 'default',
         }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="" width={26} height={26} style={{ borderRadius: '7px', display: 'block', flexShrink: 0 }} />
         Snappin&apos;Buddy
       </span>
     </header>

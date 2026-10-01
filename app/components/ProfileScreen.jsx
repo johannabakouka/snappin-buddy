@@ -347,7 +347,8 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
         borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
         position: 'relative', flexShrink: 0,
       }}>
-        <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: theme.color }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: theme.color }}>
+          <img src="/logo.png" alt="" width={26} height={26} style={{ borderRadius: '7px', display: 'block', flexShrink: 0 }} />
           Snappin&apos;Buddy
         </span>
         <div onClick={() => setDarkMode(!darkMode)} style={{

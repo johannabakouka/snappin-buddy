@@ -200,7 +200,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
         <p style={{ color: '#8C8B83', fontSize: '12px', textAlign: 'center', marginTop: '14px', lineHeight: 1.6 }}>
           Snappin&apos;Buddy met en relation les créatifs par ville.
-          <br />Photographes, modèles, maquilleurs, stylistes — gratuit.
+          <br />Photographes, vidéastes, modèles, stylistes, maquilleurs, coiffeurs,
+          directeurs artistiques, monteurs, designers, musiciens… et bien d’autres.
+          <br />Gratuit, sans agence et sans commission.
         </p>
       </div>
     </main>

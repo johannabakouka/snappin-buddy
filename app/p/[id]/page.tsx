@@ -66,9 +66,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const found = await getOffer(id);
   if (!found) return { title: "Snappin'Buddy" };
   const { offer, author } = found;
+  const description = offer.description?.slice(0, 160) || `Projet proposé par ${author?.username || 'un créatif'}`;
   return {
     title: `${offer.title} · Snappin'Buddy`,
-    description: offer.description?.slice(0, 160) || `Projet proposé par ${author?.username || 'un créatif'}`,
+    description,
+    openGraph: {
+      title: offer.title || "Snappin'Buddy",
+      description,
+      images: ['https://snappinbuddy.com/og.png'],
+    },
   };
 }
 
@@ -92,7 +98,12 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
     <main style={{ background: '#0A0A0A', color: 'white', minHeight: '100dvh' }}>
       <div style={{ maxWidth: '520px', margin: '0 auto', padding: 'calc(env(safe-area-inset-top) + 32px) 20px calc(40px + env(safe-area-inset-bottom))' }}>
 
-        <Link href="/" style={{ color: '#F2E050', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
+        <Link href="/" style={{
+          display: 'flex', width: 'fit-content', alignItems: 'center', gap: '8px',
+          color: '#F2E050', fontSize: '13px', fontWeight: 800, textDecoration: 'none',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" width={28} height={28} style={{ borderRadius: '7px', display: 'block' }} />
           Snappin&apos;Buddy
         </Link>
 
@@ -189,7 +200,9 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
 
         <p style={{ color: '#8C8B83', fontSize: '12px', textAlign: 'center', marginTop: '14px', lineHeight: 1.6 }}>
           Snappin&apos;Buddy met en relation les créatifs par ville.
-          <br />Photographes, modèles, maquilleurs, stylistes — gratuit.
+          <br />Photographes, vidéastes, modèles, stylistes, maquilleurs, coiffeurs,
+          directeurs artistiques, monteurs, designers, musiciens… et bien d’autres.
+          <br />Gratuit, sans agence et sans commission.
         </p>
       </div>
     </main>
