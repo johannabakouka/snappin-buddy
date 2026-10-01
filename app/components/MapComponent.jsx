@@ -27,6 +27,10 @@ const maptilerUrl = (dark) =>
 const NEAREST = 8;
 const MIN_OPEN_ZOOM = 5;
 const MAX_OPEN_ZOOM = 9;
+// Zoom du bouton « Moi ». On ne descend pas plus bas volontairement : les
+// positions sont volontairement floutées de ~400 m, et zoomer à fond ferait
+// croire à une précision à la rue près qui n'existe pas.
+const ME_ZOOM = 13;
 
 function openingZoom(Lf, map, lat, lng, all) {
   const others = (all || []).filter(p => !p._isMe && p.lat && p.lng);
@@ -93,6 +97,7 @@ export default function MapComponent({ theme, active = true }) {
   const fallbackRef = useRef(false);
   const tilesRef = useRef(null);
   const [savingCity, setSavingCity] = useState(false);
+  const [cityError, setCityError] = useState('');
 
   const STATUS_FILTERS = [
     { id: 'all', label: tx('All', 'Tous') },
@@ -247,6 +252,7 @@ export default function MapComponent({ theme, active = true }) {
   }
 
   async function handleCitySelected(city) {
+    setCityError('');
     if (savingCity) return;
     setSavingCity(true);
     const fuzzed = fuzzPosition(city.lat, city.lng, CITY_FUZZ);
@@ -256,7 +262,10 @@ export default function MapComponent({ theme, active = true }) {
         .update({ lat: fuzzed.lat, lng: fuzzed.lng })
         .eq('user_id', user.id);
       if (error) {
+        // L'erreur n'était que dans la console : la personne choisissait sa
+        // ville et le panneau restait là, sans explication.
         console.error('City save failed', error);
+        setCityError(tx("Couldn't save your city. Try again.", 'L’enregistrement de ta ville a échoué. Réessaie.'));
         setSavingCity(false);
         return;
       }
@@ -270,6 +279,19 @@ export default function MapComponent({ theme, active = true }) {
 
   const me = profiles.find(p => p._isMe);
   const notOnMap = !!L && !!me && (!me.lat || !me.lng);
+
+  // Bouton « Moi » : on revient sur sa position après avoir fait défiler la
+  // carte. Si on n'est pas encore placé, le bouton ouvre le choix de la ville
+  // plutôt que de ne rien faire.
+  function centerOnMe() {
+    const map = mapInstance.current;
+    if (!map) return;
+    if (me?.lat && me?.lng) {
+      map.setView([me.lat, me.lng], Math.max(map.getZoom(), ME_ZOOM), { animate: true });
+      return;
+    }
+    setCityOverlay('choose');
+  }
 
   useEffect(() => {
     if (!L || !mapInstance.current || profiles.length === 0) return;
@@ -425,6 +447,9 @@ export default function MapComponent({ theme, active = true }) {
             <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', lineHeight: 1.5, marginBottom: '18px' }}>
               {cityOverlay === 'denied' ? t.geoDenied : t.cityHint}
             </p>
+            {cityError && (
+              <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '12px', fontWeight: '700' }}>{cityError}</p>
+            )}
             <CityPicker theme={theme} onSelect={handleCitySelected} />
             <button onClick={() => setCityOverlay(null)} style={{
               marginTop: '14px', padding: '8px 12px', border: 'none', background: 'transparent',
@@ -449,6 +474,25 @@ export default function MapComponent({ theme, active = true }) {
         }}>
           <span>{t.notOnMap}</span>
           <span style={{ fontWeight: '800', textDecoration: 'underline' }}>{t.notOnMapCta} →</span>
+        </button>
+      )}
+
+      {/* Retour sur ma position, juste au-dessus du bouton de ville */}
+      {!!L && !showGeoPrompt && !cityOverlay && (
+        <button
+          onClick={centerOnMe}
+          aria-label={tx('Center on me', 'Centrer sur moi')}
+          title={tx('Center on me', 'Centrer sur moi')}
+          style={{
+            position: 'absolute', right: '12px', bottom: '202px', zIndex: 450,
+            width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer',
+            border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+            background: darkMode ? 'rgba(26,26,26,0.92)' : 'rgba(255,255,255,0.95)',
+            fontSize: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          🎯
         </button>
       )}
 

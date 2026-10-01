@@ -149,12 +149,25 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   async function sendMessage() {
     if (!text.trim() || !user || !buddyUserId) return;
     const content = text.trim();
+    const previousReply = replyTo;
     setText('');
+    setImageError('');
     const payload = { sender_id: user.id, receiver_id: buddyUserId, content };
     if (replyTo?.id) payload.reply_to = replyTo.id;
     setReplyTo(null);
+
     const { error } = await supabase.from('messages').insert(payload);
-    if (!error) notifyByEmail();
+    if (error) {
+      // L'erreur n'était pas lue : le champ était déjà vidé, le message
+      // n'arrivait jamais, et rien ne le disait. On rend son texte à la
+      // personne — c'est ce qu'elle a écrit, elle ne doit pas le perdre.
+      console.error('sendMessage', error);
+      setText(content);
+      setReplyTo(previousReply);
+      setImageError(tx("Couldn't send the message. Try again.", "Envoi du message impossible. Réessaie."));
+      return;
+    }
+    notifyByEmail();
   }
 
   // Envoi d'une photo. Le texte tapé, s'il y en a, part en légende avec la photo.
@@ -283,11 +296,19 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     if (!forwarding || !user) return;
     const content = forwarding.content;
     setForwarding(null);
-    await supabase.from('messages').insert({
+    setImageError('');
+    const { error } = await supabase.from('messages').insert({
       sender_id: user.id,
       receiver_id: profile.user_id,
       content,
     });
+    // On affichait la pastille de confirmation sans savoir si le transfert
+    // avait abouti.
+    if (error) {
+      console.error('forwardTo', error);
+      setImageError(tx("Couldn't forward the message. Try again.", "Le transfert du message a échoué. Réessaie."));
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }

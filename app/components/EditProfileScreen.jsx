@@ -6,6 +6,8 @@ import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
 import { roleIdsFromStored, universFromStored } from '../constants';
+import PhotoViewer from './PhotoViewer';
+import { cleanUrl } from '../links';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET, PORTFOLIO_BUCKET } from '../image-upload';
 
 const BIO_MAX = 150;
@@ -85,11 +87,14 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
   const [videoUrl, setVideoUrl] = useState(profile?.video_url || '');
+  const [portfolioLink, setPortfolioLink] = useState(profile?.portfolio_url || '');
   const [selectedUnivers, setSelectedUnivers] = useState(universFromStored(profile?.styles, isEn));
   const [portfolioUrls, setPortfolioUrls] = useState(profile?.portfolio_urls || []);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  // Photo de portfolio ouverte en plein écran : son rang, ou null
+  const [viewerAt, setViewerAt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const portfolioInputRef = useRef(null);
@@ -192,8 +197,27 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
   async function handleSave() {
     if (!username || !handle || selectedRoles.length === 0) { setError(tx('Required fields missing', 'Champs obligatoires manquants')); return; }
     if (!isHandleValid(handle)) { setError(tx('Your handle needs at least 3 characters.', 'Ton handle doit faire au moins 3 caractères.')); return; }
-    if (handleIssue(handle)) { setError(tx('This handle is not allowed.', "Ce handle n'est pas autorisé.")); return; }
-    if (handleFree === false) { setError(tx('This handle is already taken.', 'Ce handle est déjà pris.')); return; }
+    // Le filtre des pseudos ne vaut que pour un NOUVEAU pseudo. Mon pseudo
+    // actuel reste enregistrable même s'il figure sur la liste des noms
+    // réservés : sinon la personne qui possède @snappinbuddy ne peut plus
+    // jamais modifier son profil — ni sa bio, ni ses photos, rien. C'est
+    // exactement ce qui se passait, et ça touchait d'abord la fondatrice.
+    if (!isMyOwnHandle && handleIssue(handle)) {
+      setError(tx('This handle is not allowed.', "Ce handle n'est pas autorisé."));
+      return;
+    }
+    if (!isMyOwnHandle && handleFree === false) {
+      setError(tx('This handle is already taken.', 'Ce handle est déjà pris.'));
+      return;
+    }
+
+    // Lien portfolio : null signale une adresse qui n'en est pas une.
+    const link = cleanUrl(portfolioLink);
+    if (link === null) {
+      setError(tx('This portfolio link is not a valid web address.', 'Ce lien de portfolio n’est pas une adresse web valide.'));
+      return;
+    }
+
     setLoading(true);
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const universToSave = selectedUnivers.map(label => {
@@ -206,6 +230,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       bio, zone, styles: universToSave.join(', '),
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
+      portfolio_url: link || null,
     }).eq('user_id', profile.user_id);
     if (error) {
       const taken = /duplicate|unique/i.test(error.message || '');
@@ -369,7 +394,11 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         {portfolioUrls.map((url, i) => (
           <div key={i} style={{ position: 'relative', width: '80px', height: '80px' }}>
-            <img src={url} style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' }} />
+            <img
+              src={url} alt=""
+              onClick={() => setViewerAt(i)}
+              style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover', cursor: 'pointer' }}
+            />
             <button onClick={() => setPortfolioUrls(prev => prev.filter(u => u !== url))}
               style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#FF4D4D', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
@@ -382,6 +411,19 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
         )}
       </div>
       <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
+
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>
+        🔗 {tx('PORTFOLIO LINK', 'LIEN PORTFOLIO')} <span style={{ fontWeight: '400' }}>({tx('site, Behance, Dribbble...', 'site, Behance, Dribbble...')})</span>
+      </p>
+      <input
+        value={portfolioLink}
+        onChange={e => setPortfolioLink(e.target.value)}
+        placeholder="monsite.com"
+        autoCapitalize="none"
+        autoCorrect="off"
+        inputMode="url"
+        style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none', marginBottom: '16px' }}
+      />
 
       <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>🎬 {tx('VIDEO LINK', 'LIEN VIDÉO')} <span style={{ fontWeight: '400' }}>(YouTube, Vimeo, TikTok, Instagram)</span></p>
       <input
@@ -406,6 +448,10 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       <button onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
         {loading ? (tx('Saving...', 'Sauvegarde...')) : (tx('Save', 'Enregistrer'))}
       </button>
+
+      {viewerAt !== null && (
+        <PhotoViewer photos={portfolioUrls} startIndex={viewerAt} onClose={() => setViewerAt(null)} />
+      )}
     </div>
   );
 }

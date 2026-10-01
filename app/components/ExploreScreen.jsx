@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import BuddyProfileScreen from './BuddyProfileScreen';
+import PhotoViewer from './PhotoViewer';
 import Header from './Header';
 import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
@@ -42,6 +43,8 @@ export default function ExploreScreen({ theme, active = true }) {
   const [profiles, setProfiles] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
+  // Portfolio ouvert en plein écran : { photos, index }
+  const [viewer, setViewer] = useState(null);
   const [filter, setFilter] = useState('match');
   const [roleFilter, setRoleFilter] = useState(null);
   const [universFilter, setUniversFilter] = useState(null);
@@ -129,15 +132,26 @@ export default function ExploreScreen({ theme, active = true }) {
       const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
       displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
     }
+    // Les profils avec photo passent devant, mais seulement à égalité
+    // d'affinité : c'est une incitation à compléter son profil, pas une raison
+    // d'enterrer quelqu'un qui correspond vraiment. Rien de visible, rien de
+    // vexant — on voit juste que les profils complets sont en haut.
+    const photoFirst = (a, b) => (b.avatar_url ? 1 : 0) - (a.avatar_url ? 1 : 0);
+
     if (filter === 'match') {
       displayed = [...displayed].sort((a, b) => {
         const scoreB = getMatchScore(myProfile?.styles, b.styles);
         const scoreA = getMatchScore(myProfile?.styles, a.styles);
         if (scoreB !== scoreA) return scoreB - scoreA;
+        const photo = photoFirst(a, b);
+        if (photo !== 0) return photo;
         if (a.status === 'dispo' && b.status !== 'dispo') return -1;
         if (b.status === 'dispo' && a.status !== 'dispo') return 1;
         return 0;
       });
+    } else {
+      // Les autres onglets n'avaient aucun tri : l'ordre venait de la base.
+      displayed = [...displayed].sort(photoFirst);
     }
   }
 
@@ -313,8 +327,8 @@ export default function ExploreScreen({ theme, active = true }) {
                   <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', scrollbarWidth: 'none', padding: '0 16px 12px' }}>
                     {portfolio.map((url, i) => (
                       <img key={i} src={url} alt={`portfolio-${i}`}
-                        style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
-                        onClick={() => setActiveBuddy(p)}
+                        style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }}
+                        onClick={() => setViewer({ photos: portfolio, index: i })}
                       />
                     ))}
                   </div>
@@ -336,6 +350,9 @@ export default function ExploreScreen({ theme, active = true }) {
           )}
         </div>
       </div>
+      {viewer && (
+        <PhotoViewer photos={viewer.photos} startIndex={viewer.index} onClose={() => setViewer(null)} />
+      )}
     </div>
   );
 }

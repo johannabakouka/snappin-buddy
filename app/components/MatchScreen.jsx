@@ -5,6 +5,7 @@ import Header from './Header';
 import QRScreen from './QRScreen';
 import OfferForm from './OfferForm';
 import BuddyProfileScreen from './BuddyProfileScreen';
+import PhotoViewer from './PhotoViewer';
 import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
@@ -43,6 +44,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const inputBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
   const [tab, setTab] = useState('offres');
+  // Portfolio ouvert en plein écran : { photos, index }
+  const [viewer, setViewer] = useState(null);
+  // Échec d'une action : affiché en bandeau en bas. Avant, ces écritures ne
+  // lisaient jamais leur erreur — le projet n'était pas créé, la candidature
+  // pas enregistrée, et l'écran affichait le contraire.
+  const [actionError, setActionError] = useState('');
   const [received, setReceived] = useState([]);
   const [sent, setSent] = useState([]);
   const [user, setUser] = useState(null);
@@ -149,12 +156,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: snt } = await supabase.from('collabs').select('*').eq('sender_id', userId).order('created_at', { ascending: false });
     if (recv && recv.length > 0) {
       const senderIds = recv.map(c => c.sender_id);
-      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', senderIds);
+      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
       setReceived(recv.map(c => ({ ...c, senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id) })));
     } else setReceived([]);
     if (snt && snt.length > 0) {
       const receiverIds = snt.map(c => c.receiver_id);
-      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', receiverIds);
+      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', receiverIds);
       setSent(snt.map(c => ({ ...c, receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id) })));
     } else setSent([]);
   }
@@ -262,19 +269,31 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const collabs = (found || []).filter(c => (c.message || '').trim().endsWith(`: ${offer.title}`));
     if (collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, is_early_adopter').in('user_id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
     } else setOfferCandidates([]);
     setLoadingCandidates(false);
   }
 
   async function closeOffer(offerId) {
-    await supabase.from('offers').update({ status: 'closed' }).eq('id', offerId);
+    setActionError('');
+    const { error } = await supabase.from('offers').update({ status: 'closed' }).eq('id', offerId);
+    if (error) {
+      console.error('closeOffer', error);
+      setActionError(tx("Couldn't close the project. Try again.", "La fermeture du projet a échoué. Réessaie."));
+      return;
+    }
     loadOffers(user.id);
   }
 
   async function reopenOffer(offerId) {
-    await supabase.from('offers').update({ status: 'open' }).eq('id', offerId);
+    setActionError('');
+    const { error } = await supabase.from('offers').update({ status: 'open' }).eq('id', offerId);
+    if (error) {
+      console.error('reopenOffer', error);
+      setActionError(tx("Couldn't reopen the project. Try again.", "La réouverture du projet a échoué. Réessaie."));
+      return;
+    }
     loadOffers(user.id);
   }
 
@@ -317,11 +336,22 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function handleSaveOffer(fields) {
+    setActionError('');
     if (editingOffer) {
-      await supabase.from('offers').update(fields).eq('id', editingOffer.id);
+      const { error } = await supabase.from('offers').update(fields).eq('id', editingOffer.id);
+      if (error) {
+        console.error('updateOffer', error);
+        setActionError(tx("Couldn't save the project. Try again.", "L’enregistrement du projet a échoué. Réessaie."));
+        return;
+      }
       setEditingOffer(null);
     } else {
-      await supabase.from('offers').insert({ user_id: user.id, ...fields, status: 'open' });
+      const { error } = await supabase.from('offers').insert({ user_id: user.id, ...fields, status: 'open' });
+      if (error) {
+        console.error('insertOffer', error);
+        setActionError(tx("Couldn't create the project. Try again.", "La création du projet a échoué. Réessaie."));
+        return;
+      }
       setShowNewOffer(false);
     }
     loadOffers(user.id);
@@ -330,12 +360,20 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function applyToOffer(o) {
     const { data: { user: u } } = await supabase.auth.getUser();
     if (!u) return;
-    const { data: collab } = await supabase.from('collabs').insert({
+    setActionError('');
+    const { data: collab, error } = await supabase.from('collabs').insert({
       sender_id: u.id,
       receiver_id: o.user_id,
       message: `Je me propose pour : ${o.title}`,
       status: 'pending'
     }).select('id').single();
+    // Sans cette vérification, le bouton passait à « Déjà candidaté » même
+    // quand rien n'était enregistré : la personne ne retentait jamais.
+    if (error) {
+      console.error('applyToOffer', error);
+      setActionError(tx("Couldn't send your application. Try again.", "L’envoi de ta candidature a échoué. Réessaie."));
+      return;
+    }
     setAppliedOffers(prev => new Set([...prev, o.title]));
 
     // Prévient le porteur du projet (et non plus le candidat lui-même)
@@ -343,7 +381,13 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function respondCollab(id, status, senderId) {
-    await supabase.from('collabs').update({ status }).eq('id', id);
+    setActionError('');
+    const { error } = await supabase.from('collabs').update({ status }).eq('id', id);
+    if (error) {
+      console.error('respondCollab', error);
+      setActionError(tx("Couldn't send your reply. Try again.", "L’envoi de ta réponse a échoué. Réessaie."));
+      return;
+    }
     if (status === 'accepted' && user && senderId) {
       await supabase.from('messages').insert({
         sender_id: user.id,
@@ -494,7 +538,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
         {portfolio.length > 0 && (
           <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {portfolio.map((url, i) => (
-              <img key={i} src={url} style={{ width: '64px', height: '64px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+              <img
+                key={i} src={url} alt=""
+                onClick={() => setViewer({ photos: portfolio, index: i })}
+                style={{ width: '64px', height: '64px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }}
+              />
             ))}
           </div>
         )}
@@ -871,6 +919,26 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
           </>
         )}
       </div>
+      {viewer && (
+        <PhotoViewer photos={viewer.photos} startIndex={viewer.index} onClose={() => setViewer(null)} />
+      )}
+      {actionError && (
+        <div
+          onClick={() => setActionError('')}
+          style={{
+            position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+            bottom: 'calc(100px + env(safe-area-inset-bottom))', zIndex: 9000,
+            width: 'calc(100% - 32px)', maxWidth: '358px', cursor: 'pointer',
+            background: '#FF4D4D', color: 'white', borderRadius: '14px',
+            padding: '12px 16px', fontSize: '13px', fontWeight: '700',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.4)', display: 'flex',
+            alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+          }}
+        >
+          <span>{actionError}</span>
+          <span style={{ flexShrink: 0, opacity: 0.8 }}>✕</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ export default function MessagesScreen({ theme, active = true }) {
   // Appui long sur une conversation : épingler, sourdine, non lue, retirer
   const [menuFor, setMenuFor] = useState(null);
   const [confirmHide, setConfirmHide] = useState(false);
+  const [actionError, setActionError] = useState('');
   const pressTimer = useRef(null);
   const longPressed = useRef(false);
   // Profil ouvert depuis une conversation ou depuis la liste des buddies
@@ -130,10 +131,22 @@ export default function MessagesScreen({ theme, active = true }) {
     setActiveBuddy(c);
   }
 
+  // Épingler, mettre en sourdine, marquer non lue, retirer : le menu se
+  // fermait et la liste se rechargeait identique quand l'action échouait.
+  // « Rien ne s'est passé » est le seul retour que la personne obtenait.
   async function runAction(action) {
-    try { await action(); } catch (e) { console.error('conversation', e); }
+    let failed = false;
+    try {
+      const result = await action();
+      // conversations.js renvoie null quand l'enregistrement a été refusé.
+      if (result === null) failed = true;
+    } catch (e) {
+      console.error('conversation', e);
+      failed = true;
+    }
     setMenuFor(null);
     setConfirmHide(false);
+    setActionError(failed ? tx("That didn't work. Try again.", "Ça n’a pas fonctionné. Réessaie.") : '');
     if (user) loadConversations(user.id);
   }
 
@@ -408,6 +421,23 @@ export default function MessagesScreen({ theme, active = true }) {
               {tx('Cancel', 'Annuler')}
             </button>
           </div>
+        </div>
+      )}
+      {actionError && (
+        <div
+          onClick={() => setActionError('')}
+          style={{
+            position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+            bottom: 'calc(100px + env(safe-area-inset-bottom))', zIndex: 9000,
+            width: 'calc(100% - 32px)', maxWidth: '358px', cursor: 'pointer',
+            background: '#FF4D4D', color: 'white', borderRadius: '14px',
+            padding: '12px 16px', fontSize: '13px', fontWeight: '700',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.4)', display: 'flex',
+            alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+          }}
+        >
+          <span>{actionError}</span>
+          <span style={{ flexShrink: 0, opacity: 0.8 }}>✕</span>
         </div>
       )}
     </div>

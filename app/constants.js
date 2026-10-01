@@ -9,7 +9,10 @@ export const ROLES_FR = [
   { id: 'styliste', label: 'Styliste', icon: '👗' },
   { id: 'maquilleur', label: 'Maquilleur·se', icon: '💄' },
   { id: 'coiffeur', label: 'Coiffeur·se', icon: '💇' },
-  { id: 'modèle', label: 'Modèle', icon: '🧍' },
+  // Un seul rôle, deux mots : « mannequin » et « modèle » désignent les mêmes
+  // personnes. Deux rôles séparés couperaient en deux la même population, et
+  // chaque filtre en manquerait la moitié.
+  { id: 'modèle', label: 'Modèle / Mannequin', icon: '🧍' },
   { id: 'designer', label: 'Designer', icon: '✏️' },
   { id: 'musicien', label: 'Musicien·ne', icon: '🎵' },
   { id: 'chanteur', label: 'Chanteur·se', icon: '🎤' },
@@ -118,12 +121,22 @@ export function normKey(value) {
  * perdu, une majuscule — et l'écran de modification s'ouvrait avec AUCUN rôle
  * coché : il fallait tout re-sélectionner pour changer une photo de portfolio.
  */
+/** Mots que les gens emploient pour un rôle, sans que ce soit son libellé. */
+const ROLE_SYNONYMS = {
+  'mannequin': 'modèle',
+  'mua': 'maquilleur',
+  'make up artist': 'maquilleur',
+  'da': 'directeur artistique',
+  'videographe': 'vidéaste',
+};
+
 export function roleIdsFromStored(role) {
   const index = new Map();
   [...ROLES_FR, ...ROLES_EN].forEach(r => {
     index.set(normKey(r.id), r.id);
     index.set(normKey(r.label), r.id);
   });
+  Object.entries(ROLE_SYNONYMS).forEach(([mot, id]) => index.set(normKey(mot), id));
 
   const found = [];
   splitRoles(role).forEach(piece => {

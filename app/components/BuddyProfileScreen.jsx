@@ -1,11 +1,14 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
+import PhotoViewer from './PhotoViewer';
 import { blockUser, unblockUser } from '../blocks';
+import { cleanUrl, prettyUrl } from '../links';
+import { uploadProfileImage, AVATAR_BUCKET } from '../image-upload';
 import { withAt } from '../handles';
 
 function getVideoEmbed(url) {
@@ -52,6 +55,16 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';
   const avatarBorder = darkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.22)';
 
+  // Photo de portfolio ouverte en plein écran : son rang, ou null
+  const [viewerAt, setViewerAt] = useState(null);
+  // Ma propre photo de profil : null tant qu'on ne sait pas, '' si je n'en ai pas.
+  const [myAvatar, setMyAvatar] = useState(null);
+  const [nudgeHidden, setNudgeHidden] = useState(false);
+  const [nudgeBusy, setNudgeBusy] = useState(false);
+  const [nudgeError, setNudgeError] = useState('');
+  const [sendError, setSendError] = useState('');
+  const [photoJustAdded, setPhotoJustAdded] = useState(false);
+  const nudgeInputRef = useRef(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [message, setMessage] = useState('');
@@ -59,6 +72,8 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [blockError, setBlockError] = useState('');
   // Blocage : coupe le contact dans les deux sens.
   const [blocked, setBlocked] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
@@ -106,19 +121,79 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
     ? (tx('Unavailable', 'Indisponible'))
     : (tx('Available', 'Disponible'));
   const embedUrl = getVideoEmbed(buddy?.video_url);
+  // On revalide à l'affichage, pas seulement à la saisie : une adresse
+  // enregistrée avant cette validation, ou écrite directement dans la base,
+  // ne doit pas se retrouver cliquable telle quelle.
+  const buddyLink = cleanUrl(buddy?.portfolio_url) || '';
 
   const roleLabel = roleLabels(buddy?.role, ROLES);
 
+  // On a besoin de savoir si J'AI une photo de profil, pour le rappel affiché
+  // au moment d'envoyer une proposition.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !alive) return;
+      const { data } = await supabase.from('profiles').select('avatar_url').eq('user_id', user.id).maybeSingle();
+      if (alive) setMyAvatar(data?.avatar_url || '');
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Ajouter sa photo sans quitter l'envoi de la proposition : le rappel porte
+  // sa propre solution, sinon il ne sert qu'à culpabiliser les gens.
+  async function addMyPhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setNudgeError('');
+    setNudgeBusy(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('session expirée');
+      const url = await uploadProfileImage(file, user.id, AVATAR_BUCKET);
+      const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+      if (error) throw error;
+      setMyAvatar(url);
+      setPhotoJustAdded(true);
+    } catch (err) {
+      console.error('avatar', err);
+      setNudgeError(tx(
+        'The photo could not be saved. Try another one.',
+        'La photo n’a pas pu être enregistrée. Essaie une autre photo.',
+      ));
+    }
+    setNudgeBusy(false);
+  }
+
   async function sendCollab() {
     setSending(true);
+    setSendError('');
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: collab } = await supabase.from('collabs').insert({
+    if (!user) {
+      setSendError(tx('Your session expired. Sign in again.', 'Ta session a expiré. Reconnecte-toi.'));
+      setSending(false);
+      return;
+    }
+    {
+      const { data: collab, error } = await supabase.from('collabs').insert({
         sender_id: user.id,
         receiver_id: buddy.user_id,
         message,
         status: 'pending',
       }).select('id').single();
+
+      // L'erreur n'était pas lue : l'écran annonçait « proposition envoyée »
+      // alors que rien n'était enregistré. Une fausse confirmation est pire
+      // qu'un silence — la personne attend une réponse qui ne viendra jamais.
+      if (error) {
+        console.error('sendCollab', error);
+        setSendError(tx("Couldn't send the proposal. Try again.", "Envoi de la proposition impossible. Réessaie."));
+        setSending(false);
+        return;
+      }
+
       setSent(true);
       setRelation('pending');
       // Prévient la personne par email (le serveur retrouve son adresse)
@@ -137,6 +212,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
   async function toggleBlock() {
     if (!me?.id || !buddy?.user_id) return;
     setBlocking(true);
+    setBlockError('');
     try {
       if (blocked) {
         await unblockUser(me.id, buddy.user_id);
@@ -147,13 +223,19 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
         setConfirmBlock(false);
       }
     } catch (e) {
+      // Bloquer est un geste de sécurité : si ça rate, il faut le dire, sinon
+      // la personne croit s'être protégée.
       console.error('block', e);
+      setBlockError(blocked
+        ? tx("Couldn't unblock. Try again.", 'Le déblocage a échoué. Réessaie.')
+        : tx("Couldn't block. Try again.", 'Le blocage a échoué. Réessaie.'));
     }
     setBlocking(false);
   }
 
   async function sendReport() {
     if (!reportReason.trim()) return;
+    setReportError('');
     try {
       // Le serveur envoie le signalement à l'adresse admin ; l'app ne choisit plus le destinataire
       const { data: { session } } = await supabase.auth.getSession();
@@ -169,7 +251,14 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
       if (!res.ok) throw new Error('report failed');
       setReportSent(true);
     } catch (e) {
-      console.error(e);
+      // Un signalement d'abus qui échoue en silence est le pire silence de
+      // l'app : la personne croit avoir alerté la modération, et personne n'a
+      // rien reçu. On le dit, et on donne l'adresse de secours.
+      console.error('sendReport', e);
+      setReportError(tx(
+        "Couldn't send the report. Write to contact@snappinbuddy.com and it will be handled.",
+        "L’envoi du signalement a échoué. Écris à contact@snappinbuddy.com, il sera traité.",
+      ));
     }
   }
 
@@ -197,13 +286,41 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
 
         {portfolio.length > 0 && (
           <div style={{ marginBottom: '16px' }}>
-            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>PORTFOLIO</p>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', letterSpacing: '1px' }}>
+              PORTFOLIO <span style={{ letterSpacing: 0, textTransform: 'none' }}>· {tx('tap to enlarge', 'appuie pour agrandir')}</span>
+            </p>
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
               {portfolio.map((url, i) => (
-                <img key={i} src={url} alt={`portfolio-${i}`} style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
+                <img
+                  key={i} src={url} alt={`portfolio-${i}`}
+                  onClick={() => setViewerAt(i)}
+                  style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }}
+                />
               ))}
             </div>
           </div>
+        )}
+
+        {/* Lien portfolio. rel="noopener noreferrer" : le lien est écrit par
+            quelqu'un d'autre, le site ouvert ne doit pas pouvoir reprendre la
+            main sur l'onglet de l'app. */}
+        {buddyLink && (
+          <a
+            href={buddyLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+              marginBottom: '16px', padding: '13px 16px', borderRadius: '14px',
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+              color, textDecoration: 'none',
+            }}
+          >
+            <span style={{ fontSize: '13px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              🔗 {prettyUrl(buddyLink)}
+            </span>
+            <span style={{ fontSize: '12px', color: subText, fontWeight: '700', flexShrink: 0 }}>↗</span>
+          </a>
         )}
 
         {embedUrl && (
@@ -303,9 +420,57 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
           </div>
         ) : showInput ? (
           <div style={{ marginTop: '8px' }}>
+            {/* Rappel photo, au seul moment où la personne a une raison
+                égoïste de s'en occuper : juste avant d'envoyer. Il ne bloque
+                rien — le bouton d'envoi reste utilisable juste en dessous. */}
+            {myAvatar === '' && !nudgeHidden && (
+              <div style={{
+                border: `1px solid ${darkMode ? 'rgba(242,224,80,0.35)' : 'rgba(180,150,0,0.35)'}`,
+                background: darkMode ? 'rgba(242,224,80,0.07)' : 'rgba(242,224,80,0.14)',
+                borderRadius: '14px', padding: '14px', marginBottom: '10px', position: 'relative',
+              }}>
+                <button
+                  onClick={() => setNudgeHidden(true)}
+                  aria-label={tx('Close', 'Fermer')}
+                  style={{ position: 'absolute', top: '6px', right: '8px', background: 'none', border: 'none', color: subText, fontSize: '14px', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+                <p style={{ fontSize: '13px', fontWeight: '800', color, marginBottom: '6px' }}>
+                  📷 {tx('Your profile has no photo', 'Ton profil n’a pas de photo')}
+                </p>
+                <p style={{ fontSize: '12px', color: subText, lineHeight: 1.5, marginBottom: '10px' }}>
+                  {tx(
+                    'Add one so people know who they’re talking to — a profile without a photo often looks like a fake account.',
+                    'Ajoute-en une pour qu’on sache à qui on parle : un profil sans photo passe souvent pour un faux compte.',
+                  )}
+                </p>
+                {nudgeError && <p style={{ color: '#FF4D4D', fontSize: '12px', marginBottom: '8px' }}>{nudgeError}</p>}
+                <button
+                  onClick={() => nudgeInputRef.current?.click()}
+                  disabled={nudgeBusy}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '20px',
+                    border: `1px solid ${tagBorder}`, background: 'transparent',
+                    color, fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                  }}
+                >
+                  {nudgeBusy ? tx('Saving...', 'Sauvegarde...') : tx('Add my photo', 'Ajouter ma photo')}
+                </button>
+                <input ref={nudgeInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={addMyPhoto} />
+              </div>
+            )}
+            {photoJustAdded && (
+              <p style={{ color: '#2ECC71', fontSize: '12px', fontWeight: '700', marginBottom: '10px' }}>
+                ✓ {tx('Photo added', 'Photo ajoutée')}
+              </p>
+            )}
             <input value={message} onChange={e => setMessage(e.target.value)}
               placeholder={tx('Tell them about your project...', 'Parle-lui de ton projet...')}
               style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${tagBorder}`, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', color, fontSize: '14px', marginBottom: '10px', boxSizing: 'border-box' }} />
+            {sendError && (
+              <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>{sendError}</p>
+            )}
             <button onClick={sendCollab} disabled={sending} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
               {sending ? (tx('Sending...', 'Envoi...')) : (tx('⚡ Send proposal', '⚡ Envoyer ma proposition'))}
             </button>
@@ -331,6 +496,9 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
               }}>
                 {tx('Unblock', 'Débloquer')}
               </button>
+              {blockError && (
+                <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginTop: '8px' }}>{blockError}</p>
+              )}
             </div>
           ) : !confirmBlock ? (
             <button onClick={() => setConfirmBlock(true)} style={{
@@ -345,6 +513,9 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
                 {tx('They won’t be able to message you, propose a collab, or see you on the map. You can undo this at any time.',
                     'Elle ne pourra plus t’écrire, te proposer de collab, ni te voir sur la carte. Tu peux annuler à tout moment.')}
               </p>
+              {blockError && (
+                <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px', textAlign: 'center' }}>{blockError}</p>
+              )}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => setConfirmBlock(false)} style={{
                   flex: 1, padding: '11px', borderRadius: '20px',
@@ -398,8 +569,11 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
                   </button>
                 ))}
               </div>
+              {reportError && (
+                <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>{reportError}</p>
+              )}
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => { setShowReport(false); setReportReason(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: subText, fontSize: '13px', cursor: 'pointer' }}>
+                <button onClick={() => { setShowReport(false); setReportReason(''); setReportError(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: subText, fontSize: '13px', cursor: 'pointer' }}>
                   {tx('Cancel', 'Annuler')}
                 </button>
                 <button onClick={sendReport} disabled={!reportReason} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: reportReason ? '#FF4D4D' : 'rgba(255,77,77,0.3)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: reportReason ? 'pointer' : 'default' }}>
@@ -414,6 +588,9 @@ export default function BuddyProfileScreen({ buddy, onBack, theme }) {
         <div style={{ position: 'fixed', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '390px', zIndex: 2600, background: bg }}>
           <ChatScreen buddy={buddy} onBack={() => setChatOpen(false)} theme={theme} />
         </div>
+      )}
+      {viewerAt !== null && (
+        <PhotoViewer photos={portfolio} startIndex={viewerAt} onClose={() => setViewerAt(null)} />
       )}
     </div>
   );

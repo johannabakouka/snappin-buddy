@@ -51,7 +51,10 @@ async function setPref(userId, buddyId, patch) {
     console.error('conversation_prefs', error);
     return null;
   }
-  return data;
+  // null veut dire « refusé », et seulement ça : l'écran s'en sert pour
+  // afficher un message. Un enregistrement réussi qui ne renverrait aucune
+  // ligne ne doit donc pas passer pour un échec.
+  return data || true;
 }
 
 export function pinConversation(userId, buddyId, pinned) {

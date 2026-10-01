@@ -20,6 +20,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const subText = darkMode ? '#666' : '#888';
 
   const [sessionId, setSessionId] = useState(null);
+  const [qrError, setQrError] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
@@ -27,14 +28,23 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   }, []);
 
   async function createSession() {
+    setQrError('');
     const expires = new Date(Date.now() + 30 * 60 * 1000);
-    const { data } = await supabase.from('qr_sessions').insert({
+    const { data, error } = await supabase.from('qr_sessions').insert({
       user_id: user.id,
       collab_id: collab.id,
       expires_at: expires.toISOString(),
       status: 'pending',
     }).select().single();
-    if (data) setSessionId(data.id);
+    // L'erreur était ignorée : l'écran restait sur « Génération... » pour
+    // toujours, au moment exact où les deux personnes sont face à face pour
+    // valider leur rencontre. Le pire endroit pour une attente sans fin.
+    if (error || !data) {
+      console.error('createSession', error);
+      setQrError('Le QR code n’a pas pu être créé.');
+      return;
+    }
+    setSessionId(data.id);
   }
 
   // Le QR contient un LIEN, pas un identifiant. L'appareil photo de n'importe
@@ -199,8 +209,20 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             {qrUrl ? (
               <img src={qrUrl} alt="QR Code" style={{ width: '220px', height: '220px', borderRadius: '8px' }} />
             ) : (
-              <div style={{ width: '220px', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: subText }}>
-                Génération...
+              <div style={{ width: '220px', height: '220px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', justifyContent: 'center', color: qrError ? '#FF4D4D' : subText, textAlign: 'center', padding: '0 12px' }}>
+                {qrError ? (
+                  <>
+                    <span style={{ fontSize: '13px', fontWeight: '700', lineHeight: 1.5 }}>{qrError}</span>
+                    <button onClick={createSession} style={{
+                      border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                      background: 'transparent', color: darkMode ? 'white' : '#111',
+                      borderRadius: '20px', padding: '8px 16px', fontSize: '13px',
+                      fontWeight: '700', cursor: 'pointer',
+                    }}>
+                      Réessayer
+                    </button>
+                  </>
+                ) : 'Génération...'}
               </div>
             )}
           </div>

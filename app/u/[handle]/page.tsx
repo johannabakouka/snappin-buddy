@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '../../lib/server';
 import { ROLES_FR, splitRoles } from '../../constants';
+import { cleanUrl, prettyUrl } from '../../links';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ type PublicProfile = {
   zone: string | null;
   avatar_url: string | null;
   portfolio_urls: string[] | null;
+  portfolio_url: string | null;
   validated_projects: number | null;
 };
 
@@ -44,7 +46,7 @@ async function getProfile(handle: string): Promise<PublicProfile | null> {
   // dont le pseudo correspond vraiment.
   const { data } = await supabaseAdmin()
     .from('profiles')
-    .select('username, handle, bio, role, styles, zone, avatar_url, portfolio_urls, validated_projects')
+    .select('username, handle, bio, role, styles, zone, avatar_url, portfolio_urls, portfolio_url, validated_projects')
     .or(`handle.ilike.@${clean},handle.ilike.${clean}`)
     .limit(5);
 
@@ -85,6 +87,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   );
   const univers = (profile.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const portfolio = (profile.portfolio_urls || []).slice(0, 6);
+  // Revalidé à l'affichage : cette page est publique et lue par des moteurs de
+  // recherche, un lien douteux n'y est jamais rendu cliquable.
+  const siteLink = cleanUrl(profile.portfolio_url) || '';
   const appLink = `/?buddy=${encodeURIComponent((profile.handle || '').replace(/^@+/, ''))}`;
 
   return (
@@ -160,6 +165,19 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
         {profile.zone && (
           <p style={{ color: '#8C8B83', fontSize: '13px', marginBottom: '20px' }}>📍 {profile.zone}</p>
+        )}
+
+        {siteLink && (
+          <a href={siteLink} target="_blank" rel="noopener noreferrer nofollow" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+            border: '1px solid rgba(255,255,255,0.18)', borderRadius: '14px',
+            padding: '13px 16px', marginBottom: '20px', color: 'white', textDecoration: 'none',
+          }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              🔗 {prettyUrl(siteLink)}
+            </span>
+            <span style={{ fontSize: '12px', color: '#8C8B83', fontWeight: 700, flexShrink: 0 }}>↗</span>
+          </a>
         )}
 
         {portfolio.length > 0 && (
