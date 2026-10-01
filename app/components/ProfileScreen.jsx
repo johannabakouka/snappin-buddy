@@ -10,6 +10,7 @@ import { withAt } from '../handles';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
+import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET } from '../image-upload';
 
 function translateTag(tag, isEn) {
   if (!isEn) return tag;
@@ -112,6 +113,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
+  const [avatarError, setAvatarError] = useState('');
   const [loggingOut, setLoggingOut] = useState(false);
   const fileInputRef = useRef(null);
   const [openProjects, setOpenProjects] = useState(null);
@@ -211,20 +213,39 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     }
   }
 
+  // La photo de profil ne changeait pas, et sans jamais rien dire. Trois causes,
+  // toutes corrigées ici :
+  //   1. le champ de fichier gardait la photo choisie, donc re-choisir la même
+  //      ne déclenchait plus rien — on le vide maintenant à chaque fois ;
+  //   2. l'envoi réutilisait un nom de fichier fixe, ce qui exige un droit de
+  //      remplacement que le stockage n'accorde pas (voir uploadProfileImage) ;
+  //   3. l'erreur d'envoi était ignorée : il ne se passait rien, et on ne
+  //      pouvait pas deviner pourquoi.
   async function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+
+    setAvatarError('');
     setUploading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const ext = file.name.split('.').pop();
-    const path = `${user.id}/avatar.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
-    if (!uploadError) {
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      const url = data.publicUrl + '?t=' + Date.now();
-      await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('session expirée');
+
+      const previous = avatarUrl;
+      const url = await uploadProfileImage(file, user.id, AVATAR_BUCKET);
+      const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+      if (error) throw error;
+
       setAvatarUrl(url);
       await onProfileUpdate();
+      if (previous) removeByPublicUrl(previous, AVATAR_BUCKET);
+    } catch (err) {
+      console.error('avatar', err);
+      setAvatarError(tx(
+        'The photo could not be saved. Try another one.',
+        'La photo n’a pas pu être enregistrée. Essaie une autre photo.',
+      ));
     }
     setUploading(false);
   }
@@ -281,9 +302,11 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
 
   if (editing) return (
     <EditProfileScreen
+      key={profile?.user_id || 'edit'}
       profile={{ ...profile, avatar_url: avatarUrl }}
       onBack={() => setEditing(false)}
       onSave={() => { setEditing(false); onProfileUpdate(); }}
+      onAvatarChange={(url) => { setAvatarUrl(url); onProfileUpdate(); }}
       theme={theme}
     />
   );
@@ -346,6 +369,9 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
             </div>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+          {avatarError && (
+            <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '8px' }}>{avatarError}</p>
+          )}
 
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: theme.color }}>{profile?.username}</h2>
           {profile?.is_early_adopter && (

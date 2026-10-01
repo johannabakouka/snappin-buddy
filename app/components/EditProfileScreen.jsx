@@ -5,6 +5,8 @@ import { useRoles, useUnivers, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
+import { roleIdsFromStored, universFromStored } from '../constants';
+import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET, PORTFOLIO_BUCKET } from '../image-upload';
 
 const BIO_MAX = 150;
 
@@ -32,39 +34,43 @@ function getVideoEmbed(url) {
   return null;
 }
 
-export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
+export default function EditProfileScreen({ profile, onSave, onBack, onAvatarChange, theme }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
 
   const [username, setUsername] = useState(profile?.username || '');
-  const [handle, setHandle] = useState(profile?.handle || '');
+  // cleanHandle : un pseudo enregistré sans @ ou avec des majuscules était
+  // considéré comme invalide, et le champ se comportait comme s'il était vide.
+  const [handle, setHandle] = useState(cleanHandle(profile?.handle || ''));
   // Disponibilité du pseudo : on retient le pseudo vérifié avec le résultat,
   // pour savoir si le résultat affiché correspond bien à ce qui est tapé.
   const [handleCheck, setHandleCheck] = useState({ handle: '', free: null, suggestions: [] });
-  // On normalise : les rôles sont enregistrés en minuscules, un ancien profil
-  // écrit autrement doit quand même s'allumer dans la liste.
-  const [selectedRoles, setSelectedRoles] = useState(
-    (profile?.role || '')
-      .split(',')
-      .map(r => r.trim().toLowerCase())
-      .filter(r => r && ROLES.some(x => x.id === r))
-  );
+  const [selectedRoles, setSelectedRoles] = useState(roleIdsFromStored(profile?.role));
+
+  // Mon propre pseudo n'est jamais « déjà pris ».
+  // On le tranche ici, sans interroger la base : la vérification côté serveur
+  // dépendait de la comparaison des identifiants de compte, et au moindre
+  // décalage elle annonçait « Déjà pris » sur son propre pseudo — impossible
+  // alors d'enregistrer la moindre modification.
+  const myHandle = cleanHandle(profile?.handle || '');
+  const isMyOwnHandle = !!myHandle && cleanHandle(handle) === myHandle;
 
   // Vérification du pseudo pendant la saisie, avec une pause de 500 ms.
-  // profile.user_id : on ne se signale pas soi-même comme « déjà pris ».
+  // Son propre pseudo ne déclenche aucune requête : la réponse est connue.
   useEffect(() => {
+    if (isMyOwnHandle) return;
     if (!isHandleValid(handle)) return;
     const timer = setTimeout(async () => {
       const { free, suggestions, issue } = await checkHandle(handle, profile?.user_id);
       setHandleCheck({ handle, free, suggestions, issue });
     }, 500);
     return () => clearTimeout(timer);
-  }, [handle, profile?.user_id]);
+  }, [handle, isMyOwnHandle, profile?.user_id]);
 
-  const handleChecked = handleCheck.handle === handle;
-  const handleFree = handleChecked ? handleCheck.free : null;
+  const handleChecked = isMyOwnHandle || handleCheck.handle === handle;
+  const handleFree = isMyOwnHandle ? true : (handleChecked ? handleCheck.free : null);
   const handleSuggestions = handleChecked ? handleCheck.suggestions : [];
   const handleIssueCode = handleChecked ? handleCheck.issue : null;
   const checkingHandle = isHandleValid(handle) && !handleChecked;
@@ -79,14 +85,19 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
   const [videoUrl, setVideoUrl] = useState(profile?.video_url || '');
-  const [selectedUnivers, setSelectedUnivers] = useState(
-    profile?.styles ? profile.styles.split(',').map(s => s.trim()).filter(Boolean) : []
-  );
+  const [selectedUnivers, setSelectedUnivers] = useState(universFromStored(profile?.styles, isEn));
   const [portfolioUrls, setPortfolioUrls] = useState(profile?.portfolio_urls || []);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const portfolioInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
+
+  // Le formulaire se remplit au montage, à partir du profil reçu. Si le profil
+  // changeait de compte, l'écran parent change sa clé React et l'écran est
+  // reconstruit à neuf : pas besoin de recopier les champs à la main ici.
 
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
@@ -105,23 +116,76 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
     return <span style={{ fontSize: '11px', color: c }}>{val.length}/{max}</span>;
   }
 
+  // La photo de profil se change maintenant ici aussi. Avant, cet écran
+  // l'affichait sans permettre d'y toucher : on appuyait dessus, rien ne se
+  // passait, et le seul endroit où la changer était l'écran précédent.
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';   // sinon re-choisir la même photo ne déclenche rien
+    if (!file) return;
+
+    setError('');
+    setUploadingAvatar(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('session expirée');
+
+      const previous = avatarUrl;
+      const url = await uploadProfileImage(file, user.id, AVATAR_BUCKET);
+      const { error: dbError } = await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+      if (dbError) throw dbError;
+
+      setAvatarUrl(url);
+      // La photo est enregistrée tout de suite, sans attendre « Enregistrer » :
+      // on prévient l'écran précédent, sinon il affichait encore l'ancienne
+      // après un simple retour en arrière.
+      if (onAvatarChange) onAvatarChange(url);
+      if (previous) removeByPublicUrl(previous, AVATAR_BUCKET);
+    } catch (err) {
+      console.error('avatar', err);
+      setError(tx(
+        'The photo could not be saved. Try another one.',
+        'La photo n’a pas pu être enregistrée. Essaie une autre photo.',
+      ));
+    }
+    setUploadingAvatar(false);
+  }
+
   async function handlePortfolioUpload(e) {
     const files = Array.from(e.target.files || []);
+    e.target.value = '';
     if (!files.length) return;
     if (portfolioUrls.length + files.length > 5) { setError(tx('Maximum 5 portfolio photos', 'Maximum 5 photos de portfolio')); return; }
+
+    setError('');
     setUploadingPortfolio(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const newUrls = [...portfolioUrls];
-    for (const file of files) {
-      const ext = file.name.split('.').pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('portfolio').upload(path, file);
-      if (!uploadError) {
-        const { data } = supabase.storage.from('portfolio').getPublicUrl(path);
-        newUrls.push(data.publicUrl);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('session expirée');
+
+      const newUrls = [...portfolioUrls];
+      let failed = 0;
+      for (const file of files) {
+        try {
+          newUrls.push(await uploadProfileImage(file, user.id, PORTFOLIO_BUCKET));
+        } catch (err) {
+          console.error('portfolio', err);
+          failed += 1;
+        }
       }
+      setPortfolioUrls(newUrls);
+      // Les échecs étaient silencieux : les photos disparaissaient sans un mot.
+      // Deux messages distincts, et chacun écrit en entier : le vérificateur de
+      // traductions ne sait pas lire un texte caché dans une condition.
+      if (failed && failed === files.length) {
+        setError(tx('The photos could not be added. Try others.', 'Les photos n’ont pas pu être ajoutées. Essaie d’autres photos.'));
+      } else if (failed) {
+        setError(tx('Some photos could not be added.', 'Certaines photos n’ont pas pu être ajoutées.'));
+      }
+    } catch (err) {
+      console.error('portfolio', err);
+      setError(tx('The photos could not be added. Try others.', 'Les photos n’ont pas pu être ajoutées. Essaie d’autres photos.'));
     }
-    setPortfolioUrls(newUrls);
     setUploadingPortfolio(false);
   }
 
@@ -138,7 +202,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
       return idx >= 0 ? UNIVERS_FR[idx] : label;
     });
     const { error } = await supabase.from('profiles').update({
-      username, handle, role: selectedRoles.join(', '),
+      username, handle: cleanHandle(handle), role: selectedRoles.join(', '),
       bio, zone, styles: universToSave.join(', '),
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
@@ -160,11 +224,29 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{tx('Edit profile', 'Modifier le profil')}</h2>
       </div>
 
-      {profile?.avatar_url && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-          <img src={profile.avatar_url} alt="avatar" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'}` }} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
+        <div
+          onClick={() => avatarInputRef.current?.click()}
+          style={{
+            width: '88px', height: '88px', borderRadius: '50%',
+            background: darkMode ? '#2C2C2C' : '#DDD',
+            border: `2px solid ${darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '30px', cursor: 'pointer', overflow: 'hidden', position: 'relative',
+          }}
+        >
+          {avatarUrl
+            ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : (uploadingAvatar ? '⏳' : '◉')}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', padding: '4px 0', fontSize: '10px', color: 'white', fontWeight: '700', textAlign: 'center' }}>
+            {uploadingAvatar ? '...' : '✏️'}
+          </div>
         </div>
-      )}
+        <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+        <p style={{ color: subText, fontSize: '11px', marginTop: '8px' }}>
+          {tx('Tap the photo to change it', 'Appuie sur la photo pour la changer')}
+        </p>
+      </div>
 
       {[
         { label: tx('Name', 'Nom'), value: username, set: setUsername, placeholder: tx('Your name or username', 'Ton prénom ou pseudo'), max: null },
@@ -201,7 +283,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, theme }) {
         {checkingHandle && isHandleValid(handle) && (
           <p style={{ color: subText, fontSize: '12px', marginTop: '6px' }}>{tx('Checking…', 'Vérification…')}</p>
         )}
-        {!checkingHandle && handleFree === true && handle !== profile?.handle && (
+        {!checkingHandle && handleFree === true && !isMyOwnHandle && (
           <p style={{ color: '#4CD964', fontSize: '12px', marginTop: '6px', fontWeight: '600' }}>
             ✓ {tx('Available', 'Disponible')}
           </p>

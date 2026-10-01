@@ -3,6 +3,10 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Tap the photo to change it': 'Toca la foto para cambiarla',
+    'The photo could not be saved. Try another one.': 'No se ha podido guardar la foto. Prueba con otra.',
+    'The photos could not be added. Try others.': 'No se han podido añadir las fotos. Prueba con otras.',
+    'Some photos could not be added.': 'Algunas fotos no se han podido añadir.',
     'Account & security': 'Cuenta y seguridad',
     'Email address': 'Dirección de email',
     'This is the address you sign in with.': 'Es la dirección con la que inicias sesión.',
@@ -303,6 +307,10 @@ const TX = {
   },
 
   pt: {
+    'Tap the photo to change it': 'Toque na foto para trocá-la',
+    'The photo could not be saved. Try another one.': 'Não foi possível salvar a foto. Tente outra.',
+    'The photos could not be added. Try others.': 'Não foi possível adicionar as fotos. Tente outras.',
+    'Some photos could not be added.': 'Algumas fotos não puderam ser adicionadas.',
     'Account & security': 'Conta e segurança',
     'Email address': 'Endereço de email',
     'This is the address you sign in with.': 'É o endereço com o qual você entra.',
@@ -603,6 +611,10 @@ const TX = {
   },
 
   de: {
+    'Tap the photo to change it': 'Tippe auf das Foto, um es zu ändern',
+    'The photo could not be saved. Try another one.': 'Das Foto konnte nicht gespeichert werden. Versuche ein anderes.',
+    'The photos could not be added. Try others.': 'Die Fotos konnten nicht hinzugefügt werden. Versuche andere.',
+    'Some photos could not be added.': 'Einige Fotos konnten nicht hinzugefügt werden.',
     'Account & security': 'Konto & Sicherheit',
     'Email address': 'E-Mail-Adresse',
     'This is the address you sign in with.': 'Mit dieser Adresse meldest du dich an.',
@@ -903,6 +915,10 @@ const TX = {
   },
 
   it: {
+    'Tap the photo to change it': 'Tocca la foto per cambiarla',
+    'The photo could not be saved. Try another one.': 'Non è stato possibile salvare la foto. Provane un\'altra.',
+    'The photos could not be added. Try others.': 'Non è stato possibile aggiungere le foto. Provane altre.',
+    'Some photos could not be added.': 'Alcune foto non sono state aggiunte.',
     'Account & security': 'Account e sicurezza',
     'Email address': 'Indirizzo email',
     'This is the address you sign in with.': 'È l’indirizzo con cui accedi.',

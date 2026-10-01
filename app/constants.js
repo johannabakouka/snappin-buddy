@@ -61,7 +61,7 @@ export const UNIVERS = UNIVERS_FR;
 export const ROLE_ICONS = {
   'photographe': '📷', 'vidéaste': '🎬', 'créateur de contenu': '📱', 'directeur artistique': '🎨',
   'directeur créatif': '🎯', 'monteur vidéo': '🎞️', 'éditeur photo': '🖼️',
-  'styliste': '👗', 'maquilleur': '💄', 'modèle': '🧍',
+  'styliste': '👗', 'maquilleur': '💄', 'coiffeur': '💇', 'modèle': '🧍',
   'designer': '✏️', 'musicien': '🎵', 'chanteur': '🎤',
   'beatmaker': '🎛️', 'brand owner': '🏷️',
   'wedding planner': '💍', 'organisateur événements': '🎉', 'autre': '✨',
@@ -97,6 +97,58 @@ export const COLORS = {
 // dans la même colonne, comme les univers. Un ancien profil à un seul rôle reste valide.
 export function splitRoles(role) {
   return (role || '').split(',').map(r => r.trim()).filter(Boolean);
+}
+
+/** Clé de comparaison : minuscules, sans accents, espaces resserrés. */
+export function normKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Retrouve les rôles d'un profil, quelle que soit la façon dont ils ont été
+ * enregistrés : identifiants, libellés français ou anglais, avec ou sans
+ * accents, avec ou sans majuscules.
+ *
+ * Avant, la comparaison était stricte. Un seul écart d'écriture — un accent
+ * perdu, une majuscule — et l'écran de modification s'ouvrait avec AUCUN rôle
+ * coché : il fallait tout re-sélectionner pour changer une photo de portfolio.
+ */
+export function roleIdsFromStored(role) {
+  const index = new Map();
+  [...ROLES_FR, ...ROLES_EN].forEach(r => {
+    index.set(normKey(r.id), r.id);
+    index.set(normKey(r.label), r.id);
+  });
+
+  const found = [];
+  splitRoles(role).forEach(piece => {
+    const id = index.get(normKey(piece));
+    if (id && !found.includes(id)) found.push(id);
+  });
+  return found;
+}
+
+/**
+ * Même principe pour les univers, renvoyés dans la langue affichée : un profil
+ * enregistré en français doit s'allumer aussi quand l'app est en anglais.
+ */
+export function universFromStored(styles, isEn) {
+  const target = isEn ? UNIVERS_EN : UNIVERS_FR;
+  const found = [];
+
+  String(styles || '').split(',').map(s => s.trim()).filter(Boolean).forEach(piece => {
+    const key = normKey(piece);
+    let idx = UNIVERS_FR.findIndex(u => normKey(u) === key);
+    if (idx < 0) idx = UNIVERS_EN.findIndex(u => normKey(u) === key);
+    const label = idx >= 0 ? target[idx] : piece;
+    if (!found.includes(label)) found.push(label);
+  });
+  return found;
 }
 
 export function roleLabels(role, roles = ROLES_FR) {
