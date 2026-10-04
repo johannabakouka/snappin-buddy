@@ -10,6 +10,8 @@ import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { usePullToRefresh } from '../pull-refresh';
+import PullIndicator from './PullIndicator';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
@@ -100,7 +102,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       const { data } = await supabase.from('offers').select('*').eq('id', sharedOfferId).maybeSingle();
       if (!alive || !data) return;
       const { data: author } = await supabase.from('profiles')
-        .select('user_id, username, handle, avatar_url, role').eq('user_id', data.user_id).maybeSingle();
+        .select('user_id, username, handle, avatar_url, role, role_other').eq('user_id', data.user_id).maybeSingle();
       setSharedOffer({ ...data, authorProfile: author || null });
       setTab('offres');
       scrollBoxRef.current?.scrollTo({ top: 0 });
@@ -122,6 +124,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
   // Bouton « Mes projets » du profil : ouvre l'onglet Projets, en haut de la liste
   const scrollBoxRef = useRef(null);
+  // Tirer vers le bas pour voir les nouveaux projets et les nouvelles réponses.
+  const { pull, refreshing, trigger } = usePullToRefresh(scrollBoxRef, async () => {
+    if (!user) return;
+    await Promise.all([loadCollabs(user.id), loadOffers(user.id), loadApplied(user.id)]);
+  });
   const [seenSignal, setSeenSignal] = useState(myProjectsSignal);
   if (myProjectsSignal !== seenSignal) {
     setSeenSignal(myProjectsSignal);
@@ -156,12 +163,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: snt } = await supabase.from('collabs').select('*').eq('sender_id', userId).order('created_at', { ascending: false });
     if (recv && recv.length > 0) {
       const senderIds = recv.map(c => c.sender_id);
-      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
+      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
       setReceived(recv.map(c => ({ ...c, senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id) })));
     } else setReceived([]);
     if (snt && snt.length > 0) {
       const receiverIds = snt.map(c => c.receiver_id);
-      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', receiverIds);
+      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', receiverIds);
       setSent(snt.map(c => ({ ...c, receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id) })));
     } else setSent([]);
   }
@@ -256,7 +263,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (all) {
       const userIds = all.map(o => o.user_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role').in('user_id', userIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other').in('user_id', userIds);
       setOffers(all.map(o => ({ ...o, authorProfile: profiles?.find(p => p.user_id === o.user_id) })));
     }
     if (mine) setMyOffers(mine);
@@ -269,7 +276,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const collabs = (found || []).filter(c => (c.message || '').trim().endsWith(`: ${offer.title}`));
     if (collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
     } else setOfferCandidates([]);
     setLoadingCandidates(false);
@@ -519,7 +526,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{profile.username}</p>
-            <p style={{ fontSize: '11px', color: subText }}>{roleLabels(profile.role, ROLES)}{profile.zone ? ` · ${profile.zone}` : ''}</p>
+            <p style={{ fontSize: '11px', color: subText }}>{roleLabels(profile.role, ROLES, profile.role_other)}{profile.zone ? ` · ${profile.zone}` : ''}</p>
           </div>
           {onViewFull && (
             <button onClick={() => onViewFull(profile)} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', flexShrink: 0 }}>
@@ -637,7 +644,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
         </button>
       </div>
 
-      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px calc(110px + env(safe-area-inset-bottom))' }}>
+      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px calc(110px + env(safe-area-inset-bottom))', position: 'relative' }}>
+        <PullIndicator pull={pull} refreshing={refreshing} trigger={trigger} darkMode={darkMode} />
 
         {followUpNote && (
           <div onClick={() => setFollowUpNote('')} style={{ background: 'rgba(46,204,113,0.12)', border: '1px solid rgba(46,204,113,0.35)', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', color: theme?.color, fontSize: '12px', fontWeight: '600', lineHeight: 1.5, cursor: 'pointer' }}>
@@ -783,7 +791,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                               <span style={{ color: subText, fontWeight: '600' }}>  {withAt(o.authorProfile.handle)}</span>
                             )}
                           </p>
-                          <p style={{ fontSize: '11px', color: subText }}>{roleLabels(o.authorProfile?.role, ROLES)}</p>
+                          <p style={{ fontSize: '11px', color: subText }}>{roleLabels(o.authorProfile?.role, ROLES, o.authorProfile?.role_other)}</p>
                         </div>
                         {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '2px 8px', fontWeight: '700' }}>🚀 Boost</span>}
                         {score > 0 && o.status === 'open' && !isBoosted && (

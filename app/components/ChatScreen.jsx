@@ -229,22 +229,40 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     setActionMsg(null);
   }
 
+  // Renvoie true seulement si le serveur a confirmé. Réaction, épinglage et
+  // édition s'affichent tout de suite pour que le chat reste fluide, donc sans
+  // cette confirmation on laisserait à l'écran une action qui n'a jamais eu lieu.
   async function messageAction(payload) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      await fetch('/api/message-action', {
+      if (!session) return false;
+      const res = await fetch('/api/message-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        console.error('message-action', payload.action, res.status);
+        return false;
+      }
+      return true;
     } catch (e) {
       console.error('message-action', e);
+      return false;
     }
   }
 
-  function react(m, emoji) {
+  // Remet la conversation dans l'état d'avant et explique, plutôt que de laisser
+  // croire que c'est passé.
+  function revertMessages(snapshot, message) {
+    setMessages(snapshot);
+    setImageError(message);
+  }
+
+  async function react(m, emoji) {
     setActionMsg(null);
+    setImageError('');
+    const snapshot = messages;
     setMessages(prev => prev.map(x => {
       if (x.id !== m.id) return x;
       const current = x.reactions || {};
@@ -257,23 +275,35 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
       if (!already) next[emoji] = [...(next[emoji] || []), user?.id];
       return { ...x, reactions: next };
     }));
-    messageAction({ action: 'react', messageId: m.id, emoji });
+    const ok = await messageAction({ action: 'react', messageId: m.id, emoji });
+    if (!ok) revertMessages(snapshot, tx("Couldn't add your reaction. Try again.", "L’ajout de ta réaction a échoué. Réessaie."));
   }
 
-  function togglePin(m) {
+  async function togglePin(m) {
     setActionMsg(null);
+    setImageError('');
+    const snapshot = messages;
     const pin = !m.pinned;
     setMessages(prev => prev.map(x => x.id === m.id ? { ...x, pinned: pin } : (pin ? { ...x, pinned: false } : x)));
-    messageAction({ action: pin ? 'pin' : 'unpin', messageId: m.id });
+    const ok = await messageAction({ action: pin ? 'pin' : 'unpin', messageId: m.id });
+    if (!ok) {
+      revertMessages(snapshot, pin
+        ? tx("Couldn't pin the message. Try again.", "L’épinglage du message a échoué. Réessaie.")
+        : tx("Couldn't unpin the message. Try again.", "Le retrait de l’épingle a échoué. Réessaie."));
+    }
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     const content = text.trim();
     if (!content || !editing) return;
-    setMessages(prev => prev.map(x => x.id === editing.id ? { ...x, content, edited_at: new Date().toISOString() } : x));
-    messageAction({ action: 'edit', messageId: editing.id, content });
+    setImageError('');
+    const snapshot = messages;
+    const target = editing;
+    setMessages(prev => prev.map(x => x.id === target.id ? { ...x, content, edited_at: new Date().toISOString() } : x));
     setEditing(null);
     setText('');
+    const ok = await messageAction({ action: 'edit', messageId: target.id, content });
+    if (!ok) revertMessages(snapshot, tx("Couldn't edit the message. Try again.", "La modification du message a échoué. Réessaie."));
   }
 
   // Transfert : la liste des buddies (collabs acceptées), sans citer l'auteur du message
@@ -288,7 +318,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     const ids = [...new Set((collabs || []).map(c => c.sender_id === user.id ? c.receiver_id : c.sender_id))];
     if (!ids.length) { setBuddies([]); return; }
     const { data: profiles } = await supabase.from('profiles')
-      .select('user_id, username, avatar_url, role').in('user_id', ids);
+      .select('user_id, username, avatar_url, role, role_other').in('user_id', ids);
     setBuddies(profiles || []);
   }
 

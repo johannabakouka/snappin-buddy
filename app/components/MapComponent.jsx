@@ -4,7 +4,11 @@ import { supabase } from '../supabase';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
-import { ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels } from '../constants';
+import MapPreviewCard from './MapPreviewCard';
+import {
+  ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels,
+  daysSinceLaunch, distanceKm, COUNT_VISIBLE_FROM, NEARBY_KM, NEARBY_SPARSE_BELOW,
+} from '../constants';
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 
@@ -98,6 +102,17 @@ export default function MapComponent({ theme, active = true }) {
   const tilesRef = useRef(null);
   const [savingCity, setSavingCity] = useState(false);
   const [cityError, setCityError] = useState('');
+  // Le message « tu es parmi les premiers » se ferme et ne revient pas :
+  // utile la première fois, pénible à chaque ouverture.
+  const [pioneerDismissed, setPioneerDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('pioneerSeen') === '1'; } catch { return false; }
+  });
+
+  function dismissPioneer() {
+    setPioneerDismissed(true);
+    try { localStorage.setItem('pioneerSeen', '1'); } catch { /* navigation privée */ }
+  }
 
   const STATUS_FILTERS = [
     { id: 'all', label: tx('All', 'Tous') },
@@ -280,6 +295,21 @@ export default function MapComponent({ theme, active = true }) {
   const me = profiles.find(p => p._isMe);
   const notOnMap = !!L && !!me && (!me.lat || !me.lng);
 
+  // Une carte vide autour de soi ressemble exactement à une app abandonnée.
+  // Comme on connaît déjà tous les profils chargés, on compte sans requête en
+  // plus, et on dit ce qu'il en est : l'app est jeune, pas morte.
+  const placedProfiles = profiles.filter(p => p.lat && p.lng);
+  const totalCreatives = placedProfiles.length;
+  const nearbyCount = (me?.lat && me?.lng)
+    ? placedProfiles.filter(p => !p._isMe && distanceKm(me.lat, me.lng, p.lat, p.lng) <= NEARBY_KM).length
+    : null;
+  // Le total n'est montré qu'à partir du moment où il joue en notre faveur :
+  // un petit nombre écrit noir sur blanc donne l'argument à ceux qui comptent.
+  const showTotal = totalCreatives >= COUNT_VISIBLE_FROM;
+  const sparseNearby = nearbyCount !== null && nearbyCount < NEARBY_SPARSE_BELOW;
+  const showPioneer = !!L && !notOnMap && sparseNearby && !pioneerDismissed;
+  const openDays = daysSinceLaunch();
+
   // Bouton « Moi » : on revient sur sa position après avoir fait défiler la
   // carte. Si on n'est pas encore placé, le bouton ouvre le choix de la ville
   // plutôt que de ne rien faire.
@@ -342,15 +372,6 @@ export default function MapComponent({ theme, active = true }) {
       }
     });
   }, [L, profiles, statusFilter, universFilter, roleFilter]);
-
-  const statusColor = popupBuddy?.status === 'shoot' ? '#FFD700' : popupBuddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
-  const statusLabel = popupBuddy?.status === 'shoot'
-    ? (tx('On shoot', 'En shoot'))
-    : popupBuddy?.status === 'indispo'
-    ? (tx('Unavailable', 'Indisponible'))
-    : (tx('Available', 'Disponible'));
-
-  const popupStyles = (popupBuddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
   const pillStyle = (active) => ({
     padding: '6px 12px', borderRadius: '20px',
@@ -477,6 +498,58 @@ export default function MapComponent({ theme, active = true }) {
         </button>
       )}
 
+      {showPioneer && !showGeoPrompt && !cityOverlay && !popupBuddy && (
+        <div style={{
+          position: 'absolute', left: '16px', right: '16px', bottom: '140px', zIndex: 450,
+          padding: '14px 16px', borderRadius: '18px',
+          background: darkMode ? 'rgba(26,26,26,0.95)' : 'rgba(255,255,255,0.97)',
+          border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
+          boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
+          display: 'flex', alignItems: 'flex-start', gap: '12px',
+        }}>
+          <span style={{ fontSize: '20px', lineHeight: 1.2 }}>✨</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              color: darkMode ? 'white' : '#111', fontSize: '14px',
+              fontWeight: '800', marginBottom: '4px', lineHeight: 1.35,
+            }}>
+              {tx("You're one of the first here", 'Tu es parmi les premiers par ici')}
+            </p>
+            <p style={{
+              color: darkMode ? 'rgba(255,255,255,0.6)' : '#666',
+              fontSize: '12px', lineHeight: 1.5,
+            }}>
+              {/* Le nombre est mis APRÈS la traduction : sinon chaque valeur
+                  créerait une clé différente et le dictionnaire ne suivrait pas. */}
+              {openDays > 0
+                ? tx(
+                  "Snappin'Buddy opened {n} days ago and fills up city by city.",
+                  'Snappin’Buddy a ouvert il y a {n} jours et se remplit ville par ville.'
+                ).replace('{n}', String(openDays))
+                : tx(
+                  "Snappin'Buddy just opened and fills up city by city.",
+                  'Snappin’Buddy vient d’ouvrir et se remplit ville par ville.'
+                )}
+              {showTotal && ' '}
+              {showTotal && tx(
+                '{n} creatives are already on the map.',
+                '{n} créatifs sont déjà sur la carte.'
+              ).replace('{n}', String(totalCreatives))}
+            </p>
+          </div>
+          <button
+            onClick={dismissPioneer}
+            aria-label={tx('Close', 'Fermer')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px',
+              color: darkMode ? 'rgba(255,255,255,0.45)' : '#999', fontSize: '18px', lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Retour sur ma position, juste au-dessus du bouton de ville */}
       {!!L && !showGeoPrompt && !cityOverlay && (
         <button
@@ -529,6 +602,18 @@ export default function MapComponent({ theme, active = true }) {
           </span>
         </div>
 
+        {/* Le total ne s'affiche qu'une fois assez grand pour parler en notre
+            faveur : zéro point autour de soi ne veut pas dire une app vide. */}
+        {showTotal && (
+          <p style={{
+            textAlign: 'center', margin: '-4px 0 8px', pointerEvents: 'none',
+            fontSize: '12px', fontWeight: '700',
+            color: darkMode ? 'rgba(255,255,255,0.5)' : '#777',
+          }}>
+            🌍 {tx('{n} creatives on the map', '{n} créatifs sur la carte').replace('{n}', String(totalCreatives))}
+          </p>
+        )}
+
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none', alignItems: 'center' }}>
           {STATUS_FILTERS.map(f => (
             <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
@@ -561,73 +646,12 @@ export default function MapComponent({ theme, active = true }) {
         <span style={{ color: '#FF4D4D' }}>●</span> {tx('Unavailable', 'Indispo')}
       </div>
 
-      {popupBuddy && (
-        <div style={{
-          position: 'absolute', bottom: '100px', left: '16px', right: '16px',
-          zIndex: 500,
-          background: darkMode ? '#1A1A1A' : '#FFFFFF',
-          borderRadius: '18px', padding: '16px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-            <div style={{
-              width: '44px', height: '44px', borderRadius: '50%',
-              background: darkMode ? '#2C2C2C' : '#DDD',
-              overflow: 'hidden', flexShrink: 0,
-              border: `2px solid ${statusColor}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-            }}>
-              {popupBuddy.avatar_url
-                ? <img src={popupBuddy.avatar_url} alt={popupBuddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : '◉'
-              }
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'var(--font-nunito)', fontWeight: '900', fontSize: '17px', color: darkMode ? 'white' : '#111' }}>
-                {popupBuddy.username}
-              </div>
-              <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontWeight: '600' }}>
-                {popupBuddy.role && <span style={{ marginRight: '6px' }}>{roleLabels(popupBuddy.role, isEn ? ROLES_EN : ROLES_FR)}</span>}
-                {popupStyles.length > 0 && popupStyles.join(' · ')}
-              </div>
-            </div>
-            <button onClick={() => setPopupBuddy(null)} style={{
-              background: 'none', border: 'none',
-              color: darkMode ? '#555' : '#999',
-              fontSize: '16px', cursor: 'pointer', lineHeight: 1, flexShrink: 0,
-            }}>✕</button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusColor }} />
-            <span style={{ fontSize: '11px', color: statusColor, fontWeight: '700' }}>{statusLabel}</span>
-          </div>
-
-          {popupBuddy.bio && (
-            <p style={{
-              color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
-              fontSize: '12px', fontStyle: 'italic', lineHeight: 1.5,
-              borderLeft: '2.5px solid rgba(128,128,128,0.3)',
-              paddingLeft: '8px', marginBottom: '14px',
-            }}>
-              « {popupBuddy.bio} »
-            </p>
-          )}
-
-          <button
-            onClick={() => { setSelectedBuddy(popupBuddy); setPopupBuddy(null); }}
-            style={{
-              width: '100%', padding: '11px', borderRadius: '24px', border: 'none',
-              background: darkMode ? 'white' : '#111',
-              color: darkMode ? 'black' : 'white',
-              fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-            }}
-          >
-            {tx('See profile & create together →', 'Voir le profil & créer ensemble →')}
-          </button>
-        </div>
-      )}
+      <MapPreviewCard
+        buddy={popupBuddy}
+        darkMode={darkMode}
+        onClose={() => setPopupBuddy(null)}
+        onOpen={() => { setSelectedBuddy(popupBuddy); setPopupBuddy(null); }}
+      />
 
       {selectedBuddy && (
         <BuddyProfileScreen

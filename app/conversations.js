@@ -28,11 +28,14 @@ export async function loadPrefs(userId) {
 /** Les conversations en sourdine : ni mail, ni pastille. */
 export async function loadMutedIds(userId) {
   if (!userId) return new Set();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('conversation_prefs')
     .select('buddy_id')
     .eq('user_id', userId)
     .eq('muted', true);
+  // En cas d'échec on renvoie un ensemble vide comme avant, mais au moins la
+  // trace existe : sinon une sourdine perdue passe pour une absence de sourdine.
+  if (error) console.error('loadMutedIds', error);
   return new Set((data || []).map(r => r.buddy_id));
 }
 

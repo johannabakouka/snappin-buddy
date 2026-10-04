@@ -8,6 +8,8 @@ import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
+import { usePullToRefresh } from '../pull-refresh';
+import PullIndicator from './PullIndicator';
 
 // Recherche : on ignore les accents, les majuscules et le @ du handle,
 // pour que « sofia », « Sofía » et « @sofia » trouvent la même personne.
@@ -85,6 +87,9 @@ export default function ExploreScreen({ theme, active = true }) {
     if (active && !wasActive.current) Promise.resolve().then(loadData);
     wasActive.current = active;
   }, [active]);
+
+  // Tirer la liste vers le bas pour voir qui vient d'arriver.
+  const { pull, refreshing, trigger } = usePullToRefresh(scrollRef, loadData);
 
   function handleSearchChange(val) {
     setSearch(val);
@@ -176,7 +181,8 @@ export default function ExploreScreen({ theme, active = true }) {
   };
 
   return (
-    <div ref={scrollRef} style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+    <div ref={scrollRef} style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color, position: 'relative' }}>
+      <PullIndicator pull={pull} refreshing={refreshing} trigger={trigger} darkMode={darkMode} />
       <Header theme={theme} onLogoClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
       <div style={{ padding: '24px 16px calc(110px + env(safe-area-inset-bottom))' }}>
         <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
@@ -224,7 +230,7 @@ export default function ExploreScreen({ theme, active = true }) {
                   </div>
                   <div>
                     <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{p.username}</p>
-                    <p style={{ fontSize: '11px', color: subText }}>{roleLabels(p.role, ROLES)}{p.zone ? ` · ${p.zone}` : ''}</p>
+                    <p style={{ fontSize: '11px', color: subText }}>{roleLabels(p.role, ROLES, p.role_other)}{p.zone ? ` · ${p.zone}` : ''}</p>
                   </div>
                   <div style={{ marginLeft: 'auto' }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: p.status === 'dispo' ? '#2ECC71' : p.status === 'shoot' ? '#FFD700' : '#FF4D4D', display: 'inline-block' }} />
@@ -274,7 +280,7 @@ export default function ExploreScreen({ theme, active = true }) {
               : [];
             const roleIcon = roleIcons(p.role) || '✨';
             const portfolio = p.portfolio_urls || [];
-            const roleLabel = roleLabels(p.role, ROLES);
+            const roleLabel = roleLabels(p.role, ROLES, p.role_other);
 
             return (
               <div key={p.id} style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', overflow: 'hidden' }}>

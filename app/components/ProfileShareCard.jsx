@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRoles } from '../i18n';
 import { tx } from '../tx';
-import { UNIVERS_FR, UNIVERS_EN, splitRoles } from '../constants';
+import { UNIVERS_FR, UNIVERS_EN, splitRoles, OTHER_ROLE_ID } from '../constants';
 import { withAt } from '../handles';
 import { isNotFrench } from '../tx';
 
@@ -17,8 +17,14 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [cardImage, setCardImage] = useState(null);
+  const [shareError, setShareError] = useState('');
 
   const roles = splitRoles(profile?.role);
+  // « Autre » ne veut rien dire sur une carte qu'on partage : on écrit le
+  // métier tel que la personne l'a formulé.
+  const roleLabel = (r) => (r === OTHER_ROLE_ID && profile?.role_other)
+    ? profile.role_other
+    : (ROLES.find(o => o.id === r)?.label || r);
   const univers = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
 
   // Le pseudo est unique : il fait un lien propre et lisible.
@@ -199,7 +205,7 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
         let x = CX + PAD;
         ctx.font = font(800, 28);
         for (const r of roles) {
-          const label = ROLES.find(o => o.id === r)?.label || r;
+          const label = roleLabel(r);
           const w = ctx.measureText(label).width + 48;
           if (x + w > CX + CW - PAD) { x = CX + PAD; y += 66; }
           ctx.fillStyle = 'rgba(255,255,255,0.10)';
@@ -297,9 +303,15 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
 
   async function saveImage() {
     setSaving(true);
+    setShareError('');
     try {
       const blob = await buildImage();
-      if (!blob) return;
+      // Sans ce message, un échec de fabrication de l'image rendait simplement
+      // le bouton à son état normal, comme si tout s'était bien passé.
+      if (!blob) {
+        setShareError(tx("Couldn't prepare the image. Try again.", "La préparation de l’image a échoué. Réessaie."));
+        return;
+      }
       const name = `snappinbuddy-${handleSlug || 'profil'}.png`;
       const file = new File([blob], name, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] })) {
@@ -320,18 +332,23 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
       a.remove();
     } catch (e) {
       console.error('profile-share-card', e);
+      setShareError(tx("Couldn't save the image. Try again.", "L’enregistrement de l’image a échoué. Réessaie."));
     } finally {
       setSaving(false);
     }
   }
 
   async function copyLink() {
+    setShareError('');
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
+      // Le presse-papier est refusé dans certains navigateurs : on montre le
+      // lien pour qu'il reste copiable à la main.
       console.error('copy', e);
+      setShareError(tx("Couldn't copy. The link is here:", 'La copie a échoué. Voici le lien :') + ` ${link}`);
     }
   }
 
@@ -389,7 +406,7 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
                   background: 'rgba(255,255,255,0.1)', color: 'white',
                   borderRadius: '16px', padding: '5px 12px', fontSize: '12px', fontWeight: '700',
                 }}>
-                  {ROLES.find(o => o.id === r)?.label || r}
+                  {roleLabel(r)}
                 </span>
               ))}
             </div>
@@ -440,6 +457,14 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
         <button onClick={copyLink} style={{ ...btn, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'white' }}>
           {copied ? tx('Link copied ✓', 'Lien copié ✓') : tx('🔗 Copy my link', '🔗 Copier mon lien')}
         </button>
+        {shareError && (
+          <p style={{
+            color: '#FF4D4D', fontSize: '12px', fontWeight: '700', lineHeight: 1.5,
+            textAlign: 'center', margin: '0 0 10px', wordBreak: 'break-all',
+          }}>
+            {shareError}
+          </p>
+        )}
         <button onClick={onClose} style={{ ...btn, border: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
           {tx('Close', 'Fermer')}
         </button>

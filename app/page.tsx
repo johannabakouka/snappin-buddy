@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase';
+import { getLang } from './i18n';
+import { tx } from './tx';
 import Navbar from './components/Navbar';
 import MapScreen from './components/MapScreen';
 import ExploreScreen from './components/ExploreScreen';
@@ -17,6 +19,17 @@ import ScanResultScreen from './components/ScanResultScreen';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
+  // C'est le seul écran fabriqué par le serveur, qui n'a aucun moyen de
+  // connaître la langue du visiteur. On écrit donc la phrase une fois dans le
+  // navigateur : sinon elle s'affiche en français une fraction de seconde chez
+  // tout le monde avant de basculer.
+  const taglineRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    document.documentElement.lang = getLang();
+    if (taglineRef.current) {
+      taglineRef.current.textContent = tx('create something beautiful', 'créez quelque chose de beau');
+    }
+  }, []);
   useEffect(() => {
     const interval = setInterval(() => {
       setDots(d => d.length >= 3 ? '' : d + '.');
@@ -38,8 +51,8 @@ function LoadingScreen() {
         <p style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: 'white', letterSpacing: '-0.3px', marginBottom: '8px' }}>
           Snappin&apos;Buddy
         </p>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>
-          créez quelque chose de beau{dots}
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', minHeight: '18px' }}>
+          <span ref={taglineRef} />{dots}
         </p>
       </div>
       <style>{`

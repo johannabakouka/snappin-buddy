@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '../../lib/server';
-import { ROLES_FR, splitRoles } from '../../constants';
+import { ROLES_FR, ROLES_EN, splitRoles, OTHER_ROLE_ID } from '../../constants';
 import { cleanUrl, prettyUrl } from '../../links';
+import { txIn, langFromHeader } from '../../tx';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +30,7 @@ type PublicProfile = {
   handle: string | null;
   bio: string | null;
   role: string | null;
+  role_other: string | null;
   styles: string | null;
   zone: string | null;
   avatar_url: string | null;
@@ -46,7 +49,7 @@ async function getProfile(handle: string): Promise<PublicProfile | null> {
   // dont le pseudo correspond vraiment.
   const { data } = await supabaseAdmin()
     .from('profiles')
-    .select('username, handle, bio, role, styles, zone, avatar_url, portfolio_urls, portfolio_url, validated_projects')
+    .select('username, handle, bio, role, role_other, styles, zone, avatar_url, portfolio_urls, portfolio_url, validated_projects')
     .or(`handle.ilike.@${clean},handle.ilike.${clean}`)
     .limit(5);
 
@@ -61,8 +64,11 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   const profile = await getProfile(handle);
   if (!profile) return { title: "Snappin'Buddy" };
 
+  // L'aperçu partagé se lit dans la langue de la personne qui ouvre le lien.
+  const metaLang = langFromHeader((await headers()).get('accept-language'));
+  const metaRoles = metaLang === 'fr' ? ROLES_FR : ROLES_EN;
   const roles = splitRoles(profile.role)
-    .map((r: string) => ROLES_FR.find(x => x.id === r)?.label || r)
+    .map((r: string) => (r === OTHER_ROLE_ID && profile.role_other) ? profile.role_other : (metaRoles.find(x => x.id === r)?.label || r))
     .join(' · ');
 
   return {
@@ -81,10 +87,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const profile = await getProfile(handle);
   if (!profile) notFound();
 
+  // Cette page est ouverte depuis une story, souvent depuis un autre pays :
+  // on suit la langue du navigateur qui la demande.
+  const lang = langFromHeader((await headers()).get('accept-language'));
+  const t = (en: string, fr: string) => txIn(lang, en, fr);
+
   type Role = { id: string; label: string; icon: string };
-  const roles: Role[] = splitRoles(profile.role).map(
-    (r: string) => (ROLES_FR.find((x: Role) => x.id === r) as Role) || { id: r, label: r, icon: '' }
-  );
+  const roleList = (lang === 'fr' ? ROLES_FR : ROLES_EN) as Role[];
+  const roles: Role[] = splitRoles(profile.role).map((r: string) => {
+    // « Autre » seul ne dit rien du métier : on affiche ce que la personne a écrit.
+    if (r === OTHER_ROLE_ID && profile.role_other) return { id: r, label: profile.role_other, icon: '✨' };
+    return (roleList.find((x: Role) => x.id === r) as Role) || { id: r, label: r, icon: '' };
+  });
   const univers = (profile.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const portfolio = (profile.portfolio_urls || []).slice(0, 6);
   // Revalidé à l'affichage : cette page est publique et lue par des moteurs de
@@ -127,9 +141,13 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             borderRadius: '14px', padding: '12px 16px', marginBottom: '14px',
           }}>
             <p style={{ color: '#2ECC71', fontSize: '14px', fontWeight: 900 }}>
-              🤝 {profile.validated_projects} {profile.validated_projects === 1 ? 'projet validé' : 'projets validés'}
+              🤝 {profile.validated_projects} {profile.validated_projects === 1
+                ? t('validated project', 'projet validé')
+                : t('validated projects', 'projets validés')}
             </p>
-            <p style={{ color: '#8C8B83', fontSize: '11px' }}>Rencontres réelles, confirmées sur place</p>
+            <p style={{ color: '#8C8B83', fontSize: '11px' }}>
+              {t('Real meetups, confirmed on the spot', 'Rencontres réelles, confirmées sur place')}
+            </p>
           </div>
         )}
 
@@ -195,14 +213,16 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           display: 'block', textAlign: 'center', background: '#F2E050', color: '#0A0A0D',
           borderRadius: '26px', padding: '15px', fontSize: '15px', fontWeight: 900, textDecoration: 'none',
         }}>
-          Créer avec {profile.username || profile.handle} ⚡
+          {t('Create with', 'Créer avec')} {profile.username || profile.handle} ⚡
         </Link>
 
         <p style={{ color: '#8C8B83', fontSize: '12px', textAlign: 'center', marginTop: '14px', lineHeight: 1.6 }}>
-          Snappin&apos;Buddy met en relation les créatifs par ville.
-          <br />Photographes, vidéastes, modèles, stylistes, maquilleurs, coiffeurs,
-          directeurs artistiques, monteurs, designers, musiciens… et bien d’autres.
-          <br />Gratuit, sans agence et sans commission.
+          {t("Snappin'Buddy connects creatives city by city.", 'Snappin’Buddy met en relation les créatifs par ville.')}
+          <br />{t(
+            'Photographers, videographers, models, stylists, makeup artists, hairstylists, art directors, editors, designers, musicians… and many more.',
+            'Photographes, vidéastes, modèles, stylistes, maquilleurs, coiffeurs, directeurs artistiques, monteurs, designers, musiciens… et bien d’autres.'
+          )}
+          <br />{t('Free, no agency, no commission.', 'Gratuit, sans agence et sans commission.')}
         </p>
       </div>
     </main>

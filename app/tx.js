@@ -18,3 +18,41 @@ export function tx(en, fr) {
 export function isNotFrench() {
   return getLang() !== 'fr';
 }
+
+/**
+ * Même chose, mais pour une langue donnée.
+ * Les pages publiques (profil partagé, projet partagé) sont fabriquées par le
+ * serveur, où il n'y a pas de navigateur : getLang() ne peut donc rien deviner
+ * et renvoyait du français à tout le monde. Ces pages sont justement celles
+ * qu'on ouvre depuis une story, souvent depuis un autre pays.
+ */
+export function txIn(lang, en, fr) {
+  if (lang === 'fr') return fr;
+  if (lang === 'en') return en;
+  return TX[lang]?.[en] ?? en;
+}
+
+/**
+ * Langue déduite de l'en-tête Accept-Language du navigateur, par exemple
+ * « fr-FR,fr;q=0.9,en-US;q=0.8 ». On prend la première langue qu'on sait
+ * parler, et l'anglais par défaut.
+ */
+export function langFromHeader(acceptLanguage) {
+  const raw = String(acceptLanguage || '').toLowerCase();
+  if (!raw) return 'en';
+  const wanted = raw
+    .split(',')
+    .map(part => {
+      const [tag, ...params] = part.trim().split(';');
+      const q = params.map(p => p.trim()).find(p => p.startsWith('q='));
+      return { tag: tag.trim(), q: q ? parseFloat(q.slice(2)) : 1 };
+    })
+    .filter(x => x.tag)
+    .sort((a, b) => b.q - a.q);
+  for (const { tag } of wanted) {
+    for (const code of ['fr', 'pt', 'es', 'de', 'it', 'en']) {
+      if (tag.startsWith(code)) return code;
+    }
+  }
+  return 'en';
+}

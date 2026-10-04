@@ -10,6 +10,8 @@ import { roleLabels } from '../constants';
 import { loadIBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { loadPrefs, pinConversation, muteConversation, hideConversation, markUnread, clearUnread } from '../conversations';
+import { usePullToRefresh } from '../pull-refresh';
+import PullIndicator from './PullIndicator';
 
 export default function MessagesScreen({ theme, active = true }) {
   const t = useT();
@@ -156,32 +158,60 @@ export default function MessagesScreen({ theme, active = true }) {
     const blocked = await loadIBlockedIds(userId);
     const buddyIds = [...new Set(collabs.map(c => c.sender_id === userId ? c.receiver_id : c.sender_id))]
       .filter(id => !blocked.has(id));
-    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').in('user_id', buddyIds);
+    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles').in('user_id', buddyIds);
     setBuddies(profiles || []);
   }
 
+  // Une liste vide et une liste qu'on n'a pas réussi à charger se ressemblent à
+  // l'écran. On ne vide donc la liste que si le serveur a vraiment répondu.
   async function loadFollowing(userId) {
-    const { data } = await supabase.from('follows').select('following_id').eq('follower_id', userId);
-    if (!data || data.length === 0) return;
-    const ids = data.map(f => f.following_id);
-    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').in('user_id', ids);
+    const { data, error } = await supabase.from('follows').select('following_id').eq('follower_id', userId);
+    if (error) { console.error('loadFollowing', error); return; }
+    const ids = (data || []).map(f => f.following_id);
+    if (ids.length === 0) { setFollowing([]); return; }
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles').in('user_id', ids);
+    if (profilesError) { console.error('loadFollowing profiles', profilesError); return; }
     setFollowing(profiles || []);
   }
 
+  // Le bouton change d'état avant la réponse du serveur. Sans ce retour en
+  // arrière, on afficherait « Suivi » pour quelqu'un qu'on ne suit pas.
   async function toggleFollow(targetUserId) {
     if (!user) return;
+    setActionError('');
     const isF = following.some(f => f.user_id === targetUserId);
+    const snapshot = following;
     if (isF) {
-      await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', targetUserId);
       setFollowing(prev => prev.filter(f => f.user_id !== targetUserId));
-    } else {
-      await supabase.from('follows').insert({ follower_id: user.id, following_id: targetUserId });
-      const { data: profile } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, styles').eq('user_id', targetUserId).single();
-      if (profile) setFollowing(prev => [...prev, profile]);
+      const { error } = await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', targetUserId);
+      if (error) {
+        console.error('unfollow', error);
+        setFollowing(snapshot);
+        setActionError(tx("Couldn't unfollow. Try again.", "Le retrait du suivi a échoué. Réessaie."));
+      }
+      return;
     }
+    const { error } = await supabase.from('follows').insert({ follower_id: user.id, following_id: targetUserId });
+    if (error) {
+      console.error('follow', error);
+      setActionError(tx("Couldn't follow. Try again.", "Le suivi a échoué. Réessaie."));
+      return;
+    }
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles').eq('user_id', targetUserId).maybeSingle();
+    if (profileError) { console.error('follow profile', profileError); return; }
+    if (profile) setFollowing(prev => [...prev, profile]);
   }
 
   const isFollowingUser = (uid) => following.some(f => f.user_id === uid);
+
+  // Tirer vers le bas pour voir les nouveaux messages sans rouvrir l'app.
+  const scrollRef = useRef(null);
+  const { pull, refreshing, trigger } = usePullToRefresh(scrollRef, async () => {
+    if (!user) return;
+    await Promise.all([loadConversations(user.id), loadBuddies(user.id), loadFollowing(user.id)]);
+  });
 
   const sheetButton = {
     width: '100%', textAlign: 'left', padding: '14px 12px',
@@ -211,7 +241,7 @@ export default function MessagesScreen({ theme, active = true }) {
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{p.username}</p>
-          <p style={{ color: subText, fontSize: '11px' }}>{roleLabels(p.role, ROLES)}{p.handle ? ` · ${withAt(p.handle)}` : ''}</p>
+          <p style={{ color: subText, fontSize: '11px' }}>{roleLabels(p.role, ROLES, p.role_other)}{p.handle ? ` · ${withAt(p.handle)}` : ''}</p>
           {styles.length > 0 && (
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
               {styles.slice(0, 3).map(s => (
@@ -255,7 +285,8 @@ export default function MessagesScreen({ theme, active = true }) {
   );
 
   return (
-    <div style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
+    <div ref={scrollRef} style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color, position: 'relative' }}>
+      <PullIndicator pull={pull} refreshing={refreshing} trigger={trigger} darkMode={darkMode} />
       <Header theme={theme} />
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>

@@ -5,7 +5,7 @@ import { useRoles, useUnivers, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
-import { roleIdsFromStored, universFromStored } from '../constants';
+import { roleIdsFromStored, universFromStored, cleanRoleOther, OTHER_ROLE_ID, ROLE_OTHER_MAX } from '../constants';
 import PhotoViewer from './PhotoViewer';
 import { cleanUrl } from '../links';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET, PORTFOLIO_BUCKET } from '../image-upload';
@@ -84,6 +84,8 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       return [...prev, id];
     });
   }
+  // Métier écrit à la main, utilisé seulement si « Autre » est coché.
+  const [roleOther, setRoleOther] = useState(profile?.role_other || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [zone, setZone] = useState(profile?.zone || '');
   const [videoUrl, setVideoUrl] = useState(profile?.video_url || '');
@@ -225,8 +227,12 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       const idx = UNIVERS_EN.indexOf(label);
       return idx >= 0 ? UNIVERS_FR[idx] : label;
     });
+    // Le métier libre n'est gardé que si « Autre » est encore coché : sinon on
+    // afficherait plus tard un texte que la personne croit avoir retiré.
+    const otherToSave = selectedRoles.includes(OTHER_ROLE_ID) ? cleanRoleOther(roleOther) : '';
     const { error } = await supabase.from('profiles').update({
       username, handle: cleanHandle(handle), role: selectedRoles.join(', '),
+      role_other: otherToSave || null,
       bio, zone, styles: universToSave.join(', '),
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
@@ -287,7 +293,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       {/* Le handle a son propre bloc : il doit être unique, donc on vérifie
           sa disponibilité pendant la saisie et on propose des variantes libres. */}
       <div style={{ marginBottom: '16px' }}>
-        <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>Handle</p>
+        <p style={{ color: subText, fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>{tx('Handle', 'Identifiant')}</p>
         <input
           value={handle}
           onChange={e => setHandle(cleanHandle(e.target.value))}
@@ -373,6 +379,21 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
           );
         })}
       </div>
+
+      {selectedRoles.includes(OTHER_ROLE_ID) && (
+        <div style={{ marginBottom: '20px', marginTop: '-8px' }}>
+          <input
+            value={roleOther}
+            onChange={e => setRoleOther(e.target.value.slice(0, ROLE_OTHER_MAX))}
+            placeholder={tx('Your job, in your words', 'Ton métier, avec tes mots')}
+            maxLength={ROLE_OTHER_MAX}
+            style={{ width: '100%', padding: '13px 14px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+          />
+          <p style={{ color: subText, fontSize: '11px', marginTop: '6px' }}>
+            {tx('Shown instead of “Other” on your profile.', 'Affiché à la place de « Autre » sur ton profil.')}
+          </p>
+        </div>
+      )}
 
       <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{tx('UNIVERSE', 'UNIVERS')}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>

@@ -13,6 +13,8 @@ import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET } from '../image-upload';
+import { usePullToRefresh } from '../pull-refresh';
+import PullIndicator from './PullIndicator';
 
 function translateTag(tag, isEn) {
   if (!isEn) return tag;
@@ -205,7 +207,12 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const tagBorder = darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
   const subText = darkMode ? '#666' : '#888';
 
-  const roleLabel = roleLabels(profile?.role, ROLES);
+  const roleLabel = roleLabels(profile?.role, ROLES, profile?.role_other);
+
+  // Tirer vers le bas pour remettre son profil à jour, par exemple après une
+  // modification faite depuis un autre appareil.
+  const scrollRef = useRef(null);
+  const { pull, refreshing, trigger } = usePullToRefresh(scrollRef, async () => { await onProfileUpdate(); });
 
   async function updateStatus(newStatus) {
     setStatus(newStatus);
@@ -338,7 +345,8 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   );
 
   return (
-    <div style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color }}>
+    <div ref={scrollRef} style={{ height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: theme.bg, color: theme.color, position: 'relative' }}>
+      <PullIndicator pull={pull} refreshing={refreshing} trigger={trigger} darkMode={darkMode} />
       {/* La marge de l'encoche était absente ici (et en double plus bas) :
           le bouton de thème passait sous la barre d'état de l'iPhone. */}
       <div style={{

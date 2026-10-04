@@ -5,6 +5,7 @@ import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
+import { cleanRoleOther, OTHER_ROLE_ID, ROLE_OTHER_MAX } from '../constants';
 
 export default function OnboardingScreen({ user, onComplete }) {
   const t = useT();
@@ -16,6 +17,8 @@ export default function OnboardingScreen({ user, onComplete }) {
   const [username, setUsername] = useState('');
   const [handle, setHandle] = useState('');
   const [selectedRoles, setSelectedRoles] = useState([]);
+  // Métier écrit à la main, utilisé seulement si « Autre » est coché.
+  const [roleOther, setRoleOther] = useState('');
 
   function toggleRole(id) {
     setSelectedRoles(prev => {
@@ -107,6 +110,7 @@ export default function OnboardingScreen({ user, onComplete }) {
       username,
       handle,
       role: selectedRoles.join(', '),
+      role_other: (selectedRoles.includes(OTHER_ROLE_ID) ? cleanRoleOther(roleOther) : '') || null,
       styles: universToSave.join(', '),
       status: 'dispo',
     });
@@ -157,7 +161,7 @@ export default function OnboardingScreen({ user, onComplete }) {
 
           <div style={{ marginBottom: '24px' }}>
             <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>
-              HANDLE *
+              {tx('HANDLE *', 'IDENTIFIANT *')}
             </p>
             <input
               value={handle}
@@ -278,6 +282,21 @@ export default function OnboardingScreen({ user, onComplete }) {
               );
             })}
           </div>
+
+          {selectedRoles.includes(OTHER_ROLE_ID) && (
+            <div style={{ marginTop: '-20px', marginBottom: '28px' }}>
+              <input
+                value={roleOther}
+                onChange={e => setRoleOther(e.target.value.slice(0, ROLE_OTHER_MAX))}
+                placeholder={tx('Your job, in your words', 'Ton métier, avec tes mots')}
+                maxLength={ROLE_OTHER_MAX}
+                style={{ width: '100%', padding: '15px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'white', fontSize: '15px', boxSizing: 'border-box', outline: 'none' }}
+              />
+              <p style={{ color: subText, fontSize: '12px', marginTop: '8px' }}>
+                {tx('Shown instead of “Other” on your profile.', 'Affiché à la place de « Autre » sur ton profil.')}
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
             <button onClick={() => setStep(1)} style={{ padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>

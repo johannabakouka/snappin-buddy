@@ -22,7 +22,9 @@ export const metadata: Metadata = {
   // relatif n'est pas retrouvée par Facebook, WhatsApp ou Instagram.
   metadataBase: new URL("https://snappinbuddy.com"),
   title: "Snappin\u2019Buddy",
-  description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
+  // Cet aperçu est lu dans le monde entier, et la bannière og.png est en
+  // anglais : la description suit, sinon le lien partagé est à moitié français.
+  description: "Find the creatives around you and create together. Photographers, videographers, models, stylists, makeup artists and more.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Snappin\u2019Buddy",
-    description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
+    description: "Find the creatives around you and create together. A map, a project, a collab.",
     type: "website",
     url: "https://snappinbuddy.com",
     // Sans cette image, un lien partagé en message ou en story arrivait nu :
@@ -46,7 +48,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Snappin\u2019Buddy",
-    description: "Trouve ton prochain photographe, styliste, vidéaste... et créez quelque chose de beau.",
+    description: "Find the creatives around you and create together. A map, a project, a collab.",
     images: ["/og.png"],
   },
 };
@@ -57,7 +59,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${nunito.variable} h-full antialiased`}>
+    // La langue réelle est posée par le navigateur au chargement (voir page.tsx) :
+    // le serveur ne peut pas la deviner, et l'anglais est la langue par défaut.
+    <html lang="en" className={`${nunito.variable} h-full antialiased`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT, useRoles } from '../i18n';
+import MapPreviewCard from './MapPreviewCard';
 import { tx, isNotFrench } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
@@ -136,7 +137,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
   // ne doit pas se retrouver cliquable telle quelle.
   const buddyLink = cleanUrl(buddy?.portfolio_url) || '';
 
-  const roleLabel = roleLabels(buddy?.role, ROLES);
+  const roleLabel = roleLabels(buddy?.role, ROLES, buddy?.role_other);
   // Troisième visage du profil : la page publique, lue par des gens qui n'ont
   // pas l'app. Elle n'affiche pas la même chose que cet écran, donc l'aperçu y
   // renvoie plutôt que de laisser croire qu'il n'y en a qu'un.
@@ -312,8 +313,8 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
               👁 {tx('This is how others see you', 'Voici comment les autres te voient')}
             </p>
             <p style={{ fontSize: '11px', color: subText, lineHeight: 1.5 }}>
-              {tx('Exactly the screen that opens when someone taps your pin on the map.',
-                  'Exactement l’écran qui s’ouvre quand quelqu’un appuie sur ton pin sur la carte.')}
+              {tx('Your card on the map, then the screen that opens when someone taps it.',
+                  'Ta carte sur la carte du monde, puis l’écran qui s’ouvre quand on appuie dessus.')}
             </p>
             {publicLink && (
               <a
@@ -328,6 +329,17 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
                 {tx('See my public page', 'Voir ma page publique')} ↗
               </a>
             )}
+          </div>
+        )}
+
+        {/* La petite carte est le vrai premier contact : sur la carte du monde,
+            c'est tout ce qu'on voit avant de décider d'ouvrir un profil. */}
+        {preview && (
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: subText, letterSpacing: '0.08em', marginBottom: '8px' }}>
+              {tx('ON THE MAP', 'SUR LA CARTE')}
+            </p>
+            <MapPreviewCard buddy={buddy} darkMode={darkMode} floating={false} />
           </div>
         )}
 

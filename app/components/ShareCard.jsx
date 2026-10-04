@@ -20,6 +20,7 @@ export default function ShareCard({ offer, profile, onClose }) {
 
   const [saving, setSaving] = useState(false);
   const [cardImage, setCardImage] = useState(null);
+  const [shareError, setShareError] = useState('');
 
   // Dessine la carte en vraie image, au format story 1080x1920.
   // On reprend la charte : fond sombre, jaune de la marque, typo Nunito.
@@ -269,9 +270,15 @@ export default function ShareCard({ offer, profile, onClose }) {
 
   async function saveImage() {
     setSaving(true);
+    setShareError('');
     try {
       const blob = await buildImage();
-      if (!blob) return;
+      // Sans image, le bouton revenait simplement à son état normal : on avait
+      // l'impression d'avoir enregistré quelque chose qui n'existait pas.
+      if (!blob) {
+        setShareError(tx("Couldn't prepare the image. Try again.", "La préparation de l’image a échoué. Réessaie."));
+        return;
+      }
       const file = new File([blob], `snappinbuddy-projet-${offer.id}.png`, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] })) {
         try {
@@ -291,18 +298,23 @@ export default function ShareCard({ offer, profile, onClose }) {
       a.remove();
     } catch (e) {
       console.error('share-card', e);
+      setShareError(tx("Couldn't save the image. Try again.", "L’enregistrement de l’image a échoué. Réessaie."));
     } finally {
       setSaving(false);
     }
   }
 
   async function copyLink() {
+    setShareError('');
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
+      // Le presse-papier est refusé dans certains navigateurs : on montre le
+      // lien pour qu'il reste copiable à la main.
       console.error('copy', e);
+      setShareError(tx("Couldn't copy. The link is here:", 'La copie a échoué. Voici le lien :') + ` ${link}`);
     }
   }
   const styles = (offer.styles_needed || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -490,6 +502,15 @@ export default function ShareCard({ offer, profile, onClose }) {
             {copied ? tx('Copied ✓', 'Copié ✓') : tx('🔗 Copy the link', '🔗 Copier le lien')}
           </button>
         </div>
+
+        {shareError && (
+          <p style={{
+            color: '#FF4D4D', fontSize: '12px', fontWeight: '700', lineHeight: 1.5,
+            textAlign: 'center', marginTop: '10px', wordBreak: 'break-all',
+          }}>
+            {shareError}
+          </p>
+        )}
 
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', textAlign: 'center', marginTop: '12px', lineHeight: 1.6 }}>
           {tx('1. Save the image, then post it on your story.', '1. Enregistre l’image, puis poste-la en story.')}<br />

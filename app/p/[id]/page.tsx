@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '../../lib/server';
-import { ROLES_FR } from '../../constants';
+import { ROLES_FR, ROLES_EN } from '../../constants';
 import { isPast } from '../../offers-life';
+import { txIn, langFromHeader } from '../../tx';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +68,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const found = await getOffer(id);
   if (!found) return { title: "Snappin'Buddy" };
   const { offer, author } = found;
-  const description = offer.description?.slice(0, 160) || `Projet proposé par ${author?.username || 'un créatif'}`;
+  // L'aperçu partagé sur WhatsApp ou Instagram se lit dans la langue de la
+  // personne qui ouvre le lien, pas dans la mienne.
+  const metaLang = langFromHeader((await headers()).get('accept-language'));
+  const description = offer.description?.slice(0, 160) || txIn(
+    metaLang,
+    `Project posted by ${author?.username || 'a creative'}`,
+    `Projet proposé par ${author?.username || 'un créatif'}`
+  );
   return {
     title: `${offer.title} · Snappin'Buddy`,
     description,
@@ -84,10 +93,15 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
   if (!found) notFound();
 
   const { offer, author } = found;
+  // Un projet partagé en story est ouvert depuis n'importe où : on suit la
+  // langue du navigateur plutôt que d'afficher du français à tout le monde.
+  const lang = langFromHeader((await headers()).get('accept-language'));
+  const t = (en: string, fr: string) => txIn(lang, en, fr);
   type Role = { id: string; label: string; icon: string };
+  const roleList = (lang === 'fr' ? ROLES_FR : ROLES_EN) as Role[];
   const roles: Role[] = (offer.role_needed || '')
     .split(',').map(r => r.trim()).filter(Boolean)
-    .map(r => (ROLES_FR.find((x: Role) => x.id === r) as Role) || { id: r, label: r, icon: '' });
+    .map(r => (roleList.find((x: Role) => x.id === r) as Role) || { id: r, label: r, icon: '' });
   const univers = (offer.styles_needed || '').split(',').map(s => s.trim()).filter(Boolean);
   const closed = offer.status === 'closed';
   // Une story peut être postée après la date : la personne doit le voir tout de suite.
@@ -114,7 +128,7 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
           color: past ? '#F0B429' : '#F2E050', borderRadius: '20px', padding: '5px 14px',
           fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
         }}>
-          {past ? '⏳ PROJET PASSÉ' : closed ? 'PROJET COMPLET' : '⚡ PROJET'}
+          {past ? t('⏳ PAST PROJECT', '⏳ PROJET PASSÉ') : closed ? t('PROJECT FULL', 'PROJET COMPLET') : t('⚡ PROJECT', '⚡ PROJET')}
         </p>
 
         {author && (
@@ -152,7 +166,7 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
         {roles.length > 0 && (
           <>
             <p style={{ color: '#8C8B83', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', marginBottom: '8px' }}>
-              ON CHERCHE
+              {t('LOOKING FOR', 'ON CHERCHE')}
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
               {roles.map((r: Role) => (
@@ -186,8 +200,10 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
 
         {past && (
           <p style={{ color: '#F0B429', fontSize: '13px', marginBottom: '20px', lineHeight: 1.6 }}>
-            Ce projet a déjà eu lieu. Il reste visible parce que quelqu’un a partagé le lien,
-            mais il n’est plus dans le feed.
+            {t(
+              'This project already happened. It stays visible because someone shared the link, but it is no longer in the feed.',
+              'Ce projet a déjà eu lieu. Il reste visible parce que quelqu’un a partagé le lien, mais il n’est plus dans le feed.'
+            )}
           </p>
         )}
 
@@ -195,14 +211,20 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
           display: 'block', textAlign: 'center', background: '#F2E050', color: '#0A0A0D',
           borderRadius: '26px', padding: '15px', fontSize: '15px', fontWeight: 900, textDecoration: 'none',
         }}>
-          {past ? 'Voir les projets en cours ⚡' : closed ? 'Voir sur Snappin’Buddy' : 'Je me propose ⚡'}
+          {past
+            ? t('See the open projects ⚡', 'Voir les projets en cours ⚡')
+            : closed
+              ? t("See it on Snappin'Buddy", 'Voir sur Snappin’Buddy')
+              : t('Join ⚡', 'Je me propose ⚡')}
         </Link>
 
         <p style={{ color: '#8C8B83', fontSize: '12px', textAlign: 'center', marginTop: '14px', lineHeight: 1.6 }}>
-          Snappin&apos;Buddy met en relation les créatifs par ville.
-          <br />Photographes, vidéastes, modèles, stylistes, maquilleurs, coiffeurs,
-          directeurs artistiques, monteurs, designers, musiciens… et bien d’autres.
-          <br />Gratuit, sans agence et sans commission.
+          {t("Snappin'Buddy connects creatives city by city.", 'Snappin’Buddy met en relation les créatifs par ville.')}
+          <br />{t(
+            'Photographers, videographers, models, stylists, makeup artists, hairstylists, art directors, editors, designers, musicians… and many more.',
+            'Photographes, vidéastes, modèles, stylistes, maquilleurs, coiffeurs, directeurs artistiques, monteurs, designers, musiciens… et bien d’autres.'
+          )}
+          <br />{t('Free, no agency, no commission.', 'Gratuit, sans agence et sans commission.')}
         </p>
       </div>
     </main>

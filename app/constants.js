@@ -164,10 +164,33 @@ export function universFromStored(styles, isEn) {
   return found;
 }
 
-export function roleLabels(role, roles = ROLES_FR) {
+/**
+ * Libellés des rôles, séparés par des points médians.
+ *
+ * Le troisième argument est le métier écrit à la main quand on a choisi
+ * « Autre ». Beaucoup de métiers créatifs n'entrent dans aucune case de la
+ * liste, et afficher « Autre » sur un profil ne dit rien de ce que la personne
+ * fait. Quand ce texte existe, il remplace le mot « Autre ».
+ */
+export function roleLabels(role, roles = ROLES_FR, roleOther = '') {
+  const custom = String(roleOther || '').trim();
   return splitRoles(role)
-    .map(id => roles.find(r => r.id === id.toLowerCase())?.label || id)
+    .map(id => {
+      const key = id.toLowerCase();
+      if (key === OTHER_ROLE_ID && custom) return custom;
+      return roles.find(r => r.id === key)?.label || id;
+    })
     .join(' · ');
+}
+
+/** Identifiant du rôle « Autre », celui qui ouvre le champ libre. */
+export const OTHER_ROLE_ID = 'autre';
+/** Un métier écrit à la main reste court, sinon il déborde partout dans l'app. */
+export const ROLE_OTHER_MAX = 40;
+
+/** Nettoie le métier libre : espaces resserrés, longueur bornée. */
+export function cleanRoleOther(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, ROLE_OTHER_MAX);
 }
 
 export function roleIcons(role) {
@@ -178,3 +201,37 @@ export function hasRole(role, wanted) {
   if (!wanted) return true;
   return splitRoles(role).some(r => r.toLowerCase() === wanted.toLowerCase());
 }
+
+// Ouverture de l'app. Sert à dire « ouverte depuis N jours » plutôt qu'un
+// nombre écrit en dur, qui vieillit et finit par être faux.
+// À corriger ici si la date exacte est différente.
+export const LAUNCH_DATE = '2026-09-22';
+
+/** Nombre de jours écoulés depuis l'ouverture, jamais négatif. */
+export function daysSinceLaunch(now = new Date()) {
+  const launch = new Date(`${LAUNCH_DATE}T00:00:00Z`);
+  const days = Math.floor((now.getTime() - launch.getTime()) / 86400000);
+  return days > 0 ? days : 0;
+}
+
+/**
+ * Distance approximative en kilomètres entre deux points.
+ * Suffisant pour répondre à « est-ce qu'il y a quelqu'un près de moi ».
+ */
+export function distanceKm(aLat, aLng, bLat, bLng) {
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+// En dessous de ce nombre de créatifs, on n'affiche pas le total : un petit
+// chiffre affiché en grand dessert l'app plus qu'il ne la sert.
+export const COUNT_VISIBLE_FROM = 50;
+// Rayon considéré comme « autour de moi », et nombre en dessous duquel on
+// explique que la carte est jeune plutôt que de laisser croire qu'elle est morte.
+export const NEARBY_KM = 60;
+export const NEARBY_SPARSE_BELOW = 3;
