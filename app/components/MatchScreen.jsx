@@ -34,6 +34,18 @@ async function sendEmail(type, payload) {
   }
 }
 
+/**
+ * La date d'un projet, écrite comme on la lit : « sam. 26 sept. ».
+ * Elle est stockée en aaaa-mm-jj, qui ne se lit pas d'un coup d'œil.
+ */
+function offerDateLabel(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const d = new Date(raw + 'T12:00:00');
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(tx('en-GB', 'fr-FR'), { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0, myApplicationsSignal = 0, sharedOfferId = '', onSharedOfferSeen }) {
   const t = useT();
@@ -714,7 +726,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                             </div>
                           )}
                           {o.zone && <span style={{ fontSize: '11px', color: subText }}> · {o.zone}</span>}
-                          {o.date && <span style={{ fontSize: '11px', color: subText }}> · {o.date}</span>}
+                          {o.date && <span style={{ fontSize: '11px', color: subText }}> · {offerDateLabel(o.date)}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                           <span style={{ fontSize: '11px', color: past ? '#F0B429' : o.status === 'open' ? '#2ECC71' : subText, fontWeight: '700' }}>
@@ -822,7 +834,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           return <span key={s} style={{ fontSize: '11px', color: isMyStyle ? theme?.color : subText, border: `1px solid ${isMyStyle ? theme?.color : cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: isMyStyle ? '700' : '400' }}>{s}</span>;
                         })}
                         {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
-                        {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
+                        {/* Sans date, on le dit. Rester muet laissait croire que
+                            l'information manquait par accident, et beaucoup
+                            écrivaient leur date dans le texte du projet. */}
+                        <span style={{ fontSize: '11px', color: o.date ? subText : '#FFB020', border: `1px solid ${o.date ? cardBorder : 'rgba(255,176,32,0.35)'}`, borderRadius: '20px', padding: '3px 10px' }}>
+                          📅 {o.date ? offerDateLabel(o.date) : tx('Date to be decided', 'Date à définir')}
+                        </span>
                         {/* Rien ne s'affiche pour les projets d'avant cette option :
                             mieux vaut ne rien dire que d'affirmer à leur place. */}
                         {o.paid === true && <span style={{ fontSize: '11px', color: '#2ECC71', border: '1px solid rgba(46,204,113,0.4)', borderRadius: '20px', padding: '3px 10px', fontWeight: '700' }}>💶 {tx('Paid', 'Rémunéré')}</span>}

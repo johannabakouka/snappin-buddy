@@ -33,6 +33,17 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   );
   const [offerZone, setOfferZone] = useState(editingOffer?.zone || '');
   const [offerDate, setOfferDate] = useState(editingOffer?.date || '');
+  // Une date, ou le fait assumé qu'il n'y en a pas encore.
+  //
+  // Le champ date était une case vide sans titre, posée à côté de la ville :
+  // beaucoup l'ignoraient et écrivaient « samedi 26 septembre » dans le texte
+  // du projet, où rien ne peut s'en servir. Résultat, la pastille date restait
+  // vide sur la carte, le projet ne se classait pas et restait ouvert trente
+  // jours après être passé.
+  const [dateFlexible, setDateFlexible] = useState(() => (
+    // Un projet déjà publié sans date n'est pas bloqué à la modification.
+    !!editingOffer && !editingOffer.date
+  ));
   // null tant que rien n'est choisi : les anciens projets n'ont pas cette
   // information, et on ne va pas affirmer à leur place qu'ils sont gratuits.
   const [offerPaid, setOfferPaid] = useState(
@@ -78,8 +89,10 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
     setOfferStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   }
 
+  const dateMissing = !offerDate && !dateFlexible;
+
   async function handleSave() {
-    if (!offerTitle || offerRoles.length === 0) return;
+    if (!offerTitle || offerRoles.length === 0 || dateMissing) return;
     setOfferLoading(true);
     const { UNIVERS_FR, UNIVERS_EN } = await import('../constants');
     const stylesToSave = offerStyles.map(label => {
@@ -93,7 +106,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
       role_needed: offerRoles.join(', '),
       styles_needed: stylesToSave.join(', '),
       zone: offerZone,
-      date: offerDate,
+      date: dateFlexible ? '' : offerDate,
       paid: offerPaid,
     });
     setOfferLoading(false);
@@ -209,7 +222,17 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+        <p style={{ color: subText, fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>
+          {tx('WHERE AND WHEN', 'OÙ ET QUAND')} *
+        </p>
+        <p style={{ color: subText, fontSize: '11px', marginBottom: '10px', lineHeight: 1.5 }}>
+          {tx(
+            'The date is what lets people know if they are free, and it closes your project once it has passed.',
+            'La date permet aux gens de savoir s’ils sont libres, et ferme ton projet une fois passé.'
+          )}
+        </p>
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <input
               value={offerZone}
@@ -250,13 +273,43 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
               background: inputBg, color: theme?.color,
               fontSize: '14px', boxSizing: 'border-box', outline: 'none',
               colorScheme: darkMode ? 'dark' : 'light',
+              opacity: dateFlexible ? 0.4 : 1,
             }}
+            disabled={dateFlexible}
           />
         </div>
 
         <button
+          onClick={() => setDateFlexible(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px',
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            color: subText, fontSize: '12px', fontFamily: 'inherit',
+          }}
+        >
+          <span style={{
+            width: '16px', height: '16px', borderRadius: '5px', flexShrink: 0,
+            border: `1.5px solid ${dateFlexible ? theme?.color : inputBorder}`,
+            background: dateFlexible ? theme?.color : 'transparent',
+            color: theme?.bg, fontSize: '11px', fontWeight: '900',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>{dateFlexible ? '✓' : ''}</span>
+          {tx('Date still to be decided', 'Date encore à définir')}
+        </button>
+
+        {dateMissing && (
+          <p style={{ color: '#FFB020', fontSize: '11px', marginBottom: '18px', lineHeight: 1.5 }}>
+            {tx(
+              'Add a date, or tick the box above. Writing it in the text only is not enough: nothing can read it there.',
+              'Mets une date, ou coche la case au-dessus. L’écrire seulement dans le texte ne suffit pas : rien ne peut la lire là.'
+            )}
+          </p>
+        )}
+        {!dateMissing && <div style={{ marginBottom: '18px' }} />}
+
+        <button
           onClick={handleSave}
-          disabled={offerLoading || !offerTitle || offerRoles.length === 0}
+          disabled={offerLoading || !offerTitle || offerRoles.length === 0 || dateMissing}
           style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px' }}
         >
           {offerLoading ? (tx('Launching...', 'Lancement...')) : isEdit ? (tx('✓ Save changes', '✓ Enregistrer')) : (tx('⚡ Launch project', '⚡ Lancer le projet'))}

@@ -3,6 +3,11 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    "Date to be decided": "Fecha por definir",
+    "WHERE AND WHEN": "DÓNDE Y CUÁNDO",
+    "The date is what lets people know if they are free, and it closes your project once it has passed.": "La fecha permite saber si la gente está libre, y cierra tu proyecto una vez pasada.",
+    "Date still to be decided": "Fecha aún por definir",
+    "Add a date, or tick the box above. Writing it in the text only is not enough: nothing can read it there.": "Pon una fecha, o marca la casilla de arriba. Escribirla solo en el texto no basta: ahí nada puede leerla.",
     "Couldn't save. Try again.": "No se pudo guardar. Inténtalo de nuevo.",
     "Couldn't cancel. Try again.": "No se pudo cancelar. Inténtalo de nuevo.",
     "Invisible mode": "Modo invisible",
@@ -403,6 +408,11 @@ const TX = {
   },
 
   pt: {
+    "Date to be decided": "Data a definir",
+    "WHERE AND WHEN": "ONDE E QUANDO",
+    "The date is what lets people know if they are free, and it closes your project once it has passed.": "A data permite saber se as pessoas estão livres, e fecha seu projeto depois que passar.",
+    "Date still to be decided": "Data ainda a definir",
+    "Add a date, or tick the box above. Writing it in the text only is not enough: nothing can read it there.": "Coloque uma data, ou marque a caixa acima. Escrever só no texto não basta: ali nada consegue ler.",
     "Couldn't save. Try again.": "Não foi possível salvar. Tente de novo.",
     "Couldn't cancel. Try again.": "Não foi possível cancelar. Tente de novo.",
     "Invisible mode": "Modo invisível",
@@ -803,6 +813,11 @@ const TX = {
   },
 
   de: {
+    "Date to be decided": "Datum offen",
+    "WHERE AND WHEN": "WO UND WANN",
+    "The date is what lets people know if they are free, and it closes your project once it has passed.": "Am Datum sieht man, ob man Zeit hat, und es schließt dein Projekt, sobald es vorbei ist.",
+    "Date still to be decided": "Datum steht noch nicht fest",
+    "Add a date, or tick the box above. Writing it in the text only is not enough: nothing can read it there.": "Trag ein Datum ein oder setz oben das Häkchen. Nur im Text reicht nicht: dort kann es niemand auslesen.",
     "Couldn't save. Try again.": "Speichern fehlgeschlagen. Versuch es nochmal.",
     "Couldn't cancel. Try again.": "Abbrechen fehlgeschlagen. Versuch es nochmal.",
     "Invisible mode": "Unsichtbar-Modus",
@@ -1203,6 +1218,11 @@ const TX = {
   },
 
   it: {
+    "Date to be decided": "Data da definire",
+    "WHERE AND WHEN": "DOVE E QUANDO",
+    "The date is what lets people know if they are free, and it closes your project once it has passed.": "La data fa capire se si è liberi, e chiude il tuo progetto una volta passata.",
+    "Date still to be decided": "Data ancora da definire",
+    "Add a date, or tick the box above. Writing it in the text only is not enough: nothing can read it there.": "Metti una data, o spunta la casella qui sopra. Scriverla solo nel testo non basta: lì nulla può leggerla.",
     "Couldn't save. Try again.": "Salvataggio non riuscito. Riprova.",
     "Couldn't cancel. Try again.": "Annullamento non riuscito. Riprova.",
     "Invisible mode": "Modalità invisibile",
