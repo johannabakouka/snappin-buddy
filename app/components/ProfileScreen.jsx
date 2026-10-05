@@ -11,6 +11,7 @@ import { loadMyBlocks, unblockUser, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { lookingChips } from '../looking-for';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET } from '../image-upload';
 import { usePullToRefresh } from '../pull-refresh';
@@ -196,6 +197,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   ];
 
   const styles = (profile?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
+  const lookingFor = lookingChips(profile?.looking_for);
   const zones = (profile?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
   const [receipts, setReceipts] = useState(profile?.read_receipts !== false);
 
@@ -558,6 +560,21 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
             <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{t.currentProject}</p>
             <p style={{ fontSize: '14px', color: cardText }}>{profile.bio}</p>
+          </div>
+        )}
+
+        {lookingFor.length > 0 && (
+          <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>
+              {tx('LOOKING FOR', 'CHERCHE')}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {lookingFor.map(item => (
+                <span key={item.id} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>
+                  {item.icon} {item.label}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

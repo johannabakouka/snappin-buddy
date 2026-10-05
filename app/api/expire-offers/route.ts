@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { getProfile, getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } from '../../lib/server';
 import { isPast, pastReason, NO_DATE_DAYS } from '../../offers-life';
+import { notifyArrivals } from '../../lib/arrivals';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -74,11 +75,22 @@ export async function GET(request: Request) {
     for (const offer of expired) await notify(offer, true);
     for (const offer of reminders) await notify(offer, false);
 
+    // « Préviens-moi quand quelqu'un arrive » : même passage quotidien, parce
+    // que Vercel limite le nombre de tâches planifiées. Un échec ici ne doit
+    // pas faire passer la clôture des projets pour ratée.
+    let arrivals = null;
+    try {
+      arrivals = await notifyArrivals();
+    } catch (e) {
+      console.error('notifyArrivals', e);
+    }
+
     return Response.json({
       message: 'Cron OK',
       expired: expired.length,
       reminders: reminders.length,
       emailsSent,
+      arrivals,
     });
   } catch (err) {
     console.error('expire-offers', err);

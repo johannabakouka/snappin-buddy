@@ -61,6 +61,35 @@ export const UNIVERS_EN = [
 export const ROLES = ROLES_FR;
 export const UNIVERS = UNIVERS_FR;
 
+/**
+ * « Ce que tu cherches » : l'intention, stockée dans profiles.looking_for sous
+ * forme d'identifiants séparés par des virgules.
+ *
+ * Deux personnes peuvent avoir le même métier et la même ville et n'avoir
+ * strictement rien à se proposer : l'une cherche des missions payées, l'autre
+ * veut juste rencontrer des gens du coin. Sans cette ligne sur le profil, on le
+ * découvre après trois messages.
+ *
+ * Contrairement aux rôles et aux univers, les identifiants ne sont pas des mots
+ * français : les libellés viennent du dictionnaire. Les rôles stockés en
+ * français obligent à traduire dans les deux sens à chaque enregistrement, et
+ * c'est la source d'un bug à chaque fois qu'une langue s'ajoute.
+ */
+export const LOOKING_FOR = ['paid', 'tfp', 'exchange', 'personal', 'assist', 'meet'];
+
+export const LOOKING_FOR_ICONS = {
+  paid: '💼', tfp: '📸', exchange: '🤝', personal: '✨', assist: '🎓', meet: '📍',
+};
+
+/** Au-delà, la ligne déborde sur le profil et ne veut plus dire grand-chose. */
+export const LOOKING_FOR_MAX = 3;
+
+/** Les identifiants valides d'une chaîne stockée, dans l'ordre de la liste. */
+export function parseLookingFor(stored) {
+  const ids = String(stored || '').split(',').map(s => s.trim()).filter(Boolean);
+  return LOOKING_FOR.filter(id => ids.includes(id));
+}
+
 export const ROLE_ICONS = {
   'photographe': '📷', 'vidéaste': '🎬', 'créateur de contenu': '📱', 'directeur artistique': '🎨',
   'directeur créatif': '🎯', 'monteur vidéo': '🎞️', 'éditeur photo': '🖼️',

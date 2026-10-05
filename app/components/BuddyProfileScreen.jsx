@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { useT, useRoles } from '../i18n';
 import MapPreviewCard from './MapPreviewCard';
 import { tx, isNotFrench } from '../tx';
+import { lookingChips } from '../looking-for';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
 import PhotoViewer from './PhotoViewer';
@@ -123,6 +124,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
   }, [buddy?.user_id]);
 
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
+  const lookingFor = lookingChips(buddy?.looking_for);
   const zones = (buddy?.zone || '').split(',').map(z => z.trim()).filter(Boolean);
   const portfolio = buddy?.portfolio_urls || [];
   const statusColor = buddy?.status === 'shoot' ? '#FFD700' : buddy?.status === 'indispo' ? '#FF4D4D' : '#2ECC71';
@@ -448,6 +450,21 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
             <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>{tx('ROLE', 'RÔLE')}</p>
             <p style={{ fontSize: '14px', color }}>{roleLabel}</p>
+          </div>
+        )}
+
+        {lookingFor.length > 0 && (
+          <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>
+              {tx('LOOKING FOR', 'CHERCHE')}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {lookingFor.map(item => (
+                <span key={item.id} style={{ fontSize: '12px', color: tagColor, border: `1px solid ${tagBorder}`, borderRadius: '20px', padding: '4px 12px' }}>
+                  {item.icon} {item.label}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

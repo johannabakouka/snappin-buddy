@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { tx } from '../tx';
 import { LEGAL_SECTIONS } from '../legal-content';
 
 export default function LegalScreen({ theme, onBack }) {

@@ -78,7 +78,11 @@ export default function ExploreScreen({ theme, active = true }) {
     const { data } = await supabase.from('profiles').select('*');
     const blocked = await loadBlockedIds(user?.id);
     setFirstLoad(false);
-    if (data) setProfiles(data.filter(p => !blocked.has(p.user_id)));
+    // Mode invisible : hors de la carte et hors d'Explorer. Son propre profil
+    // reste affiché, sinon on croirait son compte cassé.
+    if (data) setProfiles(data.filter(p => (
+      !blocked.has(p.user_id) && (!p.hidden || p.user_id === user?.id)
+    )));
   }
 
   useEffect(() => {
@@ -137,7 +141,9 @@ export default function ExploreScreen({ theme, active = true }) {
       .map(p => ({
         p,
         rank: searchRank(p, q)
-          || ((normalizeSearch(p.role).includes(q) || normalizeSearch(p.zone).includes(q)) ? 0.5 : 0),
+          || ((normalizeSearch(p.role).includes(q)
+            || normalizeSearch(p.city).includes(q)
+            || normalizeSearch(p.zone).includes(q)) ? 0.5 : 0),
       }))
       .filter(x => x.rank > 0)
       .sort((a, b) => b.rank - a.rank)
@@ -353,9 +359,16 @@ export default function ExploreScreen({ theme, active = true }) {
                       </span>
                     </div>
                     <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
-                      {roleLabel && <span style={{ marginRight: '6px' }}>{roleLabel}</span>}
-                      {p.zone && <span>· {p.zone}</span>}
+                      {roleLabel && <span>{roleLabel}</span>}
                     </div>
+                    {/* Le lieu était introuvable sans ouvrir le profil, alors
+                        que c'est la première question qu'on se pose dans une
+                        liste de créatifs « autour de toi ». */}
+                    {(p.city || p.zone) && (
+                      <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
+                        📍 {[p.city, p.zone].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                       {(p.styles || '').split(',').map(s => {
                         const sClean = s.trim();

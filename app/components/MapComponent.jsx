@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
+import { loadCities, nearestCity } from '../cities';
 import MapPreviewCard from './MapPreviewCard';
 import {
   ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels,
@@ -11,12 +12,16 @@ import {
 } from '../constants';
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { loadMyWatch, watchNearby, unwatchNearby } from '../city-watch';
+import { tap } from '../haptics';
 
 // ~400 m pour une position GPS, ~2 km pour une ville choisie (répartit les pins dans la ville)
 const GPS_FUZZ = 0.004;
 const CITY_FUZZ = 0.02;
 // Zoom d'ouverture quand on ne connaît personne autour : vue régionale (on peut zoomer à la main)
 const MAP_ZOOM = 8;
+// Durée du sommeil du bandeau « tu es parmi les premiers » après un clic sur la croix.
+const PIONEER_SNOOZE_DAYS = 7;
 
 // Fond de carte : MapTiler si la clé est configurée (style sombre soigné),
 // sinon OpenStreetMap, qui reste le filet de sécurité gratuit et sans clé.
@@ -102,16 +107,70 @@ export default function MapComponent({ theme, active = true }) {
   const tilesRef = useRef(null);
   const [savingCity, setSavingCity] = useState(false);
   const [cityError, setCityError] = useState('');
-  // Le message « tu es parmi les premiers » se ferme et ne revient pas :
-  // utile la première fois, pénible à chaque ouverture.
+  // Le message « tu es parmi les premiers » se met en sommeil quand on le
+  // ferme : pénible à chaque ouverture, mais il porte maintenant le bouton
+  // « préviens-moi ». S'il disparaissait pour toujours, un clic sur la croix
+  // le premier jour fermait la porte définitivement.
   const [pioneerDismissed, setPioneerDismissed] = useState(() => {
     if (typeof window === 'undefined') return false;
-    try { return localStorage.getItem('pioneerSeen') === '1'; } catch { return false; }
+    try {
+      const at = Date.parse(localStorage.getItem('pioneerSeen') || '');
+      if (!at) return false;
+      return Date.now() - at < PIONEER_SNOOZE_DAYS * 86400000;
+    } catch { return false; }
   });
 
   function dismissPioneer() {
     setPioneerDismissed(true);
-    try { localStorage.setItem('pioneerSeen', '1'); } catch { /* navigation privée */ }
+    try { localStorage.setItem('pioneerSeen', new Date().toISOString()); } catch { /* navigation privée */ }
+  }
+
+  // Veille « préviens-moi quand quelqu'un arrive » : 'off' | 'saving' | 'on'
+  const [watchState, setWatchState] = useState('off');
+  const [watchError, setWatchError] = useState('');
+  const myId = profiles.find(p => p._isMe)?.user_id || null;
+
+  useEffect(() => {
+    if (!myId) return;
+    let alive = true;
+    (async () => {
+      const row = await loadMyWatch(myId);
+      // Une veille déjà déclenchée ne se réaffiche pas comme active : le mail
+      // est parti, la personne n'attend plus rien.
+      if (alive && row && !row.notified_at) setWatchState('on');
+    })();
+    return () => { alive = false; };
+  }, [myId]);
+
+  async function startWatch() {
+    const mine = profiles.find(p => p._isMe);
+    if (!mine?.lat || !mine?.lng) {
+      setWatchError(tx('Pick your city first.', 'Choisis d’abord ta ville.'));
+      return;
+    }
+    // Le nombre de créatifs déjà là. Sans ce repère, le serveur enverrait un
+    // mail pour annoncer des gens qui étaient présents avant l'inscription.
+    const baseline = profiles.filter(p => (
+      !p._isMe && p.lat && p.lng && distanceKm(mine.lat, mine.lng, p.lat, p.lng) <= NEARBY_KM
+    )).length;
+    setWatchError('');
+    setWatchState('saving');
+    const ok = await watchNearby(mine.user_id, mine.lat, mine.lng, baseline);
+    if (ok) {
+      tap();
+      setWatchState('on');
+    } else {
+      setWatchState('off');
+      setWatchError(tx("Couldn't save. Try again.", 'L’enregistrement a échoué. Réessaie.'));
+    }
+  }
+
+  async function stopWatch() {
+    if (!myId) return;
+    setWatchError('');
+    const ok = await unwatchNearby(myId);
+    if (ok) setWatchState('off');
+    else setWatchError(tx("Couldn't cancel. Try again.", 'L’annulation a échoué. Réessaie.'));
   }
 
   const STATUS_FILTERS = [
@@ -166,6 +225,9 @@ export default function MapComponent({ theme, active = true }) {
 
       const allProfiles = (profileData || [])
         .filter(p => !blocked.has(p.user_id))
+        // Mode invisible : le profil disparaît de la carte, mais on reste
+        // visible pour soi-même, sinon on croirait son compte cassé.
+        .filter(p => !p.hidden || (!!user && p.user_id === user.id))
         .map(p => ({ ...p, _isMe: !!user && p.user_id === user.id }));
       if (profileData) {
         setProfiles(allProfiles);
@@ -185,13 +247,48 @@ export default function MapComponent({ theme, active = true }) {
           map.setView([latitude, longitude], openingZoom(LeafletModule, map, latitude, longitude, allProfiles));
           if (user) {
             const fuzzed = fuzzPosition(latitude, longitude);
-            await supabase.from('profiles').update({ lat: fuzzed.lat, lng: fuzzed.lng }).eq('user_id', user.id);
-            setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng } : p));
+            // La ville la plus proche, pour qu'Explorer puisse écrire un lieu.
+            // Le téléchargement de la liste n'arrive qu'ici, une fois, au
+            // moment où la position est posée.
+            const city = await cityNameFor(latitude, longitude);
+            await supabase.from('profiles')
+              .update({ lat: fuzzed.lat, lng: fuzzed.lng, city })
+              .eq('user_id', user.id);
+            setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng, city } : p));
           }
         }, () => onGeoError?.(), { timeout: 15000 });
       }
     });
   }
+
+  // Le nom de la ville la plus proche, ou null. Une coupure réseau ne doit pas
+  // faire échouer l'enregistrement de la position, qui est l'essentiel.
+  async function cityNameFor(lat, lng) {
+    try {
+      const cities = await loadCities();
+      return nearestCity(cities, lat, lng)?.name || null;
+    } catch (e) {
+      console.error('cityNameFor', e);
+      return null;
+    }
+  }
+
+  // Rattrapage : les comptes créés avant ce réglage ont une position mais pas
+  // de ville. Plutôt qu'une migration, chacun répare le sien en ouvrant la
+  // carte, une seule fois.
+  useEffect(() => {
+    const mine = profiles.find(p => p._isMe);
+    if (!mine || mine.city || !mine.lat || !mine.lng) return;
+    let alive = true;
+    (async () => {
+      const city = await cityNameFor(mine.lat, mine.lng);
+      if (!alive || !city) return;
+      await supabase.from('profiles').update({ city }).eq('user_id', mine.user_id);
+      setProfiles(prev => prev.map(p => p._isMe ? { ...p, city } : p));
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profiles.find(p => p._isMe)?.user_id, profiles.find(p => p._isMe)?.lat]);
 
   // Bascule clair / sombre : on change le fond sans recharger la carte
   useEffect(() => {
@@ -274,7 +371,9 @@ export default function MapComponent({ theme, active = true }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { error } = await supabase.from('profiles')
-        .update({ lat: fuzzed.lat, lng: fuzzed.lng })
+        // Le nom de la ville était perdu : seules les coordonnées étaient
+        // gardées, donc Explorer ne pouvait afficher aucun lieu.
+        .update({ lat: fuzzed.lat, lng: fuzzed.lng, city: city.name || null })
         .eq('user_id', user.id);
       if (error) {
         // L'erreur n'était que dans la console : la personne choisissait sa
@@ -284,7 +383,7 @@ export default function MapComponent({ theme, active = true }) {
         setSavingCity(false);
         return;
       }
-      setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng } : p));
+      setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng, city: city.name || null } : p));
     }
     localStorage.setItem('geoMode', 'city');
     mapInstance.current?.setView([city.lat, city.lng], openingZoom(L, mapInstance.current, city.lat, city.lng, profiles));
@@ -536,6 +635,52 @@ export default function MapComponent({ theme, active = true }) {
                 '{n} créatifs sont déjà sur la carte.'
               ).replace('{n}', String(totalCreatives))}
             </p>
+
+            {/* La sortie du bandeau. Avant, il n'y avait que la croix : la
+                personne arrivée la première dans sa ville n'avait aucun moyen
+                de laisser une trace, donc l'app perdait exactement les gens
+                qui ouvrent une ville. */}
+            {watchState === 'on' ? (
+              <p style={{
+                color: darkMode ? 'rgba(255,255,255,0.75)' : '#444',
+                fontSize: '12px', lineHeight: 1.5, marginTop: '10px',
+              }}>
+                ✓ {tx(
+                  "We'll email you as soon as a creative shows up around you.",
+                  'On t’écrit dès qu’un créatif apparaît autour de toi.'
+                )}{' '}
+                <button
+                  onClick={stopWatch}
+                  style={{
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    color: darkMode ? 'rgba(255,255,255,0.5)' : '#888',
+                    fontSize: '12px', textDecoration: 'underline', fontFamily: 'inherit',
+                  }}
+                >
+                  {tx('Cancel', 'Annuler')}
+                </button>
+              </p>
+            ) : (
+              <button
+                onClick={startWatch}
+                disabled={watchState === 'saving'}
+                style={{
+                  marginTop: '10px', padding: '9px 16px', borderRadius: '20px', border: 'none',
+                  cursor: watchState === 'saving' ? 'default' : 'pointer',
+                  background: darkMode ? 'white' : '#111', color: darkMode ? '#111' : 'white',
+                  fontSize: '12px', fontWeight: '800', opacity: watchState === 'saving' ? 0.6 : 1,
+                }}
+              >
+                🔔 {watchState === 'saving'
+                  ? tx('Saving...', 'Enregistrement...')
+                  : tx('Notify me when someone arrives', 'Préviens-moi quand quelqu’un arrive')}
+              </button>
+            )}
+            {watchError && (
+              <p style={{ color: '#FF6B6B', fontSize: '11px', marginTop: '6px', lineHeight: 1.4 }}>
+                {watchError}
+              </p>
+            )}
           </div>
           <button
             onClick={dismissPioneer}

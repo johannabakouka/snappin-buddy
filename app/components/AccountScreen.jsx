@@ -26,6 +26,15 @@ export default function AccountScreen({ theme, onBack }) {
   const [myEmail, setMyEmail] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
 
+  // Mode invisible. Quelqu'un peut vouloir rester sur l'app sans être
+  // localisable : une période chargée, un métier qui ne cherche rien en ce
+  // moment, ou simplement l'envie de ne pas figurer sur une carte publique.
+  // Sans ce réglage, la seule sortie était de supprimer son compte.
+  const [hidden, setHidden] = useState(false);
+  const [hiddenBusy, setHiddenBusy] = useState(false);
+  const [hiddenError, setHiddenError] = useState('');
+  const [myId, setMyId] = useState('');
+
   // Formulaire email
   const [openEmail, setOpenEmail] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -51,9 +60,29 @@ export default function AccountScreen({ theme, onBack }) {
       setMyEmail(data.user?.email || '');
       // Supabase garde la future adresse ici tant que le lien n'est pas ouvert.
       setPendingEmail(data.user?.new_email || '');
+      setMyId(data.user?.id || '');
+      if (data.user?.id) {
+        supabase.from('profiles').select('hidden').eq('user_id', data.user.id).maybeSingle()
+          .then(({ data: row }) => { if (alive) setHidden(!!row?.hidden); });
+      }
     });
     return () => { alive = false; };
   }, []);
+
+  async function toggleHidden() {
+    if (!myId || hiddenBusy) return;
+    const next = !hidden;
+    setHiddenBusy(true);
+    setHiddenError('');
+    const { error } = await supabase.from('profiles').update({ hidden: next }).eq('user_id', myId);
+    if (error) {
+      console.error('toggleHidden', error);
+      setHiddenError(tx("Couldn't save. Try again.", 'L’enregistrement a échoué. Réessaie.'));
+    } else {
+      setHidden(next);
+    }
+    setHiddenBusy(false);
+  }
 
   // Vérifie le mot de passe actuel en se reconnectant avec lui. Même session,
   // même compte : ça ne déconnecte personne, mais une mauvaise saisie est
@@ -307,6 +336,52 @@ export default function AccountScreen({ theme, onBack }) {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+
+        <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '12px', border: `1px solid ${cardBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '6px' }}>
+                {tx('Invisible mode', 'Mode invisible')}
+              </p>
+              <p style={{ color: subText, fontSize: '12px', lineHeight: 1.6 }}>
+                {hidden
+                  ? tx(
+                    'You are hidden from the map and from Explore. Your conversations keep working, and your profile link still works for anyone you share it with.',
+                    'Tu n’apparais plus sur la carte ni dans Explorer. Tes conversations continuent, et ton lien de profil reste valable pour qui tu le partages.',
+                  )
+                  : tx(
+                    'Stay on the app without appearing on the map or in Explore. You can turn it off whenever you want.',
+                    'Rester sur l’app sans apparaître sur la carte ni dans Explorer. Tu peux le désactiver quand tu veux.',
+                  )}
+              </p>
+            </div>
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={tx('Invisible mode', 'Mode invisible')}
+              aria-pressed={hidden}
+              onClick={toggleHidden}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHidden(); } }}
+              style={{
+                width: '52px', height: '28px', borderRadius: '14px', flexShrink: 0,
+                background: hidden ? '#F2E050' : (darkMode ? '#333' : '#DDD'),
+                cursor: hiddenBusy ? 'default' : 'pointer', opacity: hiddenBusy ? 0.6 : 1,
+                display: 'flex', alignItems: 'center', padding: '3px',
+                transition: 'background 0.25s', boxSizing: 'border-box',
+              }}
+            >
+              <div style={{
+                width: '22px', height: '22px', borderRadius: '50%',
+                background: hidden ? '#0A0A0A' : 'white',
+                transform: hidden ? 'translateX(24px)' : 'translateX(0px)',
+                transition: 'transform 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }} />
+            </div>
+          </div>
+          {hiddenError && (
+            <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginTop: '10px' }}>{hiddenError}</p>
           )}
         </div>
 

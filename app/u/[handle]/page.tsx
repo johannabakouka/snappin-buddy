@@ -6,6 +6,7 @@ import { supabaseAdmin } from '../../lib/server';
 import { ROLES_FR, ROLES_EN, splitRoles, OTHER_ROLE_ID } from '../../constants';
 import { cleanUrl, prettyUrl } from '../../links';
 import { txIn, langFromHeader } from '../../tx';
+import { lookingChipsIn } from '../../looking-for';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,7 @@ type PublicProfile = {
   role: string | null;
   role_other: string | null;
   styles: string | null;
+  looking_for: string | null;
   zone: string | null;
   avatar_url: string | null;
   portfolio_urls: string[] | null;
@@ -49,7 +51,7 @@ async function getProfile(handle: string): Promise<PublicProfile | null> {
   // dont le pseudo correspond vraiment.
   const { data } = await supabaseAdmin()
     .from('profiles')
-    .select('username, handle, bio, role, role_other, styles, zone, avatar_url, portfolio_urls, portfolio_url, validated_projects')
+    .select('username, handle, bio, role, role_other, styles, looking_for, zone, avatar_url, portfolio_urls, portfolio_url, validated_projects')
     .or(`handle.ilike.@${clean},handle.ilike.${clean}`)
     .limit(5);
 
@@ -100,6 +102,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     return (roleList.find((x: Role) => x.id === r) as Role) || { id: r, label: r, icon: '' };
   });
   const univers = (profile.styles || '').split(',').map(s => s.trim()).filter(Boolean);
+  // « Cherche » se lit avant les univers : c'est la ligne qui dit s'il y a
+  // quelque chose à se proposer. Dans la langue du visiteur, comme le reste de
+  // cette page, qui s'ouvre souvent depuis une story à l'étranger.
+  const looking = lookingChipsIn(lang, profile.looking_for);
   const portfolio = (profile.portfolio_urls || []).slice(0, 6);
   // Revalidé à l'affichage : cette page est publique et lue par des moteurs de
   // recherche, un lien douteux n'y est jamais rendu cliquable.
@@ -165,6 +171,19 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 padding: '7px 14px', fontSize: '13px', fontWeight: 700,
               }}>
                 {r.icon} {r.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {looking.length > 0 && (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            {looking.map(item => (
+              <span key={item.id} style={{
+                border: '1px solid rgba(242,224,80,0.35)', color: '#F2E050',
+                borderRadius: '16px', padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+              }}>
+                {item.icon} {item.label}
               </span>
             ))}
           </div>

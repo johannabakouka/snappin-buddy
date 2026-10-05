@@ -5,7 +5,9 @@ import { useRoles, useUnivers, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
-import { roleIdsFromStored, universFromStored, cleanRoleOther, OTHER_ROLE_ID, ROLE_OTHER_MAX } from '../constants';
+import { roleIdsFromStored, universFromStored, cleanRoleOther, OTHER_ROLE_ID, ROLE_OTHER_MAX,
+  LOOKING_FOR, LOOKING_FOR_ICONS, LOOKING_FOR_MAX, parseLookingFor } from '../constants';
+import { lookingLabel, lookingHint } from '../looking-for';
 import PhotoViewer from './PhotoViewer';
 import { cleanUrl } from '../links';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET, PORTFOLIO_BUCKET } from '../image-upload';
@@ -91,6 +93,20 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
   const [videoUrl, setVideoUrl] = useState(profile?.video_url || '');
   const [portfolioLink, setPortfolioLink] = useState(profile?.portfolio_url || '');
   const [selectedUnivers, setSelectedUnivers] = useState(universFromStored(profile?.styles, isEn));
+  // « Ce que tu cherches » : deux personnes du même métier dans la même ville
+  // peuvent n'avoir rien à se proposer, l'une voulant des missions payées et
+  // l'autre juste rencontrer du monde. Sans cette ligne, on le découvre après
+  // trois messages.
+  const [looking, setLooking] = useState(() => parseLookingFor(profile?.looking_for));
+
+  function toggleLooking(id) {
+    setLooking(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      // Au-delà de trois, la ligne déborde sur le profil et ne dit plus rien.
+      if (prev.length >= LOOKING_FOR_MAX) return prev;
+      return [...prev, id];
+    });
+  }
   const [portfolioUrls, setPortfolioUrls] = useState(profile?.portfolio_urls || []);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
@@ -234,6 +250,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       username, handle: cleanHandle(handle), role: selectedRoles.join(', '),
       role_other: otherToSave || null,
       bio, zone, styles: universToSave.join(', '),
+      looking_for: looking.length ? looking.join(', ') : null,
       portfolio_urls: portfolioUrls,
       video_url: videoUrl || null,
       portfolio_url: link || null,
@@ -394,6 +411,46 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
           </p>
         </div>
       )}
+
+      <p style={{ color: subText, fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>
+        {tx('WHAT YOU ARE LOOKING FOR', 'CE QUE TU CHERCHES')} <span style={{ fontWeight: '400' }}>(max {LOOKING_FOR_MAX})</span>
+      </p>
+      <p style={{ color: subText, fontSize: '11px', marginBottom: '12px' }}>
+        {tx(
+          'Shown on your profile, so people know what to propose.',
+          'Affiché sur ton profil, pour qu\u2019on sache quoi te proposer.'
+        )}
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+        {LOOKING_FOR.map(id => {
+          const active = looking.includes(id);
+          const full = !active && looking.length >= LOOKING_FOR_MAX;
+          return (
+            <button
+              key={id}
+              onClick={() => toggleLooking(id)}
+              disabled={full}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px', textAlign: 'left',
+                padding: '11px 13px', borderRadius: '12px',
+                border: `1.5px solid ${active ? color : (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')}`,
+                background: active ? (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)') : 'transparent',
+                color, cursor: full ? 'default' : 'pointer', opacity: full ? 0.4 : 1,
+                transition: 'all 0.2s', width: '100%', boxSizing: 'border-box',
+              }}
+            >
+              <span style={{ fontSize: '16px', lineHeight: 1.3 }}>{LOOKING_FOR_ICONS[id]}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: '13px', fontWeight: '800' }}>{lookingLabel(id)}</span>
+                <span style={{ display: 'block', fontSize: '11px', color: subText, marginTop: '2px', lineHeight: 1.4 }}>
+                  {lookingHint(id)}
+                </span>
+              </span>
+              <span style={{ fontSize: '13px', color: active ? color : 'transparent', fontWeight: '900' }}>✓</span>
+            </button>
+          );
+        })}
+      </div>
 
       <p style={{ color: subText, fontSize: '12px', marginBottom: '12px', fontWeight: '600' }}>{tx('UNIVERSE', 'UNIVERS')}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>

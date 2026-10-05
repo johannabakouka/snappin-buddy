@@ -3,6 +3,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
+import { NEARBY_KM } from '../constants';
 
 const SUPABASE_URL = 'https://jfzdrccnzzwhvzbxgtjo.supabase.co';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snappinbuddy.com';
@@ -202,6 +203,41 @@ export function offerExpiringMail(to: string, offerTitle: string, expiryDate: st
         cta: '',
         forUser,
       };
+}
+
+// Le rayon affiché dans le mail vient de la même constante que la carte, pour
+// qu'ils ne puissent pas se contredire.
+const RADIUS_FR = ` (moins de ${NEARBY_KM} km)`;
+const RADIUS_EN = ` (within ${NEARBY_KM} km)`;
+
+/**
+ * « Quelqu'un est arrivé près de toi. »
+ *
+ * Envoyé une seule fois, à ceux qui se sont inscrits sur la carte alors que
+ * leur ville était vide. C'est le seul mail que l'app envoie sans qu'un autre
+ * membre ait agi directement envers la personne, donc il dit clairement qu'il
+ * ne reviendra pas.
+ */
+export function nearbyArrivalMail(to: string, arrived: number, forUser?: string): Mail {
+  const n = Math.max(1, Math.floor(arrived));
+  const manyFr = n > 1 ? `<b>${n} nouveaux créatifs</b> se sont placés` : '<b>Un créatif</b> s’est placé';
+  const manyEn = n > 1 ? `<b>${n} new creatives</b> have put themselves` : '<b>A creative</b> has put themselves';
+  return {
+    to,
+    subject: n > 1 ? `✨ ${n} créatifs viennent d’arriver près de toi` : '✨ Un créatif vient d’arriver près de toi',
+    titleFr: 'Ta ville se remplit ✨',
+    bodyFr: `${manyFr} sur la carte autour de toi depuis que tu as demandé à être prévenu${RADIUS_FR}. ` +
+      'Ouvre la carte pour voir qui c’est.<br><br>' +
+      '<span style="font-size:12px;color:rgba(255,255,255,.45)">Ce mail n’est envoyé qu’une fois. ' +
+      'Tu peux redemander à être prévenu depuis la carte.</span>',
+    titleEn: 'Your city is filling up ✨',
+    bodyEn: `${manyEn} on the map around you since you asked to be notified${RADIUS_EN}. ` +
+      'Open the map to see who.<br><br>' +
+      '<span style="font-size:12px;color:rgba(255,255,255,.45)">This email is sent only once. ' +
+      'You can ask to be notified again from the map.</span>',
+    cta: '',
+    forUser,
+  };
 }
 
 export function reportMail(to: string, reporterId: string, reported: { id: string; username?: string; handle?: string }, reason: string): Mail {

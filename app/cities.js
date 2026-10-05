@@ -51,6 +51,88 @@ export function loadCities() {
 export const CITY_MAX_RESULTS = 6;
 
 /**
+ * Au-delà, la ville la plus proche n'est plus la ville de la personne : mieux
+ * vaut n'afficher aucun lieu qu'un lieu faux.
+ */
+export const CITY_SNAP_KM = 75;
+
+/**
+ * Les arrondissements, écartés comme lieu d'habitation.
+ *
+ * La liste contient « Paris 4e », « Marseille 1er », « Lyon 3e » comme des
+ * villes à part entière, et elles sont forcément plus proches du point que le
+ * centre de la ville. Sans ce filtre, quelqu'un au centre de Paris était
+ * étiqueté « Paris 4e », et deux personnes du même quartier se retrouvaient
+ * affichées dans deux « villes » différentes. Aucune vraie ville ne porte un
+ * nom de cette forme.
+ */
+const DISTRICT_RE = /\s\d+\s*(er|e|ème|º)?$/i;
+
+/**
+ * La ville la plus proche d'un point, ou null si la plus proche est trop loin.
+ *
+ * Sert à écrire un nom de ville sur un profil. Jusqu'ici l'app ne gardait que
+ * des coordonnées : dans Explorer, aucune ligne ne disait où était la personne,
+ * il fallait ouvrir son profil pour le découvrir.
+ *
+ * La règle est volontairement bête : la plus proche, et rien d'autre. Préférer
+ * la plus peuplée du voisinage donnait de meilleurs résultats au centre des
+ * grandes villes et de bien pires en banlieue, où quelqu'un à Joinville se
+ * retrouvait affiché à Montreuil.
+ *
+ * Le calcul se fait une seule fois, au moment où la position est posée, et le
+ * résultat est enregistré sur le profil : charger les 765 Ko de la liste à
+ * chaque ouverture d'Explorer serait payé par tout le monde, tout le temps.
+ */
+export function nearestCity(cities, lat, lng, maxKm = CITY_SNAP_KM) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  let best = null;
+  let bestScore = Infinity;
+  // Un filtre grossier en degrés avant le vrai calcul : comparer 23 000 villes
+  // avec des sinus coûte, les écarter avec deux soustractions ne coûte rien.
+  const box = maxKm / 70;
+  const lngBox = box / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  for (let i = 0; i < cities.length; i++) {
+    const c = cities[i];
+    if (Math.abs(c.lat - lat) > box) continue;
+    if (Math.abs(c.lng - lng) > lngBox) continue;
+    if (DISTRICT_RE.test(c.name)) continue;
+    const d = roughKm(lat, lng, c.lat, c.lng);
+    if (d > maxKm) continue;
+    const score = d - reachKm(i);
+    if (score < bestScore) { bestScore = score; best = c; }
+  }
+  return best;
+}
+
+/**
+ * Le rayon sur lequel une ville « déborde » : une grande ville garde ses
+ * habitants sous son nom bien au-delà de son point central, une petite non.
+ *
+ * La liste est triée par population décroissante, donc l'indice fait office de
+ * taille. Sans ça, la ville la plus proche d'un point du 18e arrondissement
+ * n'était pas Paris mais Saint-Ouen, et Brooklyn devenait Bushwick. Avec un
+ * rayon unique pour tout le monde, c'est l'inverse qui cassait : quelqu'un à
+ * Joinville-le-Pont se retrouvait affiché à Montreuil.
+ */
+function reachKm(rank) {
+  if (rank < 300) return 12;
+  if (rank < 1200) return 8;
+  if (rank < 5000) return 3;
+  return 0;
+}
+
+function roughKm(aLat, aLng, bLat, bLng) {
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+/**
  * Les villes dont un nom commence par la recherche passent devant celles où
  * elle apparaît en début d'un mot suivant : on tape « san » pour San Francisco,
  * pas pour Sanxenxo.
