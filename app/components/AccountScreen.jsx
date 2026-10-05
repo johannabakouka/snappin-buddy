@@ -164,7 +164,7 @@ export default function AccountScreen({ theme, onBack }) {
       <div style={{ padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(80px + env(safe-area-inset-bottom))` }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+          <button onClick={onBack} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>
             {tx('Account & security', 'Compte & sécurité')}
           </h2>

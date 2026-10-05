@@ -12,8 +12,10 @@ import { withAt } from '../handles';
 import { loadPrefs, pinConversation, muteConversation, hideConversation, markUnread, clearUnread } from '../conversations';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
+import { SkeletonList } from './Skeleton';
+import { tap } from '../haptics';
 
-export default function MessagesScreen({ theme, active = true }) {
+export default function MessagesScreen({ theme, active = true, setScreen }) {
   const t = useT();
   const isEn = isNotFrench();
   const [activeBuddy, setActiveBuddy] = useState(null);
@@ -26,6 +28,9 @@ export default function MessagesScreen({ theme, active = true }) {
   // Profil ouvert depuis une conversation ou depuis la liste des buddies
   const [viewingBuddy, setViewingBuddy] = useState(null);
   const [conversations, setConversations] = useState([]);
+  // Une liste vide et une liste pas encore chargée se ressemblent à l'écran :
+  // sans ce drapeau, on annonçait « aucune conversation » avant d'avoir demandé.
+  const [firstLoad, setFirstLoad] = useState(true);
   const [buddies, setBuddies] = useState([]);
   const [following, setFollowing] = useState([]);
   const [user, setUser] = useState(null);
@@ -65,6 +70,7 @@ export default function MessagesScreen({ theme, active = true }) {
 
   async function loadConversations(userId) {
     const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
+    setFirstLoad(false);
     if (!msgs || msgs.length === 0) { setConversations([]); return; }
     const prefs = await loadPrefs(userId);
     // Comme sur Instagram : celui qui bloque perd la conversation, la personne
@@ -180,6 +186,7 @@ export default function MessagesScreen({ theme, active = true }) {
   async function toggleFollow(targetUserId) {
     if (!user) return;
     setActionError('');
+    tap();
     const isF = following.some(f => f.user_id === targetUserId);
     const snapshot = following;
     if (isF) {
@@ -299,10 +306,28 @@ export default function MessagesScreen({ theme, active = true }) {
 
         {tab === 'messages' && (
           <>
-            {conversations.length === 0 && (
-              <p style={{ color: subText, fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
-                {tx('No conversations yet', 'Aucune conversation pour l\'instant')}
-              </p>
+            {firstLoad && conversations.length === 0 && (
+              <div style={{ padding: '4px 0' }}><SkeletonList count={4} darkMode={darkMode} /></div>
+            )}
+            {!firstLoad && conversations.length === 0 && (
+              <div style={{ textAlign: 'center', marginTop: '48px' }}>
+                <p style={{ fontSize: '32px', marginBottom: '12px' }}>💬</p>
+                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>
+                  {tx('No conversations yet', 'Aucune conversation pour l\'instant')}
+                </p>
+                <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>
+                  {tx('A conversation opens once a proposal is accepted.', 'Une conversation s’ouvre dès qu’une proposition est acceptée.')}
+                </p>
+                <button
+                  onClick={() => setScreen?.('explore')}
+                  style={{
+                    padding: '11px 20px', borderRadius: '22px', border: 'none', cursor: 'pointer',
+                    background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '800',
+                  }}
+                >
+                  {tx('Explore creatives', 'Explorer les créatifs')}
+                </button>
+              </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {conversations.map(c => (

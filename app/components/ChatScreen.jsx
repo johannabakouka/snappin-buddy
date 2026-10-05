@@ -3,12 +3,38 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx } from '../tx';
+import { SkeletonChat } from './Skeleton';
+import { tap } from '../haptics';
 import { uploadChatImage } from '../image-upload';
 import { hasBlockedMe } from '../blocks';
 
 export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   const t = useT();
   const [messages, setMessages] = useState([]);
+  // Une conversation de deux cents messages s'ouvrait sur « Tout commence
+  // ici » le temps du chargement. Ce drapeau évite ce faux départ.
+  const [firstLoad, setFirstLoad] = useState(true);
+  // Hauteur du clavier logiciel. `dvh` suit la barre du navigateur, pas le
+  // clavier : à l'ouverture de celui-ci la colonne gardait sa hauteur pleine
+  // et le champ de saisie passait derrière. On mesure donc la différence entre
+  // la fenêtre visible et la fenêtre de mise en page.
+  const [keyboard, setKeyboard] = useState(0);
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv) return;
+    function measure() {
+      const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // En dessous de 80 px c'est la barre du navigateur, pas un clavier.
+      setKeyboard(hidden > 80 ? hidden : 0);
+    }
+    measure();
+    vv.addEventListener('resize', measure);
+    vv.addEventListener('scroll', measure);
+    return () => {
+      vv.removeEventListener('resize', measure);
+      vv.removeEventListener('scroll', measure);
+    };
+  }, []);
   const [text, setText] = useState('');
   const [user, setUser] = useState(null);
   const [buddyStatus, setBuddyStatus] = useState(buddy?.status || 'dispo');
@@ -95,6 +121,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
       .select('*')
       .or(`and(sender_id.eq.${myId},receiver_id.eq.${buddyId}),and(sender_id.eq.${buddyId},receiver_id.eq.${myId})`)
       .order('created_at', { ascending: true });
+    setFirstLoad(false);
     if (data) {
       setMessages(data);
       if (data.some(m => m.sender_id === buddyId && m.read === false)) markRead(buddyId);
@@ -156,6 +183,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     if (replyTo?.id) payload.reply_to = replyTo.id;
     setReplyTo(null);
 
+    tap();
     const { error } = await supabase.from('messages').insert(payload);
     if (error) {
       // L'erreur n'était pas lue : le champ était déjà vidé, le message
@@ -374,10 +402,10 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   };
 
   return (
-    <div style={{ height: '100dvh', maxHeight: '100dvh', display: 'flex', flexDirection: 'column', background: bg, color }}>
+    <div style={{ height: `calc(100dvh - ${keyboard}px)`, maxHeight: '100dvh', display: 'flex', flexDirection: 'column', background: bg, color }}>
 
       <div style={{ padding: `calc(env(safe-area-inset-top) + 16px) 16px 16px`, borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+        <button onClick={onBack} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div
           onClick={() => { if (!buddyGone) onOpenProfile?.(); }}
           style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}`, cursor: onOpenProfile && !buddyGone ? 'pointer' : 'default', flexShrink: 0 }}
@@ -427,7 +455,11 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           </div>
         )}
 
-        {messages.length === 0 && (
+        {firstLoad && messages.length === 0 && (
+          <SkeletonChat darkMode={darkMode} />
+        )}
+
+        {!firstLoad && messages.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: '60px' }}>
             <p style={{ fontSize: '32px', marginBottom: '12px' }}>🎨</p>
             <p style={{ color: subText, fontSize: '14px', lineHeight: 1.6 }}>
@@ -564,7 +596,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           </p>
         </div>
       ) : (
-      <div style={{ padding: '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div style={{ padding: keyboard ? '12px 16px' : '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
         {/* Le sélecteur natif déclenche lui-même la demande d'accès aux photos du téléphone. */}
         <input
           ref={photoInputRef}
@@ -595,7 +627,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           placeholder={tx('Message...', 'Message...')}
           style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', outline: 'none' }}
         />
-        <button onClick={() => (editing ? saveEdit() : sendMessage())} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>
+        <button onClick={() => (editing ? saveEdit() : sendMessage())} aria-label={editing ? tx('Save', 'Enregistrer') : tx('Send', 'Envoyer')} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>
       </div>
       )}
 

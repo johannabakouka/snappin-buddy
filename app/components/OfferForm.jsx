@@ -109,7 +109,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
       <div style={{ padding: '20px 16px 100px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+          <button onClick={onClose} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>
             {isEdit ? (tx('Edit project', 'Modifier le projet')) : (tx('New project', 'Nouveau projet'))}
           </h2>

@@ -3,6 +3,11 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    "Back": "Volver",
+    "Send": "Enviar",
+    "Post a project": "Publicar un proyecto",
+    "A conversation opens once a proposal is accepted.": "La conversación se abre cuando se acepta una propuesta.",
+    "Explore creatives": "Explorar creativos",
     '🔍 Search a @handle, a name, a role, a city...': '🔍 Busca un @handle, un nombre, un rol, una ciudad...',
     'Flip through the books': 'Hojear los books',
     'Paid': 'Remunerado',
@@ -376,6 +381,11 @@ const TX = {
   },
 
   pt: {
+    "Back": "Voltar",
+    "Send": "Enviar",
+    "Post a project": "Publicar um projeto",
+    "A conversation opens once a proposal is accepted.": "A conversa abre quando uma proposta é aceita.",
+    "Explore creatives": "Explorar criativos",
     '🔍 Search a @handle, a name, a role, a city...': '🔍 Procura um @handle, um nome, um papel, uma cidade...',
     'Flip through the books': 'Folhear os books',
     'Paid': 'Remunerado',
@@ -749,6 +759,11 @@ const TX = {
   },
 
   de: {
+    "Back": "Zurück",
+    "Send": "Senden",
+    "Post a project": "Projekt veröffentlichen",
+    "A conversation opens once a proposal is accepted.": "Ein Chat öffnet sich, sobald eine Anfrage angenommen wird.",
+    "Explore creatives": "Kreative entdecken",
     '🔍 Search a @handle, a name, a role, a city...': '🔍 Suche nach @Handle, Name, Rolle, Stadt...',
     'Flip through the books': 'Durch die Books blättern',
     'Paid': 'Bezahlt',
@@ -1122,6 +1137,11 @@ const TX = {
   },
 
   it: {
+    "Back": "Indietro",
+    "Send": "Invia",
+    "Post a project": "Pubblica un progetto",
+    "A conversation opens once a proposal is accepted.": "La conversazione si apre quando una proposta viene accettata.",
+    "Explore creatives": "Esplora i creativi",
     '🔍 Search a @handle, a name, a role, a city...': '🔍 Cerca un @handle, un nome, un ruolo, una città...',
     'Flip through the books': 'Sfoglia i book',
     'Paid': 'Retribuito',

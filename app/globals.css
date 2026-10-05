@@ -6,8 +6,59 @@
 
 html, body {
   height: 100%;
-  background: #0A0A0A;
-  color: #FFFFFF;
-  font-family: 'Nunito Sans', sans-serif;
+  /* Le fond suit le thème choisi. Avant, il était en noir dur ici, donc en
+     mode clair les marges de part et d'autre de la colonne restaient noires
+     sur tout écran plus large que 390 px. La valeur est posée par l'app au
+     chargement, et ce noir ne sert plus que de fond avant l'affichage. */
+  background: var(--sb-bg, #0A0A0A);
+  color: var(--sb-color, #FFFFFF);
+  /* La police du téléphone : San Francisco sur iPhone, Roboto sur Android.
+     L'app a l'air native, rien n'est téléchargé, et le texte suit le réglage
+     de taille de caractères de la personne.
+     Avant, cette ligne demandait 'Nunito Sans', une police qui n'était jamais
+     chargée : tout le corps de l'app tombait sur la police par défaut sans
+     que ce soit voulu, pendant que les titres, eux, étaient en Nunito.
+     Nunito reste, pour le nom et les titres, via var(--font-nunito). */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
   -webkit-font-smoothing: antialiased;
+  /* Le rebond du navigateur entrait en conflit avec le geste « tirer pour
+     rafraîchir » : les premiers pixels partaient dans l'élastique du système. */
+  overscroll-behavior-y: none;
+}
+
+/* Le doigt doit sentir qu'il a appuyé.
+   L'app n'avait aucun état pressé : on touchait un bouton et rien ne bougeait
+   avant que l'écran suivant arrive. C'est le détail qui sépare une app d'un
+   site web. */
+button,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, opacity 0.08s ease;
+}
+
+button:active:not(:disabled),
+[role='button']:active {
+  transform: scale(0.97);
+  opacity: 0.82;
+}
+
+/* Les champs retiraient tous leur contour de focus sans rien mettre à la
+   place : au clavier, on ne savait plus où on était. */
+:focus-visible {
+  outline: 2px solid #F2E050;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  [role='button'] {
+    transition: none;
+  }
+  button:active:not(:disabled),
+  [role='button']:active {
+    transform: none;
+  }
 }

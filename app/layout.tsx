@@ -2,10 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Nunito } from "next/font/google";
 import "./globals.css";
 
+// Nunito ne sert plus qu'au nom et aux titres, et tous sont en 800 ou 900 :
+// charger 400 et 700 revenait à télécharger deux fichiers que personne n'affiche.
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin"],
-  weight: ["400", "700", "900"],
+  weight: ["800", "900"],
 });
 
 export const viewport: Viewport = {

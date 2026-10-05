@@ -2,8 +2,15 @@
 import { useState, useRef } from 'react';
 import { useT } from '../i18n';
 
-export default function WelcomeScreen({ onStart }) {
+export default function WelcomeScreen({ onStart, theme }) {
   const t = useT();
+  // Cet écran était peint en dur en sombre : c'est le tout premier que voit
+  // quelqu'un qui arrive, et il contredisait le thème clair de l'app.
+  const darkMode = theme?.dark ?? true;
+  const bg = theme?.bg ?? '#0A0A0A';
+  const color = theme?.color ?? 'white';
+  const subText = darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)';
+  const dim = darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
   const [current, setCurrent] = useState(0);
   const touchStartX = useRef(null);
 
@@ -55,15 +62,15 @@ export default function WelcomeScreen({ onStart }) {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       style={{
-        height: '100dvh', background: '#0A0A0A', display: 'flex',
+        height: '100dvh', background: bg, display: 'flex',
         flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '40px 32px', color: 'white', position: 'relative',
+        padding: '40px 32px', color, position: 'relative',
         userSelect: 'none',
       }}
     >
       <button onClick={onStart} style={{
         position: 'absolute', top: '24px', right: '24px',
-        background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)',
+        background: 'none', border: 'none', color: subText,
         fontSize: '14px', cursor: 'pointer', fontWeight: '600',
       }}>
         {t.skip}
@@ -76,13 +83,13 @@ export default function WelcomeScreen({ onStart }) {
       <h2 style={{
         fontFamily: 'var(--font-nunito)', fontSize: '26px', fontWeight: '900',
         textAlign: 'center', marginBottom: '16px', lineHeight: 1.2,
-        color: 'white',
+        color,
       }}>
         {slide.title}
       </h2>
 
       <p style={{
-        fontSize: '15px', color: 'rgba(255,255,255,0.55)',
+        fontSize: '15px', color: subText,
         textAlign: 'center', lineHeight: 1.7, marginBottom: '48px',
         maxWidth: '300px',
       }}>
@@ -94,14 +101,14 @@ export default function WelcomeScreen({ onStart }) {
           <div key={i} onClick={() => setCurrent(i)} style={{
             width: i === current ? '24px' : '8px', height: '8px',
             borderRadius: '4px',
-            background: i === current ? 'white' : 'rgba(255,255,255,0.25)',
+            background: i === current ? color : dim,
             transition: 'all 0.3s', cursor: 'pointer',
           }} />
         ))}
       </div>
 
       <button onClick={next} style={{
-        background: 'white', color: 'black', border: 'none',
+        background: color, color: bg, border: 'none',
         borderRadius: '24px', padding: '16px 40px',
         fontSize: '15px', fontWeight: '700', cursor: 'pointer',
         width: '100%', maxWidth: '300px',

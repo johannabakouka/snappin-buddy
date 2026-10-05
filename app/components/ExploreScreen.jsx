@@ -11,6 +11,7 @@ import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
+import { SkeletonList } from './Skeleton';
 
 // Recherche : on ignore les accents, les majuscules et le @ du handle,
 // pour que « sofia », « Sofía » et « @sofia » trouvent la même personne.
@@ -44,6 +45,9 @@ export default function ExploreScreen({ theme, active = true }) {
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
   const [profiles, setProfiles] = useState([]);
+  // Vrai jusqu'à la première réponse du serveur. Sans ça, l'écran affichait
+  // « Aucun résultat » avant même d'avoir demandé quoi que ce soit.
+  const [firstLoad, setFirstLoad] = useState(true);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
   // Portfolio ouvert en plein écran : { photos, index }
@@ -73,6 +77,7 @@ export default function ExploreScreen({ theme, active = true }) {
     }
     const { data } = await supabase.from('profiles').select('*');
     const blocked = await loadBlockedIds(user?.id);
+    setFirstLoad(false);
     if (data) setProfiles(data.filter(p => !blocked.has(p.user_id)));
   }
 
@@ -394,7 +399,11 @@ export default function ExploreScreen({ theme, active = true }) {
             );
           })}
 
-          {displayed.length === 0 && (
+          {firstLoad && displayed.length === 0 && (
+            <SkeletonList count={4} darkMode={darkMode} thumbs />
+          )}
+
+          {!firstLoad && displayed.length === 0 && (
             <div style={{ textAlign: 'center', marginTop: '40px' }}>
               <p style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</p>
               <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>

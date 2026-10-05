@@ -7,7 +7,7 @@ import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
 import { cleanRoleOther, OTHER_ROLE_ID, ROLE_OTHER_MAX } from '../constants';
 
-export default function OnboardingScreen({ user, onComplete }) {
+export default function OnboardingScreen({ user, onComplete, theme }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -52,12 +52,14 @@ export default function OnboardingScreen({ user, onComplete }) {
   const handleIssueCode = checked ? handleCheck.issue : null;
   const checkingHandle = isHandleValid(handle) && !checked;
 
-  const darkMode = true;
-  const bg = '#0A0A0A';
-  const color = 'white';
-  const subText = '#555';
-  const inputBg = 'rgba(255,255,255,0.06)';
-  const inputBorder = 'rgba(255,255,255,0.1)';
+  // Ces couleurs étaient écrites en dur : l'écran restait noir même quand toute
+  // l'app était en clair, et c'était le tout premier écran d'un nouvel inscrit.
+  const darkMode = theme?.dark ?? true;
+  const bg = theme?.bg ?? '#0A0A0A';
+  const color = theme?.color ?? 'white';
+  const subText = darkMode ? '#555' : '#888';
+  const inputBg = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+  const inputBorder = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)';
 
   function generateHandle(name) {
     const base = name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -135,8 +137,8 @@ export default function OnboardingScreen({ user, onComplete }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
         <span style={{ fontSize: '12px', color: subText, fontWeight: '600', letterSpacing: '1px' }}>{stepLabel}</span>
-        <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${(step / 3) * 100}%`, height: '100%', background: 'white', borderRadius: '2px', transition: 'width 0.4s ease' }} />
+        <div style={{ flex: 1, height: '3px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ width: `${(step / 3) * 100}%`, height: '100%', background: color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
         </div>
       </div>
 
@@ -205,8 +207,8 @@ export default function OnboardingScreen({ user, onComplete }) {
                     {takenSuggestions.map(h => (
                       <button key={h} onClick={() => setHandle(h)} style={{
                         padding: '6px 12px', borderRadius: '20px',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        background: 'transparent', color: 'rgba(255,255,255,0.6)',
+                        border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                        background: 'transparent', color: subText,
                         fontSize: '12px', cursor: 'pointer',
                       }}>
                         {h}
@@ -222,8 +224,8 @@ export default function OnboardingScreen({ user, onComplete }) {
                 {handleSuggestions.map(h => (
                   <button key={h} onClick={() => setHandle(h)} style={{
                     padding: '6px 12px', borderRadius: '20px',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    background: 'transparent', color: 'rgba(255,255,255,0.6)',
+                    border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                    background: 'transparent', color: subText,
                     fontSize: '12px', cursor: 'pointer',
                   }}>
                     {t.useThis} {h}
@@ -247,7 +249,7 @@ export default function OnboardingScreen({ user, onComplete }) {
                 setError(''); setStep(2);
               }
             }}
-            style={{ width: '100%', padding: '16px', borderRadius: '24px', border: 'none', background: canContinue ? 'white' : 'rgba(255,255,255,0.15)', color: canContinue ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: 'auto' }}
+            style={{ width: '100%', padding: '16px', borderRadius: '24px', border: 'none', background: canContinue ? color : darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)', color: canContinue ? bg : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginTop: 'auto' }}
           >
             {t.continue}
           </button>
@@ -261,7 +263,7 @@ export default function OnboardingScreen({ user, onComplete }) {
           </h2>
           <p style={{ color: subText, fontSize: '14px', marginBottom: '8px' }}>{t.roleSub}</p>
           <p style={{ color: subText, fontSize: '13px', marginBottom: '28px' }}>
-            {tx('You can pick up to 3.', 'Tu peux en choisir jusqu’à 3.')} <span style={{ fontWeight: '700', color: 'white' }}>{selectedRoles.length}/3</span>
+            {tx('You can pick up to 3.', 'Tu peux en choisir jusqu’à 3.')} <span style={{ fontWeight: '700', color }}>{selectedRoles.length}/3</span>
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '32px' }}>
@@ -270,9 +272,9 @@ export default function OnboardingScreen({ user, onComplete }) {
               return (
                 <button key={r.id} onClick={() => toggleRole(r.id)} style={{
                   padding: '16px 8px', borderRadius: '14px',
-                  border: `1.5px solid ${active ? 'white' : 'rgba(255,255,255,0.12)'}`,
-                  background: active ? 'white' : 'rgba(255,255,255,0.04)',
-                  color: active ? 'black' : 'rgba(255,255,255,0.7)',
+                  border: `1.5px solid ${active ? color : darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                  background: active ? color : darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+                  color: active ? bg : subText,
                   cursor: 'pointer', display: 'flex', flexDirection: 'column',
                   alignItems: 'center', gap: '6px', transition: 'all 0.2s',
                 }}>
@@ -290,7 +292,7 @@ export default function OnboardingScreen({ user, onComplete }) {
                 onChange={e => setRoleOther(e.target.value.slice(0, ROLE_OTHER_MAX))}
                 placeholder={tx('Your job, in your words', 'Ton métier, avec tes mots')}
                 maxLength={ROLE_OTHER_MAX}
-                style={{ width: '100%', padding: '15px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'white', fontSize: '15px', boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', padding: '15px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.12)', background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', color, fontSize: '15px', boxSizing: 'border-box', outline: 'none' }}
               />
               <p style={{ color: subText, fontSize: '12px', marginTop: '8px' }}>
                 {tx('Shown instead of “Other” on your profile.', 'Affiché à la place de « Autre » sur ton profil.')}
@@ -299,13 +301,13 @@ export default function OnboardingScreen({ user, onComplete }) {
           )}
 
           <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
-            <button onClick={() => setStep(1)} style={{ padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>
+            <button onClick={() => setStep(1)} aria-label={tx('Back', 'Retour')} style={{ padding: '16px 24px', borderRadius: '24px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, background: 'transparent', color: subText, fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>
             <button
               onClick={() => {
                 if (selectedRoles.length) { setError(''); setStep(3); }
                 else setError(tx('Choose at least one role.', 'Choisis au moins un rôle.'));
               }}
-              style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: selectedRoles.length ? 'white' : 'rgba(255,255,255,0.15)', color: selectedRoles.length ? 'black' : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: selectedRoles.length ? color : darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)', color: selectedRoles.length ? bg : subText, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
             >
               {t.continue}
             </button>
@@ -326,9 +328,9 @@ export default function OnboardingScreen({ user, onComplete }) {
               return (
                 <button key={s} onClick={() => toggleUnivers(s)} style={{
                   padding: '10px 18px', borderRadius: '24px',
-                  border: `1.5px solid ${active ? 'white' : 'rgba(255,255,255,0.15)'}`,
-                  background: active ? 'white' : 'transparent',
-                  color: active ? 'black' : 'rgba(255,255,255,0.65)',
+                  border: `1.5px solid ${active ? color : darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                  background: active ? color : 'transparent',
+                  color: active ? bg : subText,
                   fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
                 }}>
                   {s}
@@ -340,11 +342,11 @@ export default function OnboardingScreen({ user, onComplete }) {
           {error && <p style={{ color: '#FF4D4D', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
           <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
-            <button onClick={() => setStep(2)} style={{ padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>
+            <button onClick={() => setStep(2)} aria-label={tx('Back', 'Retour')} style={{ padding: '16px 24px', borderRadius: '24px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, background: 'transparent', color: subText, fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>←</button>
             <button
               onClick={handleCreate}
               disabled={loading}
-              style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: 'white', color: 'black', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '16px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
             >
               {loading ? t.creating : t.createProfile}
             </button>

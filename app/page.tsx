@@ -208,6 +208,15 @@ export default function Home() {
     if (initialized) localStorage.setItem('darkMode', String(darkMode));
   }, [darkMode, initialized]);
 
+  // Le fond de la page suit le thème. Sans ça, globals.css gardait un noir dur
+  // et les marges de part et d'autre de la colonne restaient noires en mode
+  // clair, sur tout écran plus large que 390 px.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--sb-bg', darkMode ? '#0A0A0A' : '#F5F5F5');
+    root.style.setProperty('--sb-color', darkMode ? '#FFFFFF' : '#111111');
+  }, [darkMode]);
+
   useEffect(() => {
     if (initialized) localStorage.setItem('lastScreen', screen);
   }, [screen, initialized]);
@@ -237,7 +246,7 @@ export default function Home() {
   if (!user) {
     if (showWelcome) return (
       <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh' }}>
-        <WelcomeScreen onStart={() => {
+        <WelcomeScreen theme={theme} onStart={() => {
           localStorage.setItem('welcomeSeen', 'true');
           setShowWelcome(false);
         }} />
@@ -253,7 +262,7 @@ export default function Home() {
   // User connecté, profil vérifié, pas de profil = onboarding
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh', background: theme.bg, color: theme.color }}>
-      <OnboardingScreen user={user} onComplete={refreshProfile} />
+      <OnboardingScreen user={user} onComplete={refreshProfile} theme={theme} />
     </div>
   );
 
@@ -288,7 +297,7 @@ export default function Home() {
           }}
         />
       );
-      case 'messages': return <MessagesScreen theme={theme} active={active} />;
+      case 'messages': return <MessagesScreen theme={theme} active={active} setScreen={setScreen} />;
       case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} onOpenMyApplications={openMyApplications} />;
       default: return null;
     }

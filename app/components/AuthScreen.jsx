@@ -247,7 +247,7 @@ export default function AuthScreen({ onLogin, theme }) {
           overflowY: 'auto', padding: '24px 16px 60px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <button onClick={() => setShowLegal(false)} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+            <button onClick={() => setShowLegal(false)} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
             <h2 style={{ fontSize: '18px', fontWeight: '800', color }}>CGU & Politique de confidentialité</h2>
           </div>
           <div style={{ background: darkMode ? '#1A1A1A' : '#E8E8E8', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>

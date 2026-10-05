@@ -12,6 +12,8 @@ import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
+import { SkeletonList } from './Skeleton';
+import { tap } from '../haptics';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
@@ -58,6 +60,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const [myProfile, setMyProfile] = useState(null);
   const [qrCollab, setQrCollab] = useState(null);
   const [offers, setOffers] = useState([]);
+  // Le feed annonçait « aucun projet » pendant que la requête tournait.
+  const [firstLoad, setFirstLoad] = useState(true);
   const [myOffers, setMyOffers] = useState([]);
   const [showNewOffer, setShowNewOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
@@ -261,6 +265,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const blocked = await loadBlockedIds(userId);
     const all = (allRaw || []).filter(o => !blocked.has(o.user_id));
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    setFirstLoad(false);
     if (all) {
       const userIds = all.map(o => o.user_id);
       const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other').in('user_id', userIds);
@@ -368,6 +373,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: { user: u } } = await supabase.auth.getUser();
     if (!u) return;
     setActionError('');
+    tap();
     const { data: collab, error } = await supabase.from('collabs').insert({
       sender_id: u.id,
       receiver_id: o.user_id,
@@ -396,6 +402,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       return;
     }
     if (status === 'accepted' && user && senderId) {
+      tap(28);
       await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: senderId,
@@ -589,7 +596,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   if (selectedOffer) return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: theme?.bg, color: theme?.color }}>
       <div style={{ padding: 'calc(env(safe-area-inset-top) + 16px) 16px 16px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-        <button onClick={() => setSelectedOffer(null)} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
+        <button onClick={() => setSelectedOffer(null)} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color }}>{selectedOffer.title}</p>
           <p style={{ fontSize: '11px', color: subText }}>{offerCandidates.length} {tx('proposal(s)', 'proposition(s)')}</p>
@@ -847,11 +854,22 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                   );
                 })}
               </>
+            ) : firstLoad ? (
+              <SkeletonList count={3} darkMode={darkMode} />
             ) : (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
                 <p style={{ fontSize: '32px', marginBottom: '12px' }}>🎨</p>
                 <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>{t.noOffers}</p>
-                <p style={{ color: subText, fontSize: '13px' }}>{t.beFirst}</p>
+                <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>{t.beFirst}</p>
+                <button
+                  onClick={() => setShowNewOffer(true)}
+                  style={{
+                    padding: '11px 20px', borderRadius: '22px', border: 'none', cursor: 'pointer',
+                    background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '800',
+                  }}
+                >
+                  ⚡ {tx('Post a project', 'Publier un projet')}
+                </button>
               </div>
             )}
           </>
