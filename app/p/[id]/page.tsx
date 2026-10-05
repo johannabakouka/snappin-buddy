@@ -27,6 +27,7 @@ type Row = {
   zone: string | null;
   date: string | null;
   status: string | null;
+  paid: boolean | null;
   created_at: string | null;
   user_id: string;
 };
@@ -48,7 +49,7 @@ async function getOffer(id: string): Promise<{ offer: Row; author: Author | null
   const db = supabaseAdmin();
   const { data: offer, error } = await db
     .from('offers')
-    .select('id, title, description, role_needed, styles_needed, zone, date, status, created_at, user_id')
+    .select('id, title, description, role_needed, styles_needed, zone, date, status, paid, created_at, user_id')
     .eq('id', clean)
     .maybeSingle();
   if (error) console.error('page projet', clean, error.message);
@@ -196,6 +197,8 @@ export default async function PublicOfferPage({ params }: { params: Promise<{ id
 
         <p style={{ color: '#8C8B83', fontSize: '13px', marginBottom: '24px' }}>
           {offer.zone ? `📍 ${offer.zone}` : ''}{offer.zone && offer.date ? '    ' : ''}{offer.date ? `📅 ${offer.date}` : ''}
+          {offer.paid === true ? `    💶 ${t('Paid', 'Rémunéré')}` : ''}
+          {offer.paid === false ? `    🤝 ${t('Unpaid collab', 'Collab non rémunérée')}` : ''}
         </p>
 
         {past && (

@@ -23,12 +23,16 @@ function translateTag(tag, isEn) {
 }
 
 function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
+  // Le portfolio manquait à cette liste : l'app ne demandait donc jamais à
+  // personne de montrer son travail, alors que c'est ce qui décide si on écrit
+  // à quelqu'un ou pas. Il vaut autant que la photo de profil.
   const steps = [
     { key: 'avatar', label: tx('Profile photo', 'Photo de profil'), done: !!profile?.avatar_url, pts: 25 },
-    { key: 'role', label: tx('Role', 'Rôle'), done: !!profile?.role, pts: 25 },
-    { key: 'bio', label: 'Pitch', done: !!profile?.bio, pts: 20 },
-    { key: 'univers', label: tx('Universe', 'Univers'), done: (profile?.styles || '').trim().length > 0, pts: 20 },
-    { key: 'zone', label: tx('Area', 'Zone'), done: !!profile?.zone, pts: 10 },
+    { key: 'portfolio', label: 'Portfolio', done: (profile?.portfolio_urls || []).length > 0, pts: 20 },
+    { key: 'role', label: tx('Role', 'Rôle'), done: !!profile?.role, pts: 20 },
+    { key: 'bio', label: 'Pitch', done: !!profile?.bio, pts: 15 },
+    { key: 'univers', label: tx('Universe', 'Univers'), done: (profile?.styles || '').trim().length > 0, pts: 15 },
+    { key: 'zone', label: tx('Area', 'Zone'), done: !!profile?.zone, pts: 5 },
   ];
 
   const score = steps.filter(s => s.done).reduce((acc, s) => acc + s.pts, 0);
@@ -41,7 +45,9 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   } else if (score < 80) {
     message = tx('Good start! The more complete, the more you match', 'Bon début ! Plus ton profil est riche, plus tu matches');
     messageColor = '#FFD700';
-  } else if (score < 80) {
+  } else if (score < 100) {
+    // La condition était écrite deux fois à l'identique : ce message ne
+    // s'affichait jamais, et on passait directement de « bon début » à « complet ».
     message = tx('Almost perfect!', 'Presque parfait !');
     messageColor = '#FFD700';
   } else {

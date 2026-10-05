@@ -9,7 +9,10 @@ import { tx } from '../tx';
 // Balayage gauche / droite au doigt, flèches du clavier sur ordinateur,
 // Échap pour fermer. On ne ferme pas sur un simple balayage vertical : c'est
 // le geste qu'on fait par erreur en voulant faire défiler.
-export default function PhotoViewer({ photos = [], startIndex = 0, onClose }) {
+// `captions` donne un nom à chaque photo, et `onCaptionClick` ouvre le profil
+// derrière. C'est ce qui permet de feuilleter les books de plusieurs personnes
+// à la suite sans perdre de vue à qui on est en train de regarder le travail.
+export default function PhotoViewer({ photos = [], captions = [], startIndex = 0, onClose, onCaptionClick = null }) {
   const list = (photos || []).filter(Boolean);
   const [index, setIndex] = useState(() => Math.min(Math.max(startIndex, 0), Math.max(list.length - 1, 0)));
   const touch = useRef(null);
@@ -104,6 +107,24 @@ export default function PhotoViewer({ photos = [], startIndex = 0, onClose }) {
         onClick={e => e.stopPropagation()}
         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }}
       />
+
+      {captions[index] && (
+        <button
+          onClick={e => { e.stopPropagation(); onCaptionClick?.(index); }}
+          disabled={!onCaptionClick}
+          style={{
+            position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom) + 16px)',
+            left: '50%', transform: 'translateX(-50%)', maxWidth: 'calc(100% - 32px)',
+            padding: '9px 16px', borderRadius: '22px', border: 'none',
+            background: 'rgba(255,255,255,0.14)', color: 'white',
+            fontSize: '13px', fontWeight: '700', zIndex: 2,
+            cursor: onCaptionClick ? 'pointer' : 'default',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}
+        >
+          {captions[index]}{onCaptionClick ? ' →' : ''}
+        </button>
+      )}
 
       {hasMany && (
         <>

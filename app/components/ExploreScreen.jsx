@@ -8,6 +8,7 @@ import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
+import { withAt } from '../handles';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 
@@ -125,7 +126,14 @@ export default function ExploreScreen({ theme, active = true }) {
     // Les pseudos qui commencent par la recherche passent devant ceux qui la contiennent,
     // et le rôle ne sert que de repêchage.
     displayed = displayed
-      .map(p => ({ p, rank: searchRank(p, q) || (normalizeSearch(p.role).includes(q) ? 0.5 : 0) }))
+      // La ville compte autant que le rôle en repêchage : quelqu'un qui part à
+      // Mexico cherche « mexico », et jusqu'ici la recherche ne regardait que
+      // le pseudo et le nom, donc elle ne trouvait personne.
+      .map(p => ({
+        p,
+        rank: searchRank(p, q)
+          || ((normalizeSearch(p.role).includes(q) || normalizeSearch(p.zone).includes(q)) ? 0.5 : 0),
+      }))
       .filter(x => x.rank > 0)
       .sort((a, b) => b.rank - a.rank)
       .map(x => x.p);
@@ -174,6 +182,21 @@ export default function ExploreScreen({ theme, active = true }) {
     fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
   });
 
+  // Tous les books des profils affichés, bout à bout. C'est ce qui permet de
+  // feuilleter le travail des gens à la suite, sans revenir à la liste entre
+  // chaque personne : c'est la façon dont on regarde vraiment des portfolios.
+  const bookStream = displayed.flatMap(p =>
+    (p.portfolio_urls || []).filter(Boolean).map(url => ({ url, profile: p })),
+  );
+  const bookPhotos = bookStream.map(b => b.url);
+  const bookCaptions = bookStream.map(b => b.profile.username || withAt(b.profile.handle) || '');
+
+  /** Rang d'une photo dans le flux, pour ouvrir la visionneuse au bon endroit. */
+  function streamIndex(userId, photoIndex) {
+    const at = bookStream.findIndex(b => b.profile.user_id === userId);
+    return at < 0 ? 0 : at + photoIndex;
+  }
+
   const statusLabel = (status) => {
     if (status === 'dispo') return tx('Available', 'Dispo');
     if (status === 'shoot') return tx('On shoot', 'En shoot');
@@ -185,7 +208,7 @@ export default function ExploreScreen({ theme, active = true }) {
       <PullIndicator pull={pull} refreshing={refreshing} trigger={trigger} darkMode={darkMode} />
       <Header theme={theme} onLogoClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
       <div style={{ padding: '24px 16px calc(110px + env(safe-area-inset-bottom))' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
+        <h2 style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '800', marginBottom: '4px', color: theme?.color }}>{t.exploreTitle}</h2>
         <p style={{ color: subText, fontSize: '13px', marginBottom: '16px' }}>{t.exploreSubtitle}</p>
 
         <div style={{ position: 'relative', marginBottom: '14px' }} ref={searchRef}>
@@ -194,7 +217,7 @@ export default function ExploreScreen({ theme, active = true }) {
             onChange={e => handleSearchChange(e.target.value)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             onFocus={() => search.length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder={tx('🔍 Search @handle, name, role...', '🔍 Chercher un @pseudo, un nom, un rôle...')}
+            placeholder={tx('🔍 Search a @handle, a name, a role, a city...', '🔍 Chercher un @pseudo, un nom, un rôle, une ville...')}
             autoCapitalize="none"
             autoCorrect="off"
             style={{
@@ -244,7 +267,10 @@ export default function ExploreScreen({ theme, active = true }) {
         {!search.trim() && (
           <>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-              <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ Match</button>
+              {/* « Match » était le même mot que l'onglet des collabs acceptées, alors
+                  qu'ici il s'agit seulement d'un classement par univers communs.
+                  Un match, c'est quand quelqu'un a dit oui. */}
+              <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
               <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {tx('Available', 'Dispo')}</button>
               <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{tx('All', 'Tous')}</button>
             </div>
@@ -263,6 +289,25 @@ export default function ExploreScreen({ theme, active = true }) {
               ))}
             </div>
           </>
+        )}
+
+        {/* Parcourir les books à la suite, sans ouvrir chaque profil l'un après
+            l'autre. C'est la façon dont on regarde du travail quand on cherche
+            quelqu'un avec qui shooter. */}
+        {bookStream.length > 1 && (
+          <button
+            onClick={() => setViewer({ index: 0 })}
+            style={{
+              width: '100%', marginBottom: '14px', padding: '12px',
+              borderRadius: '14px', cursor: 'pointer',
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)'}`,
+              background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+              color: theme?.color, fontSize: '13px', fontWeight: '700',
+            }}
+          >
+            🖼 {tx('Flip through the books', 'Feuilleter les books')}
+            <span style={{ color: subText, fontWeight: '600' }}> · {bookStream.length}</span>
+          </button>
         )}
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
@@ -340,7 +385,7 @@ export default function ExploreScreen({ theme, active = true }) {
                     {portfolio.map((url, i) => (
                       <img key={i} src={url} alt={`portfolio-${i}`}
                         style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }}
-                        onClick={() => setViewer({ photos: portfolio, index: i })}
+                        onClick={() => setViewer({ index: streamIndex(p.user_id, i) })}
                       />
                     ))}
                   </div>
@@ -363,7 +408,17 @@ export default function ExploreScreen({ theme, active = true }) {
         </div>
       </div>
       {viewer && (
-        <PhotoViewer photos={viewer.photos} startIndex={viewer.index} onClose={() => setViewer(null)} />
+        <PhotoViewer
+          photos={bookPhotos}
+          captions={bookCaptions}
+          startIndex={viewer.index}
+          onClose={() => setViewer(null)}
+          onCaptionClick={(i) => {
+            const author = bookStream[i]?.profile;
+            setViewer(null);
+            if (author) setActiveBuddy(author);
+          }}
+        />
       )}
     </div>
   );

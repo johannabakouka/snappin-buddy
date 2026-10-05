@@ -814,6 +814,10 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         })}
                         {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
                         {o.date && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📅 {o.date}</span>}
+                        {/* Rien ne s'affiche pour les projets d'avant cette option :
+                            mieux vaut ne rien dire que d'affirmer à leur place. */}
+                        {o.paid === true && <span style={{ fontSize: '11px', color: '#2ECC71', border: '1px solid rgba(46,204,113,0.4)', borderRadius: '20px', padding: '3px 10px', fontWeight: '700' }}>💶 {tx('Paid', 'Rémunéré')}</span>}
+                        {o.paid === false && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>🤝 {tx('Unpaid collab', 'Collab non rémunérée')}</span>}
                       </div>
                       {isPast(o) ? (
                         <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>

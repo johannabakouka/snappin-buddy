@@ -1,24 +1,14 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
-
-const EUROPEAN_CITIES = [
-  'Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nantes', 'Lille', 'Strasbourg', 'Nice', 'Rennes',
-  'London', 'Manchester', 'Birmingham', 'Bristol', 'Edinburgh', 'Glasgow',
-  'Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Düsseldorf',
-  'Madrid', 'Barcelona', 'Valencia', 'Seville', 'Bilbao',
-  'Milan', 'Rome', 'Florence', 'Naples', 'Turin', 'Venice',
-  'Lisbon', 'Porto', 'São Paulo', 'Rio de Janeiro',
-  'Amsterdam', 'Rotterdam', 'Brussels', 'Antwerp',
-  'Stockholm', 'Copenhagen', 'Oslo', 'Helsinki',
-  'Warsaw', 'Krakow', 'Prague', 'Vienna', 'Zurich', 'Geneva',
-  'New York', 'Los Angeles', 'Miami', 'Chicago', 'Toronto', 'Montreal',
-  'Tokyo', 'Seoul', 'Dubai', 'Lagos', 'Abidjan', 'Dakar',
-];
+import { loadCities, searchCities } from '../cities';
 
 const TITLE_MAX = 60;
-const DESC_MAX = 800;
+// 800 caractères, c'était une page blanche qui invitait au remplissage : on a
+// vu passer des descriptions collées depuis une IA. En 300 signes on écrit ce
+// qu'on fait vraiment, et un brief court se lit en entier.
+const DESC_MAX = 300;
 
 export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave, onCloseOffer, onReopenOffer, onDeleteOffer }) {
   // Suppression en deux temps pour éviter les erreurs
@@ -43,21 +33,36 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   );
   const [offerZone, setOfferZone] = useState(editingOffer?.zone || '');
   const [offerDate, setOfferDate] = useState(editingOffer?.date || '');
+  // null tant que rien n'est choisi : les anciens projets n'ont pas cette
+  // information, et on ne va pas affirmer à leur place qu'ils sont gratuits.
+  const [offerPaid, setOfferPaid] = useState(
+    editingOffer?.paid === true ? true : editingOffer?.paid === false ? false : null,
+  );
   const [offerLoading, setOfferLoading] = useState(false);
   const [citySuggestions, setCitySuggestions] = useState([]);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
 
+  // La liste n'est téléchargée qu'au premier mot tapé, et une seule fois pour
+  // toute la session, partagée avec la carte.
+  const [cities, setCities] = useState(null);
+  const [citiesAsked, setCitiesAsked] = useState(false);
+  useEffect(() => {
+    if (!citiesAsked) return;
+    let alive = true;
+    loadCities()
+      .then(list => { if (alive) setCities(list); })
+      .catch(err => console.error('cities', err));
+    return () => { alive = false; };
+  }, [citiesAsked]);
+
   function handleCityChange(val) {
     setOfferZone(val);
-    if (val.length >= 2) {
-      const filtered = EUROPEAN_CITIES.filter(c =>
-        c.toLowerCase().startsWith(val.toLowerCase())
-      ).slice(0, 5);
-      setCitySuggestions(filtered);
-      setShowCitySuggestions(filtered.length > 0);
-    } else {
-      setShowCitySuggestions(false);
-    }
+    if (val.length < 2) { setShowCitySuggestions(false); return; }
+    if (!citiesAsked) setCitiesAsked(true);
+    if (!cities) { setShowCitySuggestions(false); return; }
+    const found = searchCities(cities, val, 5).map(c => c.name);
+    setCitySuggestions(found);
+    setShowCitySuggestions(found.length > 0);
   }
 
   function selectCity(city) {
@@ -89,6 +94,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
       styles_needed: stylesToSave.join(', '),
       zone: offerZone,
       date: offerDate,
+      paid: offerPaid,
     });
     setOfferLoading(false);
   }
@@ -129,10 +135,21 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
         <textarea
           value={offerDesc}
           onChange={e => setOfferDesc(e.target.value.slice(0, DESC_MAX))}
-          placeholder={tx('Describe your project...', 'Décris ton projet...')}
-          rows={3}
-          style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box', resize: 'none', outline: 'none' }}
+          placeholder={tx(
+            'Natural light portrait series, Saturday afternoon in Shoreditch. Looking for a model and a makeup artist. Retouched photos for everyone, unpaid.',
+            'Série portrait en lumière naturelle, samedi après-midi à Belleville. Je cherche une modèle et une maquilleuse. Photos retouchées pour tout le monde, non rémunéré.',
+          )}
+          rows={4}
+          style={{ width: '100%', padding: '13px', borderRadius: '12px', border: `1px solid ${inputBorder}`, background: inputBg, color: theme?.color, fontSize: '14px', marginBottom: '6px', boxSizing: 'border-box', resize: 'none', outline: 'none' }}
         />
+        {/* Un exemple vaut mieux qu'une consigne : il donne le ton, le niveau de
+            détail et la longueur en une seconde. */}
+        <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', lineHeight: 1.5 }}>
+          {tx(
+            'Three sentences are enough: what you are shooting, who you need, what you offer.',
+            'Trois phrases suffisent : ce qu’on fait, qui tu cherches, ce que tu proposes.',
+          )}
+        </p>
 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
           {tx('WHO ARE YOU LOOKING FOR? *', 'QUI CHERCHES-TU ? *')}
@@ -158,6 +175,35 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
             return (
               <button key={s} onClick={() => toggleStyle(s)} style={{ padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, border: `1px solid ${active ? theme?.color : inputBorder}`, background: active ? theme?.color : 'transparent', color: active ? theme?.bg : subText }}>
                 {s}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* La question que tout le monde se pose avant de répondre, et qui fait
+            perdre trois échanges de messages quand elle n'est pas posée. */}
+        <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
+          {tx('PAID?', 'RÉMUNÉRÉ ?')}
+        </p>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+          {[
+            { value: true, label: tx('💶 Paid', '💶 Rémunéré') },
+            { value: false, label: tx('🤝 Unpaid collab', '🤝 Collab non rémunérée') },
+          ].map(opt => {
+            const active = offerPaid === opt.value;
+            return (
+              <button
+                key={String(opt.value)}
+                onClick={() => setOfferPaid(active ? null : opt.value)}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '20px', fontSize: '12px',
+                  fontWeight: '700', cursor: 'pointer',
+                  border: `1px solid ${active ? theme?.color : inputBorder}`,
+                  background: active ? theme?.color : 'transparent',
+                  color: active ? theme?.bg : subText,
+                }}
+              >
+                {opt.label}
               </button>
             );
           })}

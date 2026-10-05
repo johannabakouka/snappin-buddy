@@ -1,55 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useT, getLang } from '../i18n';
-
-// public/cities.json : [name, countryCode, lat, lng, aliases?][], trié par population décroissante.
-// Source : GeoNames (villes de plus de 15 000 habitants), via all-the-cities (MIT).
-let citiesPromise = null;
-
-function normalize(str) {
-  return str
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[-'’.]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function loadCities() {
-  if (!citiesPromise) {
-    citiesPromise = fetch('/cities.json')
-      .then(r => r.json())
-      .then(rows => rows.map(([name, country, lat, lng, aliases]) => ({
-        name, country, lat, lng,
-        keys: [name, ...(aliases ? aliases.split('|') : [])].map(normalize),
-      })))
-      .catch(err => {
-        citiesPromise = null;
-        throw err;
-      });
-  }
-  return citiesPromise;
-}
-
-const MAX_RESULTS = 6;
-
-function searchCities(cities, query) {
-  const q = normalize(query);
-  if (q.length < 2) return [];
-  const prefix = [];
-  const wordStart = [];
-  const wordQ = ' ' + q;
-  for (const c of cities) {
-    if (c.keys.some(k => k.startsWith(q))) {
-      prefix.push(c);
-      if (prefix.length >= MAX_RESULTS) break;
-    } else if (wordStart.length < MAX_RESULTS && c.keys.some(k => (' ' + k).includes(wordQ))) {
-      wordStart.push(c);
-    }
-  }
-  return [...prefix, ...wordStart].slice(0, MAX_RESULTS);
-}
+import { loadCities, searchCities, normalizeCity } from '../cities';
 
 function useCountryName() {
   const [fmt] = useState(() => {
@@ -102,7 +54,7 @@ export default function CityPicker({ theme, onSelect, autoFocus = true }) {
   let status = null;
   if (error) status = t.cityNoResult;
   else if (!cities && query.length >= 2) status = t.cityLoading;
-  else if (cities && normalize(query).length >= 2 && results.length === 0) status = t.cityNoResult;
+  else if (cities && normalizeCity(query).length >= 2 && results.length === 0) status = t.cityNoResult;
 
   return (
     <div style={{ textAlign: 'left' }}>
