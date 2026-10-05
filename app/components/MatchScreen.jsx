@@ -265,13 +265,15 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const blocked = await loadBlockedIds(userId);
     const all = (allRaw || []).filter(o => !blocked.has(o.user_id));
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-    setFirstLoad(false);
     if (all) {
       const userIds = all.map(o => o.user_id);
       const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other').in('user_id', userIds);
       setOffers(all.map(o => ({ ...o, authorProfile: profiles?.find(p => p.user_id === o.user_id) })));
     }
     if (mine) setMyOffers(mine);
+    // Après les projets, pas avant : sinon la requête des auteurs se déroulait
+    // avec une liste encore vide et « aucun projet » clignotait entre les deux.
+    setFirstLoad(false);
   }
 
   async function openOfferCandidates(offer) {

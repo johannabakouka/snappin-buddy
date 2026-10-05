@@ -77,12 +77,14 @@ export default function ExploreScreen({ theme, active = true }) {
     }
     const { data } = await supabase.from('profiles').select('*');
     const blocked = await loadBlockedIds(user?.id);
-    setFirstLoad(false);
     // Mode invisible : hors de la carte et hors d'Explorer. Son propre profil
     // reste affiché, sinon on croirait son compte cassé.
     if (data) setProfiles(data.filter(p => (
       !blocked.has(p.user_id) && (!p.hidden || p.user_id === user?.id)
     )));
+    // Après la liste, jamais avant : c'est l'ordre qui évite de montrer
+    // « aucun résultat » le temps d'une requête.
+    setFirstLoad(false);
   }
 
   useEffect(() => {

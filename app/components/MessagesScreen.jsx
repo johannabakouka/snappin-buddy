@@ -70,8 +70,12 @@ export default function MessagesScreen({ theme, active = true, setScreen }) {
 
   async function loadConversations(userId) {
     const { data: msgs } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: false });
-    setFirstLoad(false);
-    if (!msgs || msgs.length === 0) { setConversations([]); return; }
+    // Le drapeau tombe en même temps que la liste arrive, jamais avant.
+    // Posé ici trop tôt, il laissait trois requêtes se dérouler avec une liste
+    // encore vide : l'écran affichait « Aucune conversation » pendant une
+    // seconde, puis les conversations apparaissaient. C'est le message qui
+    // clignotait à l'ouverture de l'onglet.
+    if (!msgs || msgs.length === 0) { setConversations([]); setFirstLoad(false); return; }
     const prefs = await loadPrefs(userId);
     // Comme sur Instagram : celui qui bloque perd la conversation, la personne
     // bloquée la garde mais ne pourra plus écrire.
@@ -113,6 +117,7 @@ export default function MessagesScreen({ theme, active = true, setScreen }) {
     // Épinglées d'abord, puis la plus récente en haut.
     convs.sort((a, b) => (b.pinnedAt - a.pinnedAt) || (b.lastAt - a.lastAt));
     setConversations(convs);
+    setFirstLoad(false);
   }
 
   // Appui long : 450 ms, comme sur Instagram. On annule dès que le doigt

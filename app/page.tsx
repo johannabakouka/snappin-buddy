@@ -19,6 +19,13 @@ import ScanResultScreen from './components/ScanResultScreen';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
+  // Les couleurs viennent des variables posées par le petit script de
+  // layout.tsx, avant le premier pixel. Les lire ici en JavaScript ne marchait
+  // pas : la page est fabriquée par le serveur, et React garde la valeur du
+  // serveur au moment de reprendre la main. L'app s'ouvrait donc en sombre
+  // puis basculait en clair d'un coup.
+  const bg = 'var(--sb-bg, #0A0A0A)';
+  const fg = 'var(--sb-color, #FFFFFF)';
   // C'est le seul écran fabriqué par le serveur, qui n'a aucun moyen de
   // connaître la langue du visiteur. On écrit donc la phrase une fois dans le
   // navigateur : sinon elle s'affiche en français une fraction de seconde chez
@@ -37,21 +44,26 @@ function LoadingScreen() {
     return () => clearInterval(interval);
   }, []);
   return (
+    // Fixé sur tout l'écran, et pas dans la colonne de 390 px où vivent les
+    // autres écrans : sur un téléphone plus large, l'écran de démarrage
+    // laissait des bandes de chaque côté, et elles étaient claires le temps que
+    // le thème enregistré soit lu.
     <div style={{
-      height: '100dvh', background: '#0A0A0A',
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
+      background: bg,
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: '20px',
     }}>
       <img src="/logo.png" alt="Snappin'Buddy" style={{
         width: '100px', height: '100px', borderRadius: '24px', objectFit: 'cover',
-        boxShadow: '0 0 40px rgba(255,255,255,0.1)',
+        boxShadow: '0 0 40px rgba(128,128,128,0.12)',
         animation: 'pulse 2s ease-in-out infinite',
       }} />
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: 'white', letterSpacing: '-0.3px', marginBottom: '8px' }}>
+        <p style={{ fontFamily: 'var(--font-nunito)', fontSize: '22px', fontWeight: '900', color: fg, letterSpacing: '-0.3px', marginBottom: '8px' }}>
           Snappin&apos;Buddy
         </p>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', minHeight: '18px' }}>
+        <p style={{ color: fg, opacity: 0.35, fontSize: '13px', minHeight: '18px' }}>
           <span ref={taglineRef} />{dots}
         </p>
       </div>
@@ -231,11 +243,7 @@ export default function Home() {
   };
 
   // Affiche loading tant que Supabase n'a pas répondu
-  if (loading || !profileChecked) return (
-    <div style={{ maxWidth: '390px', margin: '0 auto' }}>
-      <LoadingScreen />
-    </div>
-  );
+  if (loading || !profileChecked) return <LoadingScreen />;
 
   if (recovery && user) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh', background: theme.bg, color: theme.color }}>

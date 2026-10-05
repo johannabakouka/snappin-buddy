@@ -71,19 +71,49 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Snappin&#8217;Buddy" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="manifest" href="/manifest.json" />
+        {/* Le thème est posé avant le premier pixel.
+            Lu plus tard, en JavaScript, il arrivait toujours trop tard : la page
+            est fabriquée par le serveur, qui ne peut pas connaître le réglage,
+            donc l'app s'ouvrait en sombre puis basculait en clair d'un coup. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function () {
+            try {
+              var dark = localStorage.getItem('darkMode') !== 'false';
+              var root = document.documentElement;
+              root.style.setProperty('--sb-bg', dark ? '#0A0A0A' : '#F5F5F5');
+              root.style.setProperty('--sb-color', dark ? '#FFFFFF' : '#111111');
+            } catch (e) {}
+          })();
+        `}} />
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
               navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                // Une nouvelle version est en ligne : on l'active sans attendre
+                // Une nouvelle version est en ligne : on l'active sans attendre.
                 reg.addEventListener('updatefound', function() {
                   var sw = reg.installing;
                   if (sw) sw.addEventListener('statechange', function() {
-                    if (sw.state === 'installed' && navigator.serviceWorker.controller) sw.postMessage('clear-cache');
+                    if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                      sw.postMessage('clear-cache');
+                      sw.postMessage('skip-waiting');
+                    }
                   });
                 });
                 reg.update();
               }).catch(function() {});
+
+              // Le nouveau cache vient de prendre la main : la page affichée
+              // vient encore de l'ancienne version, on la recharge une fois.
+              //
+              // Sans ça, quelqu'un qui avait ajouté l'app à son écran d'accueil
+              // pouvait rester des heures sur une version déjà corrigée en
+              // ligne, et voir des bugs que plus personne n'avait.
+              var reloading = false;
+              navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (reloading) return;
+                reloading = true;
+                window.location.reload();
+              });
             });
           }
         `}} />

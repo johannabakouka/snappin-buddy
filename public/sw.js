@@ -1,7 +1,7 @@
 // Cache hors ligne de Snappin'Buddy.
 // Règle d'or : en cas de doute, on laisse passer la requête vers le réseau.
 // Un cache qui échoue ne doit jamais empêcher l'app de s'ouvrir.
-const CACHE_NAME = 'snappin-buddy-v4';
+const CACHE_NAME = 'snappin-buddy-v5';
 const STATIC_ASSETS = ['/', '/logo.png', '/manifest.json'];
 
 self.addEventListener('install', event => {
@@ -27,6 +27,7 @@ self.addEventListener('message', event => {
   if (event.data === 'clear-cache') {
     caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key))));
   }
+  if (event.data === 'skip-waiting') self.skipWaiting();
 });
 
 function shouldSkip(request) {
