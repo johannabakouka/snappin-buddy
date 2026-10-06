@@ -1,7 +1,10 @@
-'use client';
-
-// La liste des villes du monde, partagée par la carte et par le formulaire de
-// projet.
+// La liste des villes du monde, partagée par la carte, le formulaire de projet
+// et le serveur.
+//
+// Pas de 'use client' : les fonctions de calcul ne touchent à rien du
+// navigateur, et la tâche quotidienne s'en sert pour écrire la ville des
+// comptes qui n'en ont pas encore. Seul loadCities() est réservé au
+// navigateur, puisqu'il va chercher le fichier par une adresse relative.
 //
 // Elle vivait uniquement dans CityPicker, et le formulaire de projet avait sa
 // propre liste écrite à la main, surtout européenne : quelqu'un à Mexico ou à

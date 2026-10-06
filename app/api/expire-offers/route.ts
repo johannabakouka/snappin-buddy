@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { getProfile, getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } from '../../lib/server';
 import { isPast, pastReason, NO_DATE_DAYS } from '../../offers-life';
 import { notifyArrivals } from '../../lib/arrivals';
+import { backfillCities } from '../../lib/backfill-cities';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -85,12 +86,22 @@ export async function GET(request: Request) {
       console.error('notifyArrivals', e);
     }
 
+    // Villes manquantes sur les profils. Même passage quotidien, et un échec
+    // ici ne doit pas faire passer le reste de la tâche pour raté.
+    let cities = null;
+    try {
+      cities = await backfillCities();
+    } catch (e) {
+      console.error('backfillCities', e);
+    }
+
     return Response.json({
       message: 'Cron OK',
       expired: expired.length,
       reminders: reminders.length,
       emailsSent,
       arrivals,
+      cities,
     });
   } catch (err) {
     console.error('expire-offers', err);
