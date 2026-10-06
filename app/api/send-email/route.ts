@@ -51,12 +51,22 @@ export async function POST(request: Request) {
 
       const { data: collab } = await supabaseAdmin()
         .from('collabs')
-        .select('id, sender_id, receiver_id, message, status')
+        .select('id, sender_id, receiver_id, message, status, offer_id')
         .eq('id', collabId)
         .maybeSingle();
       if (!collab) return Response.json({ error: 'candidature introuvable' }, { status: 404 });
 
-      const offerTitle = offerTitleFromMessage(collab.message) || 'ton projet';
+      // Le titre vient du projet lui-même. Il était lu dans le texte du message,
+      // ce qui obligeait l'app à y recopier le titre et empêchait les gens
+      // d'écrire leur propre mot. Le repli sur l'ancienne lecture couvre les
+      // candidatures envoyées avant ce changement.
+      let offerTitle = '';
+      if (collab.offer_id) {
+        const { data: offer } = await supabaseAdmin()
+          .from('offers').select('title').eq('id', collab.offer_id).maybeSingle();
+        offerTitle = offer?.title || '';
+      }
+      if (!offerTitle) offerTitle = offerTitleFromMessage(collab.message) || 'ton projet';
 
       if (type === 'new_application' || type === 'new_proposal') {
         // Seul l'expéditeur peut déclencher cet email, et il part au destinataire de la proposition.

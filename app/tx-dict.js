@@ -3,6 +3,15 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    "Apply to this project": "Me propongo",
+    "Add a word so they know who you are. What you can bring, whether you are free on the date, a link.": "Añade unas palabras para que sepan quién eres. Lo que aportas, si estás libre esa fecha, un enlace.",
+    "Videographer in Paris, free that Saturday. I shot two concerts last month, my book is on my profile.": "Videógrafo en Madrid, libre ese sábado. Grabé dos conciertos el mes pasado, mi book está en mi perfil.",
+    "optional": "opcional",
+    "Send my application": "Enviar mi candidatura",
+    "Couldn't withdraw. Try again.": "No se pudo retirar. Inténtalo de nuevo.",
+    "I would like to join this project.": "Me propongo para este proyecto.",
+    "Withdrawing...": "Retirando...",
+    "Withdraw my application": "Retirar mi candidatura",
     "Report this profile": "Reportar este perfil",
     "Report this project": "Reportar este proyecto",
     "Report this message": "Reportar este mensaje",
@@ -418,6 +427,15 @@ const TX = {
   },
 
   pt: {
+    "Apply to this project": "Eu me proponho",
+    "Add a word so they know who you are. What you can bring, whether you are free on the date, a link.": "Escreva algumas palavras para saberem quem você é. O que você traz, se está livre na data, um link.",
+    "Videographer in Paris, free that Saturday. I shot two concerts last month, my book is on my profile.": "Videomaker em São Paulo, livre nesse sábado. Filmei dois shows no mês passado, meu book está no perfil.",
+    "optional": "opcional",
+    "Send my application": "Enviar minha candidatura",
+    "Couldn't withdraw. Try again.": "Não foi possível retirar. Tente de novo.",
+    "I would like to join this project.": "Eu me proponho para este projeto.",
+    "Withdrawing...": "Retirando...",
+    "Withdraw my application": "Retirar minha candidatura",
     "Report this profile": "Denunciar este perfil",
     "Report this project": "Denunciar este projeto",
     "Report this message": "Denunciar esta mensagem",
@@ -833,6 +851,15 @@ const TX = {
   },
 
   de: {
+    "Apply to this project": "Ich biete mich an",
+    "Add a word so they know who you are. What you can bring, whether you are free on the date, a link.": "Schreib ein paar Worte, damit man weiß, wer du bist. Was du mitbringst, ob du an dem Tag Zeit hast, ein Link.",
+    "Videographer in Paris, free that Saturday. I shot two concerts last month, my book is on my profile.": "Videograf in Berlin, an dem Samstag frei. Letzten Monat zwei Konzerte gefilmt, mein Book ist im Profil.",
+    "optional": "optional",
+    "Send my application": "Bewerbung senden",
+    "Couldn't withdraw. Try again.": "Zurückziehen fehlgeschlagen. Versuch es nochmal.",
+    "I would like to join this project.": "Ich biete mich für dieses Projekt an.",
+    "Withdrawing...": "Wird zurückgezogen...",
+    "Withdraw my application": "Bewerbung zurückziehen",
     "Report this profile": "Dieses Profil melden",
     "Report this project": "Dieses Projekt melden",
     "Report this message": "Diese Nachricht melden",
@@ -1248,6 +1275,15 @@ const TX = {
   },
 
   it: {
+    "Apply to this project": "Mi propongo",
+    "Add a word so they know who you are. What you can bring, whether you are free on the date, a link.": "Aggiungi due righe per far capire chi sei. Cosa porti, se sei libero in quella data, un link.",
+    "Videographer in Paris, free that Saturday. I shot two concerts last month, my book is on my profile.": "Videomaker a Milano, libero quel sabato. Il mese scorso ho filmato due concerti, il mio book è sul profilo.",
+    "optional": "facoltativo",
+    "Send my application": "Invia la mia candidatura",
+    "Couldn't withdraw. Try again.": "Ritiro non riuscito. Riprova.",
+    "I would like to join this project.": "Mi propongo per questo progetto.",
+    "Withdrawing...": "Ritiro in corso...",
+    "Withdraw my application": "Ritira la mia candidatura",
     "Report this profile": "Segnala questo profilo",
     "Report this project": "Segnala questo progetto",
     "Report this message": "Segnala questo messaggio",

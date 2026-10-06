@@ -81,6 +81,12 @@ export const LOOKING_FOR_ICONS = {
   paid: '💼', tfp: '📸', exchange: '🤝', personal: '✨', assist: '🎓', meet: '📍',
 };
 
+/**
+ * Le mot qu'on joint à sa candidature. Assez pour se présenter, trop court pour
+ * écrire une lettre : la personne en face en lit cinq d'affilée.
+ */
+export const APPLY_NOTE_MAX = 300;
+
 /** Au-delà, la ligne déborde sur le profil et ne veut plus dire grand-chose. */
 export const LOOKING_FOR_MAX = 3;
 

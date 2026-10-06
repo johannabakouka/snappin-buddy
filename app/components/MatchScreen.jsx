@@ -14,11 +14,12 @@ import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 import { SkeletonList } from './Skeleton';
 import ReportSheet from './ReportSheet';
+import ApplySheet from './ApplySheet';
 import { tap } from '../haptics';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
-import { hasRole, roleLabels, splitRoles } from '../constants';
+import { hasRole, roleLabels, splitRoles, APPLY_NOTE_MAX } from '../constants';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
 async function sendEmail(type, payload) {
@@ -78,13 +79,17 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   // Projet signalé : son identifiant, ou null. Les CGU interdisent les annonces
   // mensongères, mais aucun bouton ne permettait de les signaler.
   const [reportingOffer, setReportingOffer] = useState(null);
+  // Projet pour lequel on est en train de se proposer, ou null.
+  const [applyingTo, setApplyingTo] = useState(null);
+  // Candidature en cours de retrait, pour ne pas cliquer deux fois.
+  const [withdrawing, setWithdrawing] = useState(null);
   const [myOffers, setMyOffers] = useState([]);
   const [showNewOffer, setShowNewOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [offerCandidates, setOfferCandidates] = useState([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
-  const [appliedOffers, setAppliedOffers] = useState(new Set());
+  const [appliedOffers, setAppliedOffers] = useState(new Map());
   const [viewingBuddy, setViewingBuddy] = useState(null);
   const [sharingOffer, setSharingOffer] = useState(null);
   // Conversation ouverte directement depuis Match (après avoir accepté, ou bouton Écrire)
@@ -168,13 +173,17 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function loadApplied(userId) {
-    const { data } = await supabase.from('collabs').select('message').eq('sender_id', userId);
+    // Par identifiant de projet, plus par titre recopié dans le message : un
+    // titre modifié faisait disparaître la candidature de l'écran, et deux
+    // projets au même titre se confondaient.
+    const { data } = await supabase.from('collabs').select('id, offer_id, status').eq('sender_id', userId);
     if (data) {
-      const titles = data.map(c => {
-        const match = c.message?.match(/: (.+)$/);
-        return match ? match[1] : null;
-      }).filter(Boolean);
-      setAppliedOffers(new Set(titles));
+      // On garde l'identifiant de la candidature et son état, pas seulement le
+      // fait d'avoir postulé : c'est ce qui permet de la retirer depuis la carte
+      // du projet, sans aller la chercher ailleurs.
+      const m = new Map();
+      for (const c of data) if (c.offer_id) m.set(String(c.offer_id), { id: c.id, status: c.status });
+      setAppliedOffers(m);
     }
   }
 
@@ -295,8 +304,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function openOfferCandidates(offer) {
     setSelectedOffer(offer);
     setLoadingCandidates(true);
-    const { data: found } = await supabase.from('collabs').select('*').eq('receiver_id', user.id).ilike('message', `%${offer.title}%`).order('created_at', { ascending: false });
-    const collabs = (found || []).filter(c => (c.message || '').trim().endsWith(`: ${offer.title}`));
+    const { data: found } = await supabase.from('collabs')
+      .select('*')
+      .eq('receiver_id', user.id)
+      .eq('offer_id', offer.id)
+      .order('created_at', { ascending: false });
+    const collabs = found || [];
     if (collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
       const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
@@ -387,15 +400,50 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     loadOffers(user.id);
   }
 
-  async function applyToOffer(o) {
+  // Retirer sa candidature, tant qu'elle est en attente. Le serveur revérifie
+  // qui demande et dans quel état est la candidature : la vérification ne peut
+  // pas vivre seulement dans l'app.
+  async function withdrawApplication(collabId, offerId) {
+    if (!collabId || withdrawing) return;
+    setWithdrawing(collabId);
+    setActionError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/withdraw-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ collabId }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      if (offerId) {
+        setAppliedOffers(prev => {
+          const next = new Map(prev);
+          next.delete(String(offerId));
+          return next;
+        });
+      }
+      if (user?.id) { loadCollabs(user.id); loadApplied(user.id); }
+    } catch (e) {
+      console.error('withdrawApplication', e);
+      setActionError(tx("Couldn't withdraw. Try again.", 'Le retrait a échoué. Réessaie.'));
+    }
+    setWithdrawing(null);
+  }
+
+  async function applyToOffer(o, note = '') {
     const { data: { user: u } } = await supabase.auth.getUser();
     if (!u) return;
     setActionError('');
     tap();
+    // Le message est maintenant celui de la personne. Le titre n'y est plus
+    // recopié : c'est offer_id qui relie la candidature au projet, et le mot
+    // sert à se distinguer des autres candidats.
+    const written = String(note || '').trim().slice(0, APPLY_NOTE_MAX);
     const { data: collab, error } = await supabase.from('collabs').insert({
       sender_id: u.id,
       receiver_id: o.user_id,
-      message: `Je me propose pour : ${o.title}`,
+      offer_id: o.id,
+      message: written || tx('I would like to join this project.', 'Je me propose pour ce projet.'),
       status: 'pending'
     }).select('id').single();
     // Sans cette vérification, le bouton passait à « Déjà candidaté » même
@@ -405,7 +453,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       setActionError(tx("Couldn't send your application. Try again.", "L’envoi de ta candidature a échoué. Réessaie."));
       return;
     }
-    setAppliedOffers(prev => new Set([...prev, o.title]));
+    setAppliedOffers(prev => new Map(prev).set(String(o.id), { id: collab?.id, status: 'pending' }));
 
     // Prévient le porteur du projet (et non plus le candidat lui-même)
     if (collab?.id) sendEmail('new_application', { collabId: collab.id });
@@ -793,7 +841,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                   const isShared = sharedOffer && o.id === sharedOffer.id;
                   const score = getMatchScore(o);
                   const isBoosted = o.boosted_until && new Date(o.boosted_until) > new Date();
-                  const hasApplied = appliedOffers.has(o.title);
+                  const myApplication = appliedOffers.get(String(o.id));
+                  const hasApplied = !!myApplication;
                   return (
                     <div key={o.id} style={{ background: card, border: `1px solid ${isShared ? '#F2E050' : isBoosted ? '#F0B429' : score > 0 && o.status === 'open' ? (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') : cardBorder}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', opacity: o.status === 'closed' ? 0.7 : 1, boxShadow: isShared ? '0 0 24px rgba(242,224,80,0.18)' : 'none' }}>
                       {isShared && (
@@ -856,11 +905,27 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                       ) : o.status === 'open' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           {hasApplied ? (
-                            <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(46,204,113,0.1)' : 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>
-                              {t.alreadyApplied}
-                            </div>
+                            <>
+                              <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: 'rgba(46,204,113,0.1)', color: '#2ECC71', fontSize: '13px', fontWeight: '700', textAlign: 'center', border: '1px solid rgba(46,204,113,0.3)' }}>
+                                {t.alreadyApplied}
+                              </div>
+                              {/* Tant que personne n'a répondu, on peut encore
+                                  se retirer. Sans ça, une candidature envoyée
+                                  par erreur restait pour toujours. */}
+                              {myApplication?.status === 'pending' && myApplication?.id && (
+                                <button
+                                  onClick={() => withdrawApplication(myApplication.id, o.id)}
+                                  disabled={withdrawing === myApplication.id}
+                                  style={{ background: 'none', border: 'none', color: subText, fontSize: '11px', cursor: 'pointer', padding: '2px 0', margin: '0 auto', textDecoration: 'underline' }}
+                                >
+                                  {withdrawing === myApplication.id
+                                    ? tx('Withdrawing...', 'Retrait...')
+                                    : tx('Withdraw my application', 'Retirer ma candidature')}
+                                </button>
+                              )}
+                            </>
                           ) : (
-                            <button onClick={() => applyToOffer(o)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                            <button onClick={() => setApplyingTo(o)} style={{ width: '100%', padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
                               {t.applyOffer}
                             </button>
                           )}
@@ -938,6 +1003,19 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                       </div>
                     )}
                     {c.status === 'accepted' && <DoneButton collab={c} />}
+                    {/* Même sortie que depuis la carte du projet : tant que
+                        personne n'a répondu, on peut se retirer. */}
+                    {c.status === 'pending' && (
+                      <button
+                        onClick={() => withdrawApplication(c.id, c.offer_id)}
+                        disabled={withdrawing === c.id}
+                        style={{ background: 'none', border: 'none', color: subText, fontSize: '11px', cursor: 'pointer', padding: '8px 0 0', textDecoration: 'underline' }}
+                      >
+                        {withdrawing === c.id
+                          ? tx('Withdrawing...', 'Retrait...')
+                          : tx('Withdraw my application', 'Retirer ma candidature')}
+                      </button>
+                    )}
                   </div>
                 ))}
               </>
@@ -1007,6 +1085,19 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
           targetId={reportingOffer}
           theme={theme}
           onClose={() => setReportingOffer(null)}
+        />
+      )}
+
+      {applyingTo && (
+        <ApplySheet
+          offer={applyingTo}
+          theme={theme}
+          onClose={() => setApplyingTo(null)}
+          onSend={async note => {
+            const target = applyingTo;
+            setApplyingTo(null);
+            await applyToOffer(target, note);
+          }}
         />
       )}
     </div>
