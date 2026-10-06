@@ -102,7 +102,9 @@ export default function LegalScreen({ theme, onBack }) {
         <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid rgba(255,77,77,0.2)` }}>
           <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>🗑 Supprimer mon compte</p>
           <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6, marginBottom: '14px' }}>
-            La suppression est immédiate et irréversible. Toutes tes données (profil, messages, projets, propositions) seront définitivement effacées conformément au RGPD.
+            La suppression est immédiate et irréversible : profil, photos, projets et propositions sont effacés.
+            Les messages déjà envoyés restent visibles pour la personne à qui tu les as écrits, sans ton nom ni ta photo.
+            Sans cette exception, supprimer son compte suffirait à effacer les preuves d’un harcèlement.
           </p>
           {!confirm ? (
             <button onClick={() => setConfirm(true)} style={{

@@ -6,6 +6,14 @@
 // on laisse à null : la section n'apparaît pas, plutôt que d'annoncer un médiateur
 // qui ne couvrirait pas réellement Snappin'Buddy.
 // Pour l'activer : remplacer par { nom: '...', adresse: '...', site: '...' }
+/**
+ * Version du texte légal. À changer à chaque modification de fond des CGU.
+ *
+ * Sans elle, une acceptation enregistrée ne dit pas ce qui a été accepté : le
+ * texte peut avoir changé trois fois depuis. La date seule ne prouve rien.
+ */
+export const CGU_VERSION = '2026-10-06';
+
 export const MEDIATEUR = {
   nom: 'CM2C — Centre de la Médiation de la Consommation de Conciliateurs de Justice',
   adresse: '49 rue de Ponthieu, 75008 Paris',
@@ -89,7 +97,9 @@ Délai de réponse : 30 jours maximum.
 
 Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
 
-Durée de conservation des données : jusqu'à suppression du compte + 30 jours de sauvegarde.`,
+Durée de conservation des données : jusqu'à suppression du compte + 30 jours de sauvegarde.
+
+Une exception : les messages échangés. Ils ne sont pas effacés quand un compte est supprimé, et ils restent visibles pour la personne avec qui ils ont été échangés. Sans cela, il suffirait de supprimer son compte pour effacer les preuves d'un harcèlement. Ton nom et ta photo, eux, disparaissent bien : la conversation indique seulement un compte supprimé.`,
   },
   {
     title: '⏰ Durée de vie des projets',

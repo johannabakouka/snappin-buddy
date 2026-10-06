@@ -13,6 +13,7 @@ import { tx, isNotFrench } from '../tx';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 import { SkeletonList } from './Skeleton';
+import ReportSheet from './ReportSheet';
 import { tap } from '../haptics';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
@@ -74,6 +75,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const [offers, setOffers] = useState([]);
   // Le feed annonçait « aucun projet » pendant que la requête tournait.
   const [firstLoad, setFirstLoad] = useState(true);
+  // Projet signalé : son identifiant, ou null. Les CGU interdisent les annonces
+  // mensongères, mais aucun bouton ne permettait de les signaler.
+  const [reportingOffer, setReportingOffer] = useState(null);
   const [myOffers, setMyOffers] = useState([]);
   const [showNewOffer, setShowNewOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
@@ -863,6 +867,14 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           <button onClick={() => setSharingOffer(o)} style={{ width: '100%', padding: '8px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`, background: 'transparent', color: subText, fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                             📸 {tx('Share on story', 'Partager en story')}
                           </button>
+                          {o.user_id !== user?.id && (
+                            <button
+                              onClick={() => setReportingOffer(o.id)}
+                              style={{ background: 'none', border: 'none', color: subText, fontSize: '11px', cursor: 'pointer', padding: '2px 0', margin: '0 auto' }}
+                            >
+                              🚩 {tx('Report this project', 'Signaler ce projet')}
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div style={{ width: '100%', padding: '10px', borderRadius: '20px', background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: subText, fontSize: '13px', fontWeight: '600', textAlign: 'center' }}>
@@ -987,6 +999,15 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
           <span>{actionError}</span>
           <span style={{ flexShrink: 0, opacity: 0.8 }}>✕</span>
         </div>
+      )}
+
+      {reportingOffer !== null && (
+        <ReportSheet
+          targetType="offer"
+          targetId={reportingOffer}
+          theme={theme}
+          onClose={() => setReportingOffer(null)}
+        />
       )}
     </div>
   );

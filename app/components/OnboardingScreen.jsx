@@ -6,6 +6,7 @@ import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
 import { handleIssue } from '../handle-filter';
 import { cleanRoleOther, OTHER_ROLE_ID, ROLE_OTHER_MAX } from '../constants';
+import { CGU_VERSION } from '../legal-content';
 
 export default function OnboardingScreen({ user, onComplete, theme }) {
   const t = useT();
@@ -107,6 +108,13 @@ export default function OnboardingScreen({ user, onComplete, theme }) {
       return idx >= 0 ? UNIVERS_FR[idx] : label;
     });
 
+    // La date et la version des CGU acceptées à l'inscription, recopiées sur le
+    // profil. Sans cette trace, les CGU affirment une base légale qu'on ne peut
+    // prouver nulle part. Le repli sur maintenant couvre les comptes créés avant
+    // que l'inscription ne transporte l'information.
+    const acceptedAt = user?.user_metadata?.cgu_accepted_at || new Date().toISOString();
+    const acceptedVersion = user?.user_metadata?.cgu_version || CGU_VERSION;
+
     const { error: insertError } = await supabase.from('profiles').insert({
       user_id: user.id,
       username,
@@ -115,6 +123,8 @@ export default function OnboardingScreen({ user, onComplete, theme }) {
       role_other: (selectedRoles.includes(OTHER_ROLE_ID) ? cleanRoleOther(roleOther) : '') || null,
       styles: universToSave.join(', '),
       status: 'dispo',
+      cgu_accepted_at: acceptedAt,
+      cgu_version: acceptedVersion,
     });
 
     if (insertError) {

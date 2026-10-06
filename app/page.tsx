@@ -267,6 +267,43 @@ export default function Home() {
     );
   }
 
+  // Compte suspendu : l'app s'arrête ici. Les CGU annoncent la suspension
+  // comme sanction, mais rien ne l'appliquait : un compte sanctionné continuait
+  // d'écrire et d'apparaître partout.
+  if (profile?.suspended_at) return (
+    <div style={{
+      maxWidth: '390px', margin: '0 auto', height: '100dvh',
+      background: theme.bg, color: theme.color,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: '32px 24px', textAlign: 'center', gap: '14px',
+    }}>
+      <p style={{ fontSize: '36px' }}>⏸</p>
+      <p style={{ fontSize: '18px', fontWeight: '800' }}>
+        {tx('Your account is suspended', 'Ton compte est suspendu')}
+      </p>
+      <p style={{ fontSize: '14px', lineHeight: 1.6, opacity: 0.7 }}>
+        {profile.suspended_reason
+          ? tx('Reason: ', 'Motif : ') + profile.suspended_reason
+          : tx('Following a report about your account.', 'À la suite d’un signalement concernant ton compte.')}
+      </p>
+      <p style={{ fontSize: '13px', lineHeight: 1.6, opacity: 0.55 }}>
+        {tx(
+          'You can contest this decision by writing to contact@snappinbuddy.com.',
+          'Tu peux contester cette décision en écrivant à contact@snappinbuddy.com.',
+        )}
+      </p>
+      <button
+        onClick={() => supabase.auth.signOut()}
+        style={{
+          marginTop: '8px', padding: '12px 22px', borderRadius: '22px', border: 'none',
+          background: theme.color, color: theme.bg, fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+        }}
+      >
+        {tx('Sign out', 'Se déconnecter')}
+      </button>
+    </div>
+  );
+
   // User connecté, profil vérifié, pas de profil = onboarding
   if (!profile) return (
     <div style={{ maxWidth: '390px', margin: '0 auto', height: '100dvh', background: theme.bg, color: theme.color }}>

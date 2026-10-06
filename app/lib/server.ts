@@ -240,6 +240,41 @@ export function nearbyArrivalMail(to: string, arrived: number, forUser?: string)
   };
 }
 
+/**
+ * « Ton compte est suspendu », avec le motif et la façon de contester.
+ *
+ * Les CGU promettent que toute personne sanctionnée en est informée par email,
+ * avec le motif, et peut contester en répondant. Aucun modèle n'existait, donc
+ * la promesse ne pouvait pas être tenue.
+ */
+export function sanctionMail(to: string, kind: 'suspend' | 'unsuspend', reason: string, forUser?: string): Mail {
+  const r = escapeHtml(reason);
+  if (kind === 'unsuspend') {
+    return {
+      to,
+      subject: 'Ton compte Snappin’Buddy est de nouveau actif',
+      titleFr: 'Ton compte est réactivé',
+      bodyFr: 'La suspension de ton compte est levée. Tu peux te reconnecter normalement.',
+      titleEn: 'Your account is active again',
+      bodyEn: 'The suspension on your account has been lifted. You can sign in again.',
+      cta: '',
+      forUser,
+    };
+  }
+  return {
+    to,
+    subject: 'Ton compte Snappin’Buddy est suspendu',
+    titleFr: 'Ton compte est suspendu',
+    bodyFr: `À la suite d’un signalement, ton compte est suspendu.${r ? `<br><br>Motif : <b>${r}</b>` : ''}` +
+      '<br><br>Si tu penses que c’est une erreur, réponds à cet email : la décision sera réexaminée.',
+    titleEn: 'Your account is suspended',
+    bodyEn: `Following a report, your account has been suspended.${r ? `<br><br>Reason: <b>${r}</b>` : ''}` +
+      '<br><br>If you believe this is a mistake, reply to this email and the decision will be reviewed.',
+    cta: '',
+    forUser,
+  };
+}
+
 export function reportMail(to: string, reporterId: string, reported: { id: string; username?: string; handle?: string }, reason: string): Mail {
   return {
     to,

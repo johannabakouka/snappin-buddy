@@ -5,6 +5,7 @@ import { useT } from '../i18n';
 import { tx } from '../tx';
 import { SkeletonChat } from './Skeleton';
 import { tap } from '../haptics';
+import ReportSheet from './ReportSheet';
 import { uploadChatImage } from '../image-upload';
 import { hasBlockedMe } from '../blocks';
 
@@ -39,6 +40,11 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   const [user, setUser] = useState(null);
   const [buddyStatus, setBuddyStatus] = useState(buddy?.status || 'dispo');
   const [showQRReminder, setShowQRReminder] = useState(false);
+  // Message signalé : l'identifiant, ou null. Une conversation pouvait
+  // recevoir n'importe quelle photo sans que le destinataire ait le moindre
+  // bouton, alors que les CGU interdisent nommément ce contenu.
+  const [reportingMsg, setReportingMsg] = useState(null);
+
   // Appui long sur un message : menu Répondre / Copier / Supprimer
   const [actionMsg, setActionMsg] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
@@ -778,11 +784,28 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
                 🗑 {tx('Delete', 'Supprimer')}
               </button>
             )}
+            {actionMsg.sender_id !== user?.id && !actionMsg.deleted && (
+              <button
+                onClick={() => { const id = actionMsg.id; setActionMsg(null); setReportingMsg(id); }}
+                style={{ ...sheetBtn, color: '#FF4D4D' }}
+              >
+                🚩 {tx('Report', 'Signaler')}
+              </button>
+            )}
             <button onClick={() => setActionMsg(null)} style={{ ...sheetBtn, color: subText, fontWeight: '600' }}>
               {tx('Cancel', 'Annuler')}
             </button>
           </div>
         </div>
+      )}
+
+      {reportingMsg !== null && (
+        <ReportSheet
+          targetType="message"
+          targetId={reportingMsg}
+          theme={theme}
+          onClose={() => setReportingMsg(null)}
+        />
       )}
     </div>
   );

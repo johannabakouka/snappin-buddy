@@ -5,6 +5,7 @@ import { useT, useRoles } from '../i18n';
 import MapPreviewCard from './MapPreviewCard';
 import { tx, isNotFrench } from '../tx';
 import { lookingChips } from '../looking-for';
+import ReportSheet from './ReportSheet';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import ChatScreen from './ChatScreen';
 import PhotoViewer from './PhotoViewer';
@@ -82,9 +83,6 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
   const [message, setMessage] = useState('');
   const [showInput, setShowInput] = useState(false);
   const [showReport, setShowReport] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [reportSent, setReportSent] = useState(false);
-  const [reportError, setReportError] = useState('');
   const [blockError, setBlockError] = useState('');
   // Blocage : coupe le contact dans les deux sens.
   const [blocked, setBlocked] = useState(false);
@@ -252,35 +250,6 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
         : tx("Couldn't block. Try again.", 'Le blocage a échoué. Réessaie.'));
     }
     setBlocking(false);
-  }
-
-  async function sendReport() {
-    if (!reportReason.trim()) return;
-    setReportError('');
-    try {
-      // Le serveur envoie le signalement à l'adresse admin ; l'app ne choisit plus le destinataire
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({
-          type: 'report',
-          reportedUserId: buddy?.user_id,
-          reason: reportReason,
-        }),
-      });
-      if (!res.ok) throw new Error('report failed');
-      setReportSent(true);
-    } catch (e) {
-      // Un signalement d'abus qui échoue en silence est le pire silence de
-      // l'app : la personne croit avoir alerté la modération, et personne n'a
-      // rien reçu. On le dit, et on donne l'adresse de secours.
-      console.error('sendReport', e);
-      setReportError(tx(
-        "Couldn't send the report. Write to contact@snappinbuddy.com and it will be handled.",
-        "L’envoi du signalement a échoué. Écris à contact@snappinbuddy.com, il sera traité.",
-      ));
-    }
   }
 
   if (sharing) return (
@@ -629,54 +598,23 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
           )}
         </div>
 
-        {/* Signalement */}
+        {/* Signalement. Le panneau est partagé avec les messages et les
+            projets : mêmes motifs, même enregistrement, une seule chose à
+            maintenir. */}
         <div style={{ marginTop: '16px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingTop: '16px' }}>
-          {!showReport ? (
-            <button onClick={() => setShowReport(true)} style={{ background: 'none', border: 'none', color: subText, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 auto' }}>
-              🚩 {tx('Report this user', 'Signaler cet utilisateur')}
-            </button>
-          ) : reportSent ? (
-            <p style={{ color: '#2ECC71', fontSize: '13px', textAlign: 'center', fontWeight: '600' }}>
-              ✓ {tx('Report sent, thank you.', 'Signalement envoyé, merci.')}
-            </p>
-          ) : (
-            <div>
-              <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', textAlign: 'center' }}>
-                {tx('Why are you reporting this user?', 'Pourquoi tu signales cet utilisateur ?')}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
-                {[
-                  tx('Inappropriate behavior', 'Comportement inapproprié'),
-                  tx('Fake profile', 'Faux profil'),
-                  tx('Spam', 'Spam'),
-                  tx('Harassment', 'Harcèlement'),
-                  tx('Other', 'Autre'),
-                ].map(reason => (
-                  <button key={reason} onClick={() => setReportReason(reason)} style={{
-                    padding: '10px 14px', borderRadius: '12px', textAlign: 'left',
-                    border: `1px solid ${reportReason === reason ? '#FF4D4D' : (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                    background: reportReason === reason ? 'rgba(255,77,77,0.1)' : 'transparent',
-                    color: reportReason === reason ? '#FF4D4D' : subText,
-                    fontSize: '13px', cursor: 'pointer', fontWeight: reportReason === reason ? '700' : '400',
-                  }}>
-                    {reason}
-                  </button>
-                ))}
-              </div>
-              {reportError && (
-                <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>{reportError}</p>
-              )}
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => { setShowReport(false); setReportReason(''); setReportError(''); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: subText, fontSize: '13px', cursor: 'pointer' }}>
-                  {tx('Cancel', 'Annuler')}
-                </button>
-                <button onClick={sendReport} disabled={!reportReason} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: reportReason ? '#FF4D4D' : 'rgba(255,77,77,0.3)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: reportReason ? 'pointer' : 'default' }}>
-                  {tx('Send report', 'Envoyer')}
-                </button>
-              </div>
-            </div>
-          )}
+          <button onClick={() => setShowReport(true)} style={{ background: 'none', border: 'none', color: subText, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 auto' }}>
+            🚩 {tx('Report this profile', 'Signaler ce profil')}
+          </button>
         </div>
+
+        {showReport && (
+          <ReportSheet
+            targetType="profile"
+            targetId={buddy?.user_id}
+            theme={theme}
+            onClose={() => setShowReport(false)}
+          />
+        )}
       </div>
       {chatOpen && (
         <div style={{ position: 'fixed', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '390px', zIndex: 2600, background: bg }}>

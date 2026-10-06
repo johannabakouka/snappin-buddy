@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { authErrorMessage } from '../auth-errors';
+import { CGU_VERSION, LEGAL_SECTIONS } from '../legal-content';
 
 export default function AuthScreen({ onLogin, theme }) {
   const t = useT();
@@ -35,7 +36,14 @@ export default function AuthScreen({ onLogin, theme }) {
     setLoading(true);
     setMessage('');
     if (mode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // La date et la version acceptées voyagent avec l'inscription, puis sont
+      // recopiées sur le profil. Les CGU disent que leur acceptation est la base
+      // légale du traitement : sans trace, cette base ne se prouve nulle part.
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { cgu_accepted_at: new Date().toISOString(), cgu_version: CGU_VERSION } },
+      });
       if (error) setMessage(authErrorMessage(error));
       else if (data?.session) {
         // La confirmation par email n'est pas exigée : on entre directement.
@@ -250,23 +258,20 @@ export default function AuthScreen({ onLogin, theme }) {
             <button onClick={() => setShowLegal(false)} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
             <h2 style={{ fontSize: '18px', fontWeight: '800', color }}>CGU & Politique de confidentialité</h2>
           </div>
-          <div style={{ background: darkMode ? '#1A1A1A' : '#E8E8E8', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-            <p style={{ color: subText, fontSize: '13px', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{`Éditeur : Ateliers 777 — SIRET 995 320 264 00014
-59 rue de Ponthieu, 75008 Paris, France
-Contact : contact@snappinbuddy.com
-
-Snappin'Buddy collecte ton email, ton profil créatif et ta position approximative (±400m) pour te mettre en contact avec d'autres créatifs.
-
-Aucune donnée n'est vendue à des tiers. Tu peux supprimer ton compte à tout moment depuis l'app.
-
-Conformément au RGPD, tu disposes d'un droit d'accès, de rectification et d'effacement de tes données.
-
-Les paiements sont sécurisés par Stripe (PCI-DSS). Les offres expirent après 30 jours.
-
-Droit applicable : droit français. Juridiction : Tribunaux de Paris.
-
-Pour toute question : contact@snappinbuddy.com`}</p>
-          </div>
+          {/* Le vrai texte, pas un résumé.
+              Ce panneau affichait un résumé réécrit à la main, plus court que
+              les CGU et sans l'âge minimum, les règles de contenu, la durée de
+              conservation ni le médiateur. Ce qui était accepté à l'inscription
+              n'était donc pas ce que les CGU disent. */}
+          {LEGAL_SECTIONS.map((sec, i) => (
+            <div key={i} style={{ background: darkMode ? '#1A1A1A' : '#E8E8E8', borderRadius: '14px', padding: '16px', marginBottom: '10px' }}>
+              <p style={{ color, fontWeight: '800', fontSize: '13px', marginBottom: '8px' }}>{sec.title}</p>
+              <p style={{ color: subText, fontSize: '12.5px', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{sec.content}</p>
+            </div>
+          ))}
+          <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', textAlign: 'center' }}>
+            Version {CGU_VERSION}
+          </p>
           <button
             onClick={() => { setCguAccepted(true); setShowLegal(false); }}
             style={{ width: '100%', padding: '14px', borderRadius: '24px', border: 'none', background: color, color: bg, fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
