@@ -25,14 +25,43 @@ type Action =
   | 'resolve' | 'dismiss'
   | 'backfill';
 
+/**
+ * « ateliers777.contact@gmail.com » devient « at…@gm….com ».
+ *
+ * Assez pour reconnaître son adresse ou voir qu'on regarde une autre, pas
+ * assez pour la recopier.
+ */
+function masqueEmail(adresse: string): string {
+  const [local, domaine] = String(adresse || '').split('@');
+  if (!local || !domaine) return '';
+  const morceaux = domaine.split('.');
+  const suite = morceaux.length > 1 ? '.' + morceaux.slice(1).join('.') : '';
+  return `${local.slice(0, 2)}…@${morceaux[0].slice(0, 2)}…${suite}`;
+}
+
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
     if (!user) return Response.json({ error: 'unauthorized' }, { status: 401 });
 
-    const email = (user.email || '').toLowerCase();
-    if (!email || email !== ADMIN_EMAIL.toLowerCase()) {
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+    // Les espaces sont retirés des deux côtés. Un espace invisible collé à la
+    // fin d'une valeur recopiée dans Vercel suffisait à faire échouer la
+    // comparaison, sans que rien ne le laisse voir nulle part.
+    const email = (user.email || '').trim().toLowerCase();
+    const attendu = (ADMIN_EMAIL || '').trim().toLowerCase();
+    if (!email || !attendu || email !== attendu) {
+      // Le refus dit avec quel compte on est connecté, et à quoi ressemble
+      // celui qui est attendu.
+      //
+      // Sans ça, « Accès réservé » laisse deviner entre trois causes : pas
+      // connecté du tout, connecté avec le mauvais compte, ou variable
+      // ADMIN_EMAIL modifiée sur Vercel sans redéploiement. L'adresse attendue
+      // n'est donnée que masquée : de quoi la comparer, pas de quoi la donner
+      // à qui tenterait de s'en servir.
+      return Response.json(
+        { error: 'forbidden', vous: user.email || '', attendu: masqueEmail(ADMIN_EMAIL) },
+        { status: 403 },
+      );
     }
 
     const body = await request.json().catch(() => ({}));

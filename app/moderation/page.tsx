@@ -88,7 +88,11 @@ export default function ModerationPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
-  const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading');
+  // 'anonyme' = aucun compte connecté dans ce navigateur.
+  // 'refuse'  = connecté, mais ce n'est pas le compte administrateur.
+  // Les distinguer est tout l'intérêt : les deux se réparent autrement.
+  const [state, setState] = useState<'loading' | 'ok' | 'anonyme' | 'refuse' | 'error'>('loading');
+  const [qui, setQui] = useState<{ vous: string; attendu: string } | null>(null);
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
@@ -115,7 +119,12 @@ export default function ModerationPage() {
     (async () => {
       const { status, body } = await call({ action: 'list' });
       if (!alive) return;
-      if (status === 401 || status === 403) { setState('denied'); return; }
+      if (status === 401) { setState('anonyme'); return; }
+      if (status === 403) {
+        setQui({ vous: String(body.vous || ''), attendu: String(body.attendu || '') });
+        setState('refuse');
+        return;
+      }
       if (status !== 200) { setState('error'); return; }
       setReports((body.reports || []) as Report[]);
       setProfiles((body.profiles || []) as Profile[]);
@@ -162,10 +171,34 @@ export default function ModerationPage() {
   }
 
   if (state === 'loading') return <Shell><p style={dim}>Chargement...</p></Shell>;
-  if (state === 'denied') return (
+  if (state === 'anonyme') return (
     <Shell>
-      <p style={{ fontWeight: 800, marginBottom: 8 }}>Accès réservé</p>
-      <p style={dim}>Connecte-toi avec le compte administrateur dans l’app, puis reviens sur cette page.</p>
+      <p style={{ fontWeight: 800, marginBottom: 8 }}>Aucun compte connecté ici</p>
+      <p style={{ ...dim, lineHeight: 1.6 }}>
+        Cette page lit la session de <b style={{ color: '#fff' }}>ce navigateur</b>, et il n’y en a pas.
+        Être connectée dans l’app installée sur le téléphone ne compte pas pour l’ordinateur, et
+        l’inverse non plus : chaque navigateur a la sienne.
+        <br /><br />
+        Ouvre <b style={{ color: '#fff' }}>snappinbuddy.com</b> dans cet onglet, connecte-toi,
+        puis reviens ici.
+      </p>
+      <button onClick={() => setTick(t => t + 1)} style={{ ...ghost, marginTop: 16 }}>Réessayer</button>
+    </Shell>
+  );
+  if (state === 'refuse') return (
+    <Shell>
+      <p style={{ fontWeight: 800, marginBottom: 8 }}>Ce compte n’est pas l’administrateur</p>
+      <p style={{ ...dim, lineHeight: 1.6 }}>
+        Tu es connectée avec <b style={{ color: '#fff' }}>{qui?.vous || '(adresse inconnue)'}</b>.
+        <br />
+        Le compte attendu ressemble à <b style={{ color: '#fff' }}>{qui?.attendu || '(non configuré)'}</b>.
+      </p>
+      <p style={{ ...dim, lineHeight: 1.6, marginTop: 12 }}>
+        Si ces deux-là devraient être la même adresse, c’est que la variable
+        <b style={{ color: '#fff' }}> ADMIN_EMAIL</b> de Vercel a bien été modifiée mais que le
+        projet n’a pas été redéployé depuis : une variable ne prend effet qu’au déploiement suivant.
+      </p>
+      <button onClick={() => setTick(t => t + 1)} style={{ ...ghost, marginTop: 16 }}>Réessayer</button>
     </Shell>
   );
   if (state === 'error') return (
