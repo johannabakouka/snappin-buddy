@@ -12,15 +12,67 @@ export const PORTFOLIO_BUCKET = 'portfolio';
 const MAX_SIDE = 1280;
 const QUALITY = 0.82;
 
+// La vignette, pour tout ce qui s'affiche petit : les pins de la carte (44 px),
+// les listes d'Explorer (48 px), les miniatures de portfolio (56 px).
+//
+// Jusqu'ici ces endroits téléchargeaient la photo entière, 1280 pixels et
+// 200 à 400 Ko, pour la dessiner dans un rond de 44 pixels. La carte le faisait
+// pour tous les profils, et recommençait à chaque retour sur l'onglet. C'est ce
+// qui a fait dépasser le quota de bande passante du stockage.
+//
+// Une vignette de 256 pixels pèse une vingtaine de kilo-octets : dix à quinze
+// fois moins, sans aucune différence visible.
+const THUMB_SIDE = 256;
+const THUMB_QUALITY = 0.72;
+const THUMB_SUFFIX = '_thumb';
+
+/**
+ * L'adresse de la vignette d'une photo, déduite de son nom.
+ *
+ * On aurait pu l'enregistrer dans une colonne à côté de chaque photo, mais il
+ * aurait fallu une colonne pour l'avatar, une pour chaque entrée de portfolio,
+ * une pour chaque message. Le nom suffit : photo.jpg et photo_thumb.jpg.
+ *
+ * Renvoie une chaîne vide si l'adresse n'a pas la forme attendue : l'appelant
+ * retombe alors sur la photo d'origine.
+ */
+export function thumbUrl(url) {
+  const raw = String(url || '');
+  if (!raw || !raw.endsWith('.jpg')) return '';
+  if (raw.endsWith(THUMB_SUFFIX + '.jpg')) return raw;
+  return raw.slice(0, -'.jpg'.length) + THUMB_SUFFIX + '.jpg';
+}
+
+/** Le chemin de la vignette, à partir du chemin de la photo. */
+function thumbPath(path) {
+  return path.endsWith('.jpg') ? path.slice(0, -4) + THUMB_SUFFIX + '.jpg' : path + THUMB_SUFFIX;
+}
+
+/**
+ * Dépose la vignette à côté de la photo. Au mieux : une vignette manquante fait
+ * simplement retomber l'affichage sur la photo d'origine, alors qu'une erreur
+ * ici empêcherait d'envoyer la photo tout court.
+ */
+async function uploadThumb(file, bucket, path) {
+  try {
+    const thumb = await resizeImage(file, THUMB_SIDE, THUMB_QUALITY);
+    await supabase.storage
+      .from(bucket)
+      .upload(thumbPath(path), thumb, { contentType: 'image/jpeg', upsert: true });
+  } catch (e) {
+    console.error('uploadThumb', e);
+  }
+}
+
 /** Redimensionne et recompresse une image en JPEG. Renvoie un Blob. */
-export function resizeImage(file) {
+export function resizeImage(file, maxSide = MAX_SIDE, quality = QUALITY) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
 
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const ratio = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
       const width = Math.round(img.width * ratio);
       const height = Math.round(img.height * ratio);
 
@@ -33,7 +85,7 @@ export function resizeImage(file) {
       canvas.toBlob(
         blob => (blob ? resolve(blob) : reject(new Error('conversion impossible'))),
         'image/jpeg',
-        QUALITY
+        quality
       );
     };
 
@@ -61,6 +113,8 @@ export async function uploadChatImage(file, userId) {
     .from(CHAT_BUCKET)
     .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
   if (error) throw error;
+
+  await uploadThumb(file, CHAT_BUCKET, path);
 
   const { data } = supabase.storage.from(CHAT_BUCKET).getPublicUrl(path);
   return data.publicUrl;
@@ -93,6 +147,8 @@ export async function uploadProfileImage(file, userId, bucket) {
     .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
   if (error) throw error;
 
+  await uploadThumb(file, bucket, path);
+
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
@@ -108,8 +164,53 @@ export async function removeByPublicUrl(url, bucket) {
     const at = String(url || '').indexOf(marker);
     if (at < 0) return;
     const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
-    if (path) await supabase.storage.from(bucket).remove([path]);
+    if (path) await supabase.storage.from(bucket).remove([path, thumbPath(path)]);
   } catch (e) {
     console.error('removeByPublicUrl', e);
   }
+}
+
+/**
+ * Fabrique les vignettes manquantes des photos d'une personne.
+ *
+ * Les photos envoyées avant les vignettes n'en ont pas : elles continuent d'être
+ * servies en pleine taille à tous ceux qui les regardent. Plutôt qu'une
+ * migration, chacun répare les siennes en ouvrant l'app, une seule fois, comme
+ * on l'a fait pour les villes.
+ *
+ * Tout est au mieux : une vignette qui échoue laisse simplement la photo
+ * d'origine en place.
+ */
+export async function ensureThumbs(urls) {
+  const liste = (Array.isArray(urls) ? urls : [urls]).filter(Boolean);
+  let faites = 0;
+
+  for (const url of liste) {
+    const cible = thumbUrl(url);
+    if (!cible || cible === url) continue;
+    try {
+      // La vignette existe-t-elle déjà ? Une requête de tête ne télécharge rien.
+      const deja = await fetch(cible, { method: 'HEAD' });
+      if (deja.ok) continue;
+
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      const petite = await resizeImage(blob, THUMB_SIDE, THUMB_QUALITY);
+
+      // Le nom du seau et le chemin se relisent dans l'adresse publique.
+      const m = String(url).match(/\/object\/public\/([^/]+)\/(.+)$/);
+      if (!m) continue;
+      const seau = m[1];
+      const chemin = decodeURIComponent(m[2].split('?')[0]);
+
+      await supabase.storage
+        .from(seau)
+        .upload(thumbPath(chemin), petite, { contentType: 'image/jpeg', upsert: true });
+      faites++;
+    } catch (e) {
+      console.error('ensureThumbs', e);
+    }
+  }
+  return faites;
 }

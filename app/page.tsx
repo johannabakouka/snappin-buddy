@@ -232,6 +232,30 @@ export default function Home() {
     if (initialized) localStorage.setItem('darkMode', String(darkMode));
   }, [darkMode, initialized]);
 
+  // Les photos envoyées avant les vignettes n'en ont pas, et continuent donc
+  // d'être servies en pleine taille à tous ceux qui les regardent. Chacun
+  // répare les siennes en ouvrant l'app, une fois par jour au plus, comme on
+  // l'a fait pour les villes.
+  useEffect(() => {
+    if (!profile) return;
+    let vivant = true;
+    (async () => {
+      try {
+        const cle = 'thumbsDone';
+        const dernier = Number(localStorage.getItem(cle) || 0);
+        if (Date.now() - dernier < 86400000) return;
+        const { ensureThumbs } = await import('./image-upload');
+        const faites = await ensureThumbs([profile.avatar_url, ...(profile.portfolio_urls || [])]);
+        if (!vivant) return;
+        localStorage.setItem(cle, String(Date.now()));
+        if (faites) console.log('vignettes créées :', faites);
+      } catch (e) {
+        console.error('ensureThumbs', e);
+      }
+    })();
+    return () => { vivant = false; };
+  }, [profile]);
+
   // Le fond de la page suit le thème. Sans ça, globals.css gardait un noir dur
   // et les marges de part et d'autre de la colonne restaient noires en mode
   // clair, sur tout écran plus large que 390 px.

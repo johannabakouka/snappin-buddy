@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useT } from '../i18n';
 import { tx } from '../tx';
+import Thumb from './Thumb';
 import { SkeletonChat } from './Skeleton';
 import { tap } from '../haptics';
 import ReportSheet from './ReportSheet';
@@ -430,7 +431,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           style={{ width: '36px', height: '36px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${statusColor}`, cursor: onOpenProfile && !buddyGone ? 'pointer' : 'default', flexShrink: 0 }}
         >
           {!buddyGone && buddy?.avatar_url
-            ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <Thumb src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : '◉'}
         </div>
         <div
@@ -740,7 +741,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
             {buddies.map(p => (
               <button key={p.user_id} onClick={() => forwardTo(p)} style={{ ...sheetBtn, display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ width: '34px', height: '34px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>
-                  {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                  {p.avatar_url ? <Thumb src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                 </span>
                 {p.username}
               </button>

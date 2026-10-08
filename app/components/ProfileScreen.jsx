@@ -11,6 +11,7 @@ import { loadMyBlocks, unblockUser, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import Thumb from './Thumb';
 import { lookingChips } from '../looking-for';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET } from '../image-upload';
@@ -495,7 +496,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                   <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
                     {c.buddy?.avatar_url
-                      ? <img src={c.buddy.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <Thumb src={c.buddy.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : '◉'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -677,7 +678,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
               blockedList.map(p => (
                 <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                    {p.avatar_url ? <Thumb src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '13px', fontWeight: '700', color: theme.color }}>{p.username || tx('Creative', 'Créatif')}</p>

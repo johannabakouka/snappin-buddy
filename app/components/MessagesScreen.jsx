@@ -6,6 +6,7 @@ import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
 import { useT, useRoles } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import Thumb from './Thumb';
 import { roleLabels } from '../constants';
 import { loadIBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
@@ -260,7 +261,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
         style={{ background: card, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
       >
         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-          {p.avatar_url ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+          {p.avatar_url ? <Thumb src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{p.username}</p>
@@ -366,7 +367,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
                   }}
                 >
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                    {c.avatar_url ? <img src={c.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                    {c.avatar_url ? <Thumb src={c.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>

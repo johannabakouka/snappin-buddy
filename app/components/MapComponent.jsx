@@ -14,6 +14,7 @@ import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { loadMyWatch, watchNearby, unwatchNearby } from '../city-watch';
 import { tap } from '../haptics';
+import { thumbUrl } from '../image-upload';
 
 // ~400 m pour une position GPS, ~2 km pour une ville choisie (répartit les pins dans la ville)
 const GPS_FUZZ = 0.004;
@@ -22,6 +23,13 @@ const CITY_FUZZ = 0.02;
 const MAP_ZOOM = 8;
 // Durée du sommeil du bandeau « tu es parmi les premiers » après un clic sur la croix.
 const PIONEER_SNOOZE_DAYS = 7;
+
+// Les colonnes dont la carte a besoin. Elle prenait tout, y compris les bios,
+// les portfolios et les tableaux de liens, pour dessiner des pastilles.
+const MAP_COLUMNS = 'user_id, username, handle, avatar_url, role, role_other, styles, zone, city, status, lat, lng, hidden, is_early_adopter, validated_projects, bio, portfolio_urls, portfolio_url, looking_for';
+
+// Temps minimum entre deux relectures des profils quand on revient sur l'onglet.
+const MIN_RELOAD_MS = 60000;
 
 // Fond de carte : MapTiler si la clé est configurée (style sombre soigné),
 // sinon OpenStreetMap, qui reste le filet de sécurité gratuit et sans clé.
@@ -100,6 +108,8 @@ export default function MapComponent({ theme, active = true }) {
     return !localStorage.getItem('geoAsked');
   });
   // null | 'choose' | 'denied' : panneau de choix de ville
+  // Dernier chargement des profils, pour ne pas tout relire à chaque retour.
+  const lastLoad = useRef(0);
   const [cityOverlay, setCityOverlay] = useState(null);
   // Repli sur OpenStreetMap : on remet alors le filtre qui assombrit la carte
   const [useFilter, setUseFilter] = useState(false);
@@ -218,7 +228,8 @@ export default function MapComponent({ theme, active = true }) {
       LeafletModule.control.zoom({ position: 'bottomright' }).addTo(map);
       setL(LeafletModule);
 
-      const { data: profileData } = await supabase.from('profiles').select('*');
+      lastLoad.current = Date.now();
+      const { data: profileData } = await supabase.from('profiles').select(MAP_COLUMNS);
       const { data: { user } } = await supabase.auth.getUser();
       // Les personnes bloquées, dans un sens comme dans l'autre, n'apparaissent pas.
       const blocked = await loadBlockedIds(user?.id);
@@ -315,9 +326,15 @@ export default function MapComponent({ theme, active = true }) {
   useEffect(() => {
     if (active && !wasActive.current && mapInstance.current) {
       setTimeout(() => mapInstance.current?.invalidateSize(), 60);
+      // Revenir sur l'onglet rechargeait tous les profils entiers, à chaque
+      // fois. Les pins ne changent pas d'une seconde à l'autre : on ne relit
+      // qu'au-delà d'une minute, et seulement les colonnes affichées.
+      const depuis = Date.now() - lastLoad.current;
+      if (depuis < MIN_RELOAD_MS) { wasActive.current = active; return; }
+      lastLoad.current = Date.now();
       (async () => {
         const [{ data: profileData }, { data: { user } }] = await Promise.all([
-          supabase.from('profiles').select('*'),
+          supabase.from('profiles').select(MAP_COLUMNS),
           supabase.auth.getUser(),
         ]);
         const blocked = await loadBlockedIds(user?.id);
@@ -331,8 +348,9 @@ export default function MapComponent({ theme, active = true }) {
 
   // Blocage : la personne doit disparaître de la carte tout de suite.
   useEffect(() => onBlocksChanged(async () => {
+    lastLoad.current = Date.now();
     const [{ data: profileData }, { data: { user } }] = await Promise.all([
-      supabase.from('profiles').select('*'),
+      supabase.from('profiles').select(MAP_COLUMNS),
       supabase.auth.getUser(),
     ]);
     const blocked = await loadBlockedIds(user?.id);
@@ -445,7 +463,7 @@ export default function MapComponent({ theme, active = true }) {
           className: '',
           html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
             <div style="width:44px;height:44px;border-radius:50%;background:#FFFFFF;border:3px solid #0A0A0A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A0A0A;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;">
-              ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : 'MOI'}
+              ${p.avatar_url ? `<img src="${thumbUrl(p.avatar_url) || p.avatar_url}" onerror="this.onerror=null;this.src='${p.avatar_url}'" style="width:100%;height:100%;object-fit:cover;" />` : 'MOI'}
             </div>
             <span style="font-size:10px;font-weight:700;color:white;background:rgba(10,10,10,0.7);padding:1px 6px;border-radius:8px;white-space:nowrap;">${tx('Me', 'Moi')}</span>
           </div>`,
@@ -459,7 +477,7 @@ export default function MapComponent({ theme, active = true }) {
           className: '',
           html: `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
             <div style="width:44px;height:44px;border-radius:50%;background:#1A1A1A;border:3px solid ${statusColor};display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);overflow:hidden;">
-              ${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />` : '◉'}
+              ${p.avatar_url ? `<img src="${thumbUrl(p.avatar_url) || p.avatar_url}" onerror="this.onerror=null;this.src='${p.avatar_url}'" style="width:100%;height:100%;object-fit:cover;" />` : '◉'}
             </div>
             <span style="font-size:10px;font-weight:700;color:white;background:rgba(10,10,10,0.7);padding:1px 6px;border-radius:8px;white-space:nowrap;">${(p.username || '').toUpperCase()}</span>
           </div>`,

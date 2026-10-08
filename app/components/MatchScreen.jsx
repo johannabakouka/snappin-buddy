@@ -10,6 +10,7 @@ import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import Thumb from './Thumb';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 import { SkeletonList } from './Skeleton';
@@ -853,7 +854,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div onClick={onViewFull ? () => onViewFull(profile) : undefined}
             style={{ width: '40px', height: '40px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', cursor: onViewFull ? 'pointer' : 'default' }}>
-            {profile.avatar_url ? <img src={profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+            {profile.avatar_url ? <Thumb src={profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: '700', fontSize: '14px', color: theme?.color }}>{profile.username}</p>
@@ -1117,7 +1118,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: o.authorProfile ? 'pointer' : 'default' }}
                       >
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? '#2C2C2C' : '#CCC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                          {o.authorProfile?.avatar_url ? <img src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                          {o.authorProfile?.avatar_url ? <Thumb src={o.authorProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>

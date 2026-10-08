@@ -1,6 +1,7 @@
 'use client';
 import { ROLES_EN, ROLES_FR, roleLabels } from '../constants';
 import { tx, isNotFrench } from '../tx';
+import Thumb from './Thumb';
 
 // La petite carte qui s'ouvre quand on touche un point sur la carte.
 //
@@ -55,7 +56,7 @@ export default function MapPreviewCard({
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
         }}>
           {buddy.avatar_url
-            ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <Thumb src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : '◉'}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>

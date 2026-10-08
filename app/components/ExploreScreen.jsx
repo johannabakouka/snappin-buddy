@@ -7,6 +7,7 @@ import Header from './Header';
 import { hasRole, roleIcons, roleLabels } from '../constants';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import Thumb from './Thumb';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { usePullToRefresh } from '../pull-refresh';
@@ -269,7 +270,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: avatarBg, overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
-                    {p.avatar_url ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                    {p.avatar_url ? <Thumb src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                   </div>
                   <div>
                     <p style={{ fontWeight: '700', fontSize: '13px', color: theme?.color }}>{p.username}</p>
@@ -352,7 +353,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                 <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: avatarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden' }}>
-                      {p.avatar_url ? <img src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
+                      {p.avatar_url ? <Thumb src={p.avatar_url} alt={p.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
                     </div>
                     {score > 0 && !search.trim() && (
                       <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#2ECC71', color: '#000', borderRadius: '10px', padding: '1px 5px', fontSize: '9px', fontWeight: '900' }}>{score}✓</div>
@@ -410,7 +411,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                 {portfolio.length > 0 && (
                   <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', scrollbarWidth: 'none', padding: '0 16px 12px' }}>
                     {portfolio.map((url, i) => (
-                      <img key={i} src={url} alt={`portfolio-${i}`}
+                      <Thumb key={i} src={url} alt={`portfolio-${i}`}
                         style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }}
                         onClick={() => setViewer({ index: streamIndex(p.user_id, i) })}
                       />
