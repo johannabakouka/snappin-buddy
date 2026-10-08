@@ -92,7 +92,11 @@ Tu peux refuser la géolocalisation — certaines fonctionnalités de la carte s
 · Droit d'opposition au traitement
 · Droit de retirer ton consentement à tout moment
 
-Pour exercer ces droits : contact@snappinbuddy.com
+Deux de ces droits s'exercent tout de suite, sans écrire à personne, en bas de cet écran :
+· « Télécharger mes données » te remet un fichier contenant tout ce que l'app sait de toi — profil, projets, candidatures, conversations, abonnements et liste de tes photos. C'est le droit d'accès et le droit à la portabilité.
+· « Supprimer mon compte » efface immédiatement ton profil, tes photos, tes projets et tes candidatures. C'est le droit à l'effacement.
+
+Pour les autres, ou si un bouton ne fonctionne pas : contact@snappinbuddy.com
 Délai de réponse : 30 jours maximum.
 
 Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
@@ -128,6 +132,8 @@ Si tu penses qu'un compte appartient à un mineur, signale-le : contact@snappinb
 · La publication de photos de tiers sans leur accord
 · Les annonces mensongères, les arnaques et le démarchage commercial
 · Tout contenu illégal
+
+Contrôle automatique des photos : chaque photo envoyée à l'app (photo de profil, portfolio, conversation) est analysée avant son envoi, directement dans ton téléphone. Une photo reconnue comme un contenu sexuel est refusée et ne quitte jamais l'appareil ; aucune société extérieure ne la voit, et nous n'en gardons aucune copie. L'analyse est faite par un programme, donc elle peut se tromper : si une de tes photos est refusée à tort, écris à contact@snappinbuddy.com et une personne la réexaminera.
 
 Comment signaler : chaque profil comporte un bouton de signalement, et tu peux aussi écrire à contact@snappinbuddy.com. Chaque signalement est examiné, et les contenus manifestement illégaux sont retirés sans délai.
 

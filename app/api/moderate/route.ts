@@ -46,11 +46,24 @@ export async function POST(request: Request) {
       if (error) throw error;
       const rows = reports || [];
 
+      // Les photos refusées par le contrôle automatique. Ce ne sont pas des
+      // signalements : personne ne s'est plaint, et rien n'est arrivé dans le
+      // stockage. C'est une liste d'insistances, à regarder séparément.
+      const { data: blocks } = await db
+        .from('upload_blocks')
+        .select('id, user_id, context, scores, created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      const blockRows = blocks || [];
+
       // Le contexte, pour décider sans quitter l'écran : qui est visé, et quel
       // est le contenu exact. Un signalement sans son contenu oblige à aller le
       // chercher ailleurs, et c'est le genre de friction qui fait qu'on ne
       // traite pas.
-      const userIds = [...new Set(rows.flatMap(r => [r.target_user_id, r.reporter_id]).filter(Boolean))] as string[];
+      const userIds = [...new Set([
+        ...rows.flatMap(r => [r.target_user_id, r.reporter_id]),
+        ...blockRows.map(b => b.user_id),
+      ].filter(Boolean))] as string[];
       const { data: profiles } = userIds.length
         ? await db.from('profiles')
           .select('user_id, username, handle, avatar_url, portfolio_urls, hidden, suspended_at')
@@ -70,6 +83,7 @@ export async function POST(request: Request) {
       return Response.json({
         ok: true,
         reports: rows,
+        blocks: blockRows,
         profiles: profiles || [],
         messages: messages || [],
         offers: offers || [],

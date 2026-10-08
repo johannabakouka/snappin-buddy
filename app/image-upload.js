@@ -1,5 +1,6 @@
 'use client';
 import { supabase } from './supabase';
+import { imageFormat, analyseContenu, ImageRefusee } from './lib/image-check';
 
 // Envoi d'une photo dans une conversation.
 // La photo est redimensionnée dans le téléphone AVANT l'envoi : une photo d'iPhone
@@ -64,6 +65,50 @@ async function uploadThumb(file, bucket, path) {
   }
 }
 
+/**
+ * Prévient le serveur qu'une photo a été refusée.
+ *
+ * Rien n'est envoyé de la photo elle-même, seulement les scores : le but est
+ * que la modération repère quelqu'un qui insiste, pas de garder une trace de ce
+ * qu'il a essayé d'envoyer. Au mieux, et sans attendre : un journal qui échoue
+ * ne doit pas ralentir l'écran.
+ */
+function journaliseRefus(contexte, scores) {
+  (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/upload-blocked', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ contexte, scores }),
+      });
+    } catch (e) {
+      console.error('journaliseRefus', e);
+    }
+  })();
+}
+
+/**
+ * Contrôle d'une photo avant son envoi : vrai format, puis contenu.
+ *
+ * Le contenu est analysé sur la version redimensionnée, pas sur l'original :
+ * le modèle ramène de toute façon l'image à 224 pixels, et décoder deux fois
+ * une photo d'iPhone de 5 Mo n'apporterait rien.
+ */
+async function controleAvantEnvoi(file, blob, contexte) {
+  if (!(await imageFormat(file))) throw new ImageRefusee('format');
+
+  const { bloquee, scores } = await analyseContenu(blob);
+  if (bloquee) {
+    journaliseRefus(contexte, scores);
+    throw new ImageRefusee('contenu', scores);
+  }
+}
+
 /** Redimensionne et recompresse une image en JPEG. Renvoie un Blob. */
 export function resizeImage(file, maxSide = MAX_SIDE, quality = QUALITY) {
   return new Promise((resolve, reject) => {
@@ -104,9 +149,9 @@ export function resizeImage(file, maxSide = MAX_SIDE, quality = QUALITY) {
  * d'effacer toutes ses photos quand il supprime son compte.
  */
 export async function uploadChatImage(file, userId) {
-  if (!file.type.startsWith('image/')) throw new Error('fichier non image');
-
   const blob = await resizeImage(file);
+  await controleAvantEnvoi(file, blob, 'chat');
+
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
 
   const { error } = await supabase.storage
@@ -137,9 +182,10 @@ export async function uploadChatImage(file, userId) {
 export async function uploadProfileImage(file, userId, bucket) {
   if (!file) throw new Error('aucun fichier');
   if (!userId) throw new Error('session expirée');
-  if (file.type && !file.type.startsWith('image/')) throw new Error('fichier non image');
 
   const blob = await resizeImage(file);
+  await controleAvantEnvoi(file, blob, bucket === AVATAR_BUCKET ? 'avatar' : 'portfolio');
+
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
 
   const { error } = await supabase.storage

@@ -11,6 +11,7 @@ import { lookingLabel, lookingHint } from '../looking-for';
 import PhotoViewer from './PhotoViewer';
 import { cleanUrl } from '../links';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET, PORTFOLIO_BUCKET } from '../image-upload';
+import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 
 const BIO_MAX = 150;
 
@@ -166,10 +167,10 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
       if (previous) removeByPublicUrl(previous, AVATAR_BUCKET);
     } catch (err) {
       console.error('avatar', err);
-      setError(tx(
+      setError(messageEnvoi(err, tx(
         'The photo could not be saved. Try another one.',
         'La photo n’a pas pu être enregistrée. Essaie une autre photo.',
-      ));
+      )));
     }
     setUploadingAvatar(false);
   }
@@ -188,19 +189,25 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
 
       const newUrls = [...portfolioUrls];
       let failed = 0;
+      // Une photo refusée par le contrôle de contenu n'est pas un échec
+      // d'envoi : on la compte à part pour pouvoir dire pourquoi.
+      let refusee = null;
       for (const file of files) {
         try {
           newUrls.push(await uploadProfileImage(file, user.id, PORTFOLIO_BUCKET));
         } catch (err) {
           console.error('portfolio', err);
           failed += 1;
+          if (err?.name === 'ImageRefusee' && !refusee) refusee = err;
         }
       }
       setPortfolioUrls(newUrls);
       // Les échecs étaient silencieux : les photos disparaissaient sans un mot.
       // Deux messages distincts, et chacun écrit en entier : le vérificateur de
       // traductions ne sait pas lire un texte caché dans une condition.
-      if (failed && failed === files.length) {
+      if (refusee) {
+        setError(messageEnvoi(refusee, ''));
+      } else if (failed && failed === files.length) {
         setError(tx('The photos could not be added. Try others.', 'Les photos n’ont pas pu être ajoutées. Essaie d’autres photos.'));
       } else if (failed) {
         setError(tx('Some photos could not be added.', 'Certaines photos n’ont pas pu être ajoutées.'));
@@ -290,7 +297,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
             {uploadingAvatar ? '...' : '✏️'}
           </div>
         </div>
-        <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+        <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onClick={prechauffeControle} onChange={handleAvatarUpload} />
         <p style={{ color: subText, fontSize: '11px', marginTop: '8px' }}>
           {tx('Tap the photo to change it', 'Appuie sur la photo pour la changer')}
         </p>
@@ -488,7 +495,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
           </button>
         )}
       </div>
-      <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePortfolioUpload} />
+      <input ref={portfolioInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onClick={prechauffeControle} onChange={handlePortfolioUpload} />
 
       <p style={{ color: subText, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>
         🔗 {tx('PORTFOLIO LINK', 'LIEN PORTFOLIO')} <span style={{ fontWeight: '400' }}>({tx('site, Behance, Dribbble...', 'site, Behance, Dribbble...')})</span>

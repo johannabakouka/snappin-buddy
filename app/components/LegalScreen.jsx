@@ -20,6 +20,9 @@ export default function LegalScreen({ theme, onBack }) {
   // Deux taps ne doivent pas suffire pour une action définitive.
   const [myEmail, setMyEmail] = useState('');
   const [typedEmail, setTypedEmail] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMyEmail(data.user?.email || ''));
@@ -66,6 +69,66 @@ export default function LegalScreen({ theme, onBack }) {
   }
 
 
+  // Télécharger tout ce que l'app sait de nous (RGPD art. 15 et 20).
+  //
+  // Les CGU donnaient ce droit mais obligeaient à écrire un email et à
+  // attendre. Un bouton, c'est le même droit sans l'attente.
+  //
+  // Deux façons de remettre le fichier, parce qu'une seule ne suffit pas :
+  // sur iPhone, l'app tourne en plein écran et un téléchargement classique
+  // n'ouvre rien du tout, alors que le partage propose « Enregistrer dans
+  // Fichiers ». Sur ordinateur, c'est l'inverse.
+  async function exportData() {
+    setExporting(true);
+    setExportError('');
+    setExportDone(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('session expirée');
+
+      const res = await fetch('/api/export-data', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error(`erreur ${res.status}`);
+
+      const blob = await res.blob();
+      const nom = `snappinbuddy-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+
+      let partage = false;
+      try {
+        const fichier = new File([blob], nom, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [fichier] })) {
+          await navigator.share({ files: [fichier], title: nom });
+          partage = true;
+        }
+      } catch (e) {
+        // Fermer la feuille de partage n'est pas une panne : on ne dit rien,
+        // et on ne retombe pas sur le téléchargement, qui serait une surprise.
+        if (e?.name === 'AbortError') { setExporting(false); return; }
+        console.error('export partage', e);
+      }
+
+      if (!partage) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nom;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+      setExportDone(true);
+    } catch (e) {
+      console.error('export-data', e);
+      setExportError(
+        "Le fichier n'a pas pu être préparé. Réessaie, et si ça bloque écris à contact@snappinbuddy.com : tes données te seront envoyées sous 30 jours."
+      );
+    }
+    setExporting(false);
+  }
+
   const emailMatches =
     myEmail.length > 0 && typedEmail.trim().toLowerCase() === myEmail.toLowerCase();
 
@@ -98,6 +161,34 @@ export default function LegalScreen({ theme, onBack }) {
             <p style={{ color: subText, fontSize: '13px', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{s.content}</p>
           </div>
         ))}
+
+        <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid ${cardBorder}` }}>
+          <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>📦 Télécharger mes données</p>
+          <p style={{ color: subText, fontSize: '13px', lineHeight: 1.6, marginBottom: '14px' }}>
+            Un fichier qui contient tout ce que l’app sait de toi : ton profil, tes projets, tes
+            candidatures, tes conversations, tes abonnements et la liste de tes photos.
+            Rien n’est supprimé, c’est une copie.
+          </p>
+          {exportError && (
+            <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>
+              {exportError}
+            </p>
+          )}
+          {exportDone && !exportError && (
+            <p style={{ color: '#2ECC71', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>
+              ✓ Ton fichier est prêt.
+            </p>
+          )}
+          <button onClick={exportData} disabled={exporting} style={{
+            width: '100%', padding: '12px', borderRadius: '20px',
+            border: `1px solid ${cardBorder}`,
+            background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+            color, fontSize: '13px', fontWeight: '700',
+            cursor: exporting ? 'default' : 'pointer',
+          }}>
+            {exporting ? 'Préparation...' : 'Télécharger mes données'}
+          </button>
+        </div>
 
         <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px', border: `1px solid rgba(255,77,77,0.2)` }}>
           <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '10px' }}>🗑 Supprimer mon compte</p>

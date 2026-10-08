@@ -3,6 +3,8 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    "That file is not a photo. Choose an image.": "Ese archivo no es una foto. Elige una imagen.",
+    "This photo cannot be published: it was detected as sexual content, which the terms do not allow. If that is a mistake, write to contact@snappinbuddy.com.": "Esta foto no se puede publicar: se ha detectado como contenido sexual, que las condiciones no permiten. Si es un error, escribe a contact@snappinbuddy.com.",
     "Sorry, I won't be able to make it for this project after all. I hope you find someone!": "Lo siento, al final no voy a poder estar en este proyecto. ¡Espero que encuentres a alguien!",
     "You are stepping back": "Te retiras",
     "Your spot opens up again and this message goes to the person. You can change it.": "Tu puesto vuelve a quedar libre y este mensaje le llega a la persona. Puedes cambiarlo.",
@@ -438,6 +440,8 @@ const TX = {
   },
 
   pt: {
+    "That file is not a photo. Choose an image.": "Esse arquivo não é uma foto. Escolha uma imagem.",
+    "This photo cannot be published: it was detected as sexual content, which the terms do not allow. If that is a mistake, write to contact@snappinbuddy.com.": "Esta foto não pode ser publicada: ela foi detectada como conteúdo sexual, que os termos não permitem. Se for um erro, escreva para contact@snappinbuddy.com.",
     "Sorry, I won't be able to make it for this project after all. I hope you find someone!": "Desculpa, no fim não vou conseguir estar neste projeto. Espero que encontre alguém!",
     "You are stepping back": "Você está se retirando",
     "Your spot opens up again and this message goes to the person. You can change it.": "Sua vaga fica livre de novo e esta mensagem vai para a pessoa. Você pode alterá-la.",
@@ -873,6 +877,8 @@ const TX = {
   },
 
   de: {
+    "That file is not a photo. Choose an image.": "Diese Datei ist kein Foto. Wähle ein Bild.",
+    "This photo cannot be published: it was detected as sexual content, which the terms do not allow. If that is a mistake, write to contact@snappinbuddy.com.": "Dieses Foto kann nicht veröffentlicht werden: es wurde als sexueller Inhalt erkannt, den die Nutzungsbedingungen nicht erlauben. Wenn das ein Fehler ist, schreib an contact@snappinbuddy.com.",
     "Sorry, I won't be able to make it for this project after all. I hope you find someone!": "Sorry, ich kann bei diesem Projekt doch nicht dabei sein. Ich hoffe, du findest jemanden!",
     "You are stepping back": "Du ziehst dich zurück",
     "Your spot opens up again and this message goes to the person. You can change it.": "Dein Platz wird wieder frei, und diese Nachricht geht an die Person. Du kannst sie ändern.",
@@ -1308,6 +1314,8 @@ const TX = {
   },
 
   it: {
+    "That file is not a photo. Choose an image.": "Questo file non è una foto. Scegli un'immagine.",
+    "This photo cannot be published: it was detected as sexual content, which the terms do not allow. If that is a mistake, write to contact@snappinbuddy.com.": "Questa foto non può essere pubblicata: è stata rilevata come contenuto sessuale, che i termini non consentono. Se è un errore, scrivi a contact@snappinbuddy.com.",
     "Sorry, I won't be able to make it for this project after all. I hope you find someone!": "Scusa, alla fine non riuscirò a esserci per questo progetto. Spero che trovi qualcuno!",
     "You are stepping back": "Ti ritiri",
     "Your spot opens up again and this message goes to the person. You can change it.": "Il tuo posto torna libero e questo messaggio arriva alla persona. Puoi modificarlo.",

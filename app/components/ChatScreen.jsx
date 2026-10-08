@@ -8,6 +8,7 @@ import { SkeletonChat } from './Skeleton';
 import { tap } from '../haptics';
 import ReportSheet from './ReportSheet';
 import { uploadChatImage } from '../image-upload';
+import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { hasBlockedMe } from '../blocks';
 
 // Au-delà, le champ cesse de grandir et défile : cinq lignes environ, pour que
@@ -238,7 +239,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
       notifyByEmail();
     } catch (err) {
       console.error('sendImage', err);
-      setImageError(tx("Couldn't send the photo. Try again.", "Envoi de la photo impossible. Réessaie."));
+      setImageError(messageEnvoi(err, tx("Couldn't send the photo. Try again.", "Envoi de la photo impossible. Réessaie.")));
     }
     setSendingImage(false);
   }
@@ -622,6 +623,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           ref={photoInputRef}
           type="file"
           accept="image/*"
+          onClick={prechauffeControle}
           onChange={sendImage}
           style={{ display: 'none' }}
         />

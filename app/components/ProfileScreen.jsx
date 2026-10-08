@@ -15,6 +15,7 @@ import Thumb from './Thumb';
 import { lookingChips } from '../looking-for';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
 import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET } from '../image-upload';
+import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 
@@ -272,10 +273,10 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
       if (previous) removeByPublicUrl(previous, AVATAR_BUCKET);
     } catch (err) {
       console.error('avatar', err);
-      setAvatarError(tx(
+      setAvatarError(messageEnvoi(err, tx(
         'The photo could not be saved. Try another one.',
         'La photo n’a pas pu être enregistrée. Essaie une autre photo.',
-      ));
+      )));
     }
     setUploading(false);
   }
@@ -414,7 +415,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
               {uploading ? '...' : '✏️'}
             </div>
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onClick={prechauffeControle} onChange={handleAvatarUpload} />
           {avatarError && (
             <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginBottom: '8px' }}>{avatarError}</p>
           )}

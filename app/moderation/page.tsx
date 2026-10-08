@@ -31,6 +31,16 @@ type Profile = {
   avatar_url: string | null; portfolio_urls: string[] | null;
   hidden: boolean | null; suspended_at: string | null;
 };
+// Une photo refusée par le contrôle automatique, à l'envoi. Ce n'est pas un
+// signalement : rien n'est arrivé dans le stockage, et personne ne s'est
+// plaint. Ce qui compte ici, c'est la répétition.
+type Block = {
+  id: number;
+  user_id: string;
+  context: string;
+  scores: Record<string, number> | null;
+  created_at: string;
+};
 type Message = { id: string; content: string | null; image_url: string | null; deleted: boolean | null };
 type Offer = { id: string; title: string | null; description: string | null; status: string | null };
 
@@ -41,6 +51,13 @@ const REASONS: Record<string, string> = {
   harcelement: 'Harcèlement',
   illegal: 'Contenu illégal',
   autre: 'Autre',
+};
+
+const CONTEXTES: Record<string, string> = {
+  avatar: 'photo de profil',
+  portfolio: 'portfolio',
+  chat: 'conversation',
+  autre: 'ailleurs',
 };
 
 const dim = { color: 'rgba(255,255,255,0.5)', fontSize: 13 } as const;
@@ -70,6 +87,7 @@ export default function ModerationPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading');
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [busy, setBusy] = useState('');
@@ -102,6 +120,7 @@ export default function ModerationPage() {
       setProfiles((body.profiles || []) as Profile[]);
       setMessages((body.messages || []) as Message[]);
       setOffers((body.offers || []) as Offer[]);
+      setBlocks((body.blocks || []) as Block[]);
       setState('ok');
     })();
     return () => { alive = false; };
@@ -132,6 +151,18 @@ export default function ModerationPage() {
   const shown = onlyOpen ? reports.filter(r => r.status === 'open') : reports;
   const openCount = reports.filter(r => r.status === 'open').length;
 
+  // Les refus regroupés par personne : une photo refusée est un accident,
+  // cinq en une soirée est un comportement. Seul le second mérite un geste.
+  const parPersonne = new Map<string, { n: number; dernier: string; ou: string[] }>();
+  for (const b of blocks) {
+    const g = parPersonne.get(b.user_id) || { n: 0, dernier: b.created_at, ou: [] };
+    g.n += 1;
+    if (b.created_at > g.dernier) g.dernier = b.created_at;
+    if (!g.ou.includes(b.context)) g.ou.push(b.context);
+    parPersonne.set(b.user_id, g);
+  }
+  const refus = [...parPersonne.entries()].sort((a, b) => b[1].n - a[1].n);
+
   return (
     <Shell>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -143,7 +174,7 @@ export default function ModerationPage() {
         </button>
       </div>
 
-      {shown.length === 0 && <p style={dim}>Rien à traiter. 🎉</p>}
+      {shown.length === 0 && refus.length === 0 && <p style={dim}>Rien à traiter. 🎉</p>}
 
       {shown.map(r => {
         const target = profiles.find(p => p.user_id === r.target_user_id);
@@ -281,6 +312,62 @@ export default function ModerationPage() {
           </div>
         );
       })}
+
+      {refus.length > 0 && (
+        <>
+          <p style={{ fontWeight: 900, fontSize: 16, margin: '28px 0 6px' }}>Photos refusées à l’envoi</p>
+          <p style={{ ...dim, fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
+            Le contrôle automatique a refusé ces photos dans le téléphone : aucune n’est arrivée
+            dans le stockage, il n’y a donc rien à retirer. Ce qui se regarde ici, c’est le nombre.
+          </p>
+
+          {refus.map(([userId, g]) => {
+            const p = profiles.find(x => x.user_id === userId);
+            const k = (a: string) => 'b:' + userId + ':' + a;
+            return (
+              <div key={userId} style={card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontWeight: 800, fontSize: 13 }}>
+                    🚫 {g.n} photo{g.n > 1 ? 's' : ''} refusée{g.n > 1 ? 's' : ''}
+                  </span>
+                  <span style={{ ...dim, fontSize: 11, whiteSpace: 'nowrap' }}>
+                    {new Date(g.dernier).toLocaleDateString('fr-FR')}
+                  </span>
+                </div>
+                <p style={{ ...dim, fontSize: 12, marginBottom: 10 }}>
+                  <b style={{ color: '#fff' }}>{p?.username || userId}</b>
+                  {p?.handle ? ' ' + p.handle : ''}
+                  {p?.hidden ? ' · masqué' : ''}
+                  {p?.suspended_at ? ' · SUSPENDU' : ''}
+                  <br />
+                  Depuis : {g.ou.map(c => CONTEXTES[c] || c).join(', ')}
+                </p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button
+                    disabled={!!busy}
+                    onClick={() => act({ action: p?.hidden ? 'show_profile' : 'hide_profile', targetUserId: userId }, k('hp'))}
+                    style={ghost}
+                  >
+                    {p?.hidden ? 'Réafficher le profil' : 'Masquer le profil'}
+                  </button>
+                  <button
+                    disabled={!!busy}
+                    onClick={() => act(
+                      p?.suspended_at
+                        ? { action: 'unsuspend', targetUserId: userId }
+                        : { action: 'suspend', targetUserId: userId, reason: 'Envoi répété de contenus sexuels' },
+                      k('su'),
+                    )}
+                    style={danger}
+                  >
+                    {p?.suspended_at ? 'Lever la suspension' : 'Suspendre le compte'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
     </Shell>
   );
 }

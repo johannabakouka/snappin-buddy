@@ -326,6 +326,31 @@ export function slotFreedMail(to: string, offerTitle: string, roleLabel: string,
   };
 }
 
+/**
+ * « Quelqu'un insiste. »
+ *
+ * Le contrôle automatique refuse les photos sur l'appareil, donc rien n'arrive
+ * dans le stockage et il n'y a rien à retirer. Reste à être prévenu quand la
+ * même personne réessaie plusieurs fois : c'est ce signal-là qui mérite un
+ * regard humain.
+ */
+export function uploadBlockedMail(
+  to: string,
+  who: { id: string; username?: string; handle?: string; count: number; contexte: string },
+): Mail {
+  const nom = escapeHtml(who.username || who.id);
+  return {
+    to,
+    subject: `🚫 Photos refusées · ${who.username || who.id}`.slice(0, 120),
+    titleFr: 'Plusieurs photos refusées par le contrôle automatique',
+    bodyFr: `<b>${nom}</b> (@${escapeHtml(who.handle)}, id ${escapeHtml(who.id)}) a vu ` +
+      `<b>${who.count}</b> photos refusées en 24 heures, la dernière sur « ${escapeHtml(who.contexte)} ».<br><br>` +
+      'Aucune de ces photos n’est arrivée dans le stockage. Le détail est dans l’écran de modération.',
+    titleEn: 'Several photos blocked by the automatic check',
+    bodyEn: 'See details above.',
+  };
+}
+
 export function reportMail(to: string, reporterId: string, reported: { id: string; username?: string; handle?: string }, reason: string): Mail {
   return {
     to,

@@ -13,6 +13,7 @@ import ProfileShareCard from './ProfileShareCard';
 import { blockUser, unblockUser } from '../blocks';
 import { cleanUrl, prettyUrl } from '../links';
 import { uploadProfileImage, AVATAR_BUCKET } from '../image-upload';
+import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { withAt } from '../handles';
 
 function getVideoEmbed(url) {
@@ -178,10 +179,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
       setPhotoJustAdded(true);
     } catch (err) {
       console.error('avatar', err);
-      setNudgeError(tx(
+      setNudgeError(messageEnvoi(err, tx(
         'The photo could not be saved. Try another one.',
         'La photo n’a pas pu être enregistrée. Essaie une autre photo.',
-      ));
+      )));
     }
     setNudgeBusy(false);
   }
@@ -519,7 +520,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
                 >
                   {nudgeBusy ? tx('Saving...', 'Sauvegarde...') : tx('Add my photo', 'Ajouter ma photo')}
                 </button>
-                <input ref={nudgeInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={addMyPhoto} />
+                <input ref={nudgeInputRef} type="file" accept="image/*" style={{ display: 'none' }} onClick={prechauffeControle} onChange={addMyPhoto} />
               </div>
             )}
             {photoJustAdded && (
