@@ -92,6 +92,7 @@ export default function ModerationPage() {
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
+  const [backfillMsg, setBackfillMsg] = useState('');
 
   const call = useCallback(async (payload: Record<string, unknown>) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -125,6 +126,32 @@ export default function ModerationPage() {
     })();
     return () => { alive = false; };
   }, [call, tick]);
+
+  /**
+   * Remplir les villes et les pays manquants, sans attendre la tâche de 9 h.
+   *
+   * Utile le jour où une colonne de lieu vient d'être créée : elle est alors
+   * vide pour tous les profils et tous les projets déjà en base, donc la
+   * recherche par pays ne trouve rien du tout. Un clic, et elle fonctionne.
+   */
+  async function runBackfill() {
+    setBusy('backfill');
+    setBackfillMsg('');
+    const { status, body } = await call({ action: 'backfill' });
+    setBusy('');
+    if (status !== 200) {
+      setBackfillMsg(`Échec (${status}). Réessaie.`);
+      return;
+    }
+    const b = body as Record<string, number>;
+    setBackfillMsg(
+      `${b.remplis ?? 0} profil(s) complété(s) sur ${b.candidats ?? 0} à vérifier · ` +
+      `${b.projetsRemplis ?? 0} projet(s) sur ${b.projetsCandidats ?? 0}.` +
+      ((b.candidats ?? 0) >= 500 || (b.projetsCandidats ?? 0) >= 500
+        ? ' Il en reste : relance pour la suite.'
+        : '')
+    );
+  }
 
   async function act(payload: Record<string, unknown>, key: string) {
     setBusy(key);
@@ -171,6 +198,23 @@ export default function ModerationPage() {
         </p>
         <button onClick={() => setOnlyOpen(v => !v)} style={ghost}>
           {onlyOpen ? 'Tout voir' : 'En attente'}
+        </button>
+      </div>
+
+      {/* Entretien. Séparé des signalements : ce n'est pas de la modération,
+          c'est du rattrapage de données, et ça n'a pas à attendre 9 h. */}
+      <div style={card}>
+        <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 6 }}>🗺 Lieux manquants</p>
+        <p style={{ ...dim, fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>
+          Remplit la ville et le pays des profils et des projets qui n’en ont pas.
+          À lancer après l’ajout d’une colonne de lieu : sans ça, la recherche par
+          pays ne trouve rien tant que la tâche de 9 h n’est pas passée.
+        </p>
+        {backfillMsg && (
+          <p style={{ color: '#2ECC71', fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>{backfillMsg}</p>
+        )}
+        <button disabled={!!busy} onClick={runBackfill} style={ghost}>
+          {busy === 'backfill' ? 'En cours...' : 'Remplir maintenant'}
         </button>
       </div>
 

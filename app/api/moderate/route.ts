@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { ADMIN_EMAIL, getProfile, getUserEmail, requireUser, sanctionMail, sendMail, supabaseAdmin } from '../../lib/server';
+import { backfillCities } from '../../lib/backfill-cities';
 
 // La modération, réservée à l'adresse administratrice.
 //
@@ -21,7 +22,8 @@ type Action =
   | 'delete_message'
   | 'close_offer' | 'delete_offer'
   | 'suspend' | 'unsuspend'
-  | 'resolve' | 'dismiss';
+  | 'resolve' | 'dismiss'
+  | 'backfill';
 
 export async function POST(request: Request) {
   try {
@@ -88,6 +90,19 @@ export async function POST(request: Request) {
         messages: messages || [],
         offers: offers || [],
       });
+    }
+
+    // Remplir les lieux manquants, tout de suite.
+    //
+    // La tâche quotidienne le fait déjà, mais le jour où une colonne de lieu
+    // est créée elle est vide pour tout le monde, et attendre 9 h du matin
+    // pour que la recherche par pays commence à fonctionner n'a pas de sens.
+    // L'autre déclencheur, /api/backfill-cities, demande la clé CRON_SECRET
+    // dans un en-tête : impossible depuis un téléphone. Ici, être connectée
+    // avec le compte administrateur suffit.
+    if (action === 'backfill') {
+      const result = await backfillCities();
+      return Response.json({ ok: true, ...result });
     }
 
     const targetUserId = String(body.targetUserId || '');
