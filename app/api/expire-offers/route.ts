@@ -4,6 +4,7 @@ import { getProfile, getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } 
 import { isPast, pastReason, NO_DATE_DAYS } from '../../offers-life';
 import { notifyArrivals } from '../../lib/arrivals';
 import { backfillCities } from '../../lib/backfill-cities';
+import { closePendingAndNotify } from '../../lib/slots-server';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -54,6 +55,20 @@ export async function GET(request: Request) {
         .update({ status: 'closed' })
         .in('id', expired.map(o => o.id));
       if (closeError) throw closeError;
+
+      // Un projet qui expire laissait ses candidats en attente pour toujours.
+      // Ils sont prévenus comme pour une équipe au complet : le projet est
+      // clos, ce n'est pas un refus qui leur est adressé.
+      for (const o of expired) {
+        try {
+          await closePendingAndNotify({
+            id: String(o.id), user_id: o.user_id, title: o.title,
+            role_needed: null, slots: null, slots_filled: null, status: 'closed',
+          });
+        } catch (e) {
+          console.error('closePendingAndNotify', o.id, e);
+        }
+      }
     }
 
     let emailsSent = 0;

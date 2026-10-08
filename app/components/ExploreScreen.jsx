@@ -40,7 +40,7 @@ function getMatchScore(myStyles, theirStyles) {
   return mine.filter(s => theirs.includes(s)).length;
 }
 
-export default function ExploreScreen({ theme, active = true }) {
+export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) {
   const t = useT();
   const ROLES = useRoles();
   const UNIVERS = useUnivers();
@@ -50,6 +50,13 @@ export default function ExploreScreen({ theme, active = true }) {
   const [firstLoad, setFirstLoad] = useState(true);
   const [myProfile, setMyProfile] = useState(null);
   const [activeBuddy, setActiveBuddy] = useState(null);
+
+  // Rappui sur l'onglet Explorer : on referme le profil ouvert.
+  const [seenHome, setSeenHome] = useState(homeSignal);
+  if (homeSignal !== seenHome) {
+    setSeenHome(homeSignal);
+    setActiveBuddy(null);
+  }
   // Portfolio ouvert en plein écran : { photos, index }
   const [viewer, setViewer] = useState(null);
   const [filter, setFilter] = useState('match');

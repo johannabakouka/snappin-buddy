@@ -275,6 +275,57 @@ export function sanctionMail(to: string, kind: 'suspend' | 'unsuspend', reason: 
   };
 }
 
+/**
+ * « Ce projet a trouvé son équipe. »
+ *
+ * Envoyé une seule fois, aux candidats encore en attente le jour où le projet
+ * se remplit. Il ne parle pas d'eux et ne dit pas « refusé » : le projet est
+ * complet, c'est tout, et il y en a d'autres.
+ *
+ * Avant, ces gens n'étaient jamais prévenus de rien. Leur candidature restait
+ * en attente pour toujours, et ils attendaient une réponse qui ne venait pas.
+ */
+export function projectFilledMail(to: string, offerTitle: string, forUser?: string): Mail {
+  const o = escapeHtml(offerTitle);
+  const quoted = o ? ` <b>« ${o} »</b>` : '';
+  const quotedEn = o ? ` <b>“${o}”</b>` : '';
+  return {
+    to,
+    subject: o ? `Le projet « ${offerTitle} » a trouvé son équipe`.slice(0, 120) : 'Ce projet a trouvé son équipe',
+    titleFr: 'Ce projet a trouvé son équipe',
+    bodyFr: `Le projet${quoted} est complet, ta candidature n’est donc plus en attente.<br><br>` +
+      'Merci de t’être proposé. D’autres projets sont ouverts autour de toi en ce moment.',
+    titleEn: 'This project found its team',
+    bodyEn: `The project${quotedEn} is now full, so your application is no longer pending.<br><br>` +
+      'Thanks for putting yourself forward. Other projects are open near you right now.',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
+ * « Une place s'est libérée sur ton projet. »
+ * Pour le porteur, quand quelqu'un d'accepté se désiste.
+ */
+export function slotFreedMail(to: string, offerTitle: string, roleLabel: string, forUser?: string): Mail {
+  const o = escapeHtml(offerTitle);
+  const r = escapeHtml(roleLabel);
+  return {
+    to,
+    subject: o ? `Une place s’est libérée · ${offerTitle}`.slice(0, 120) : 'Une place s’est libérée',
+    titleFr: 'Une place s’est libérée',
+    bodyFr: `Quelqu’un s’est désisté sur ton projet${o ? ` <b>« ${o} »</b>` : ''}` +
+      `${r ? `, la place de <b>${r}</b> est de nouveau ouverte` : ''}.<br><br>` +
+      'Ton projet est revenu dans le fil, et les personnes qui avaient candidaté sont toujours dans ta liste.',
+    titleEn: 'A spot has opened up',
+    bodyEn: `Someone withdrew from your project${o ? ` <b>“${o}”</b>` : ''}` +
+      `${r ? `, so the <b>${r}</b> spot is open again` : ''}.<br><br>` +
+      'Your project is back in the feed, and everyone who applied is still on your list.',
+    cta: '',
+    forUser,
+  };
+}
+
 export function reportMail(to: string, reporterId: string, reported: { id: string; username?: string; handle?: string }, reason: string): Mail {
   return {
     to,

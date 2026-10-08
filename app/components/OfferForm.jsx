@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useT, useRoles, useUnivers } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { loadCities, searchCities } from '../cities';
+import { slotsOf, SLOT_MAX } from '../slots';
 
 const TITLE_MAX = 60;
 // 800 caractères, c'était une page blanche qui invitait au remplissage : on a
@@ -28,6 +29,16 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   const [offerRoles, setOfferRoles] = useState(
     editingOffer?.role_needed ? editingOffer.role_needed.split(', ').filter(Boolean) : []
   );
+  // Combien de personnes pour chaque rôle. Un projet peut chercher un
+  // photographe et trois modèles : sans ce nombre, l'app croyait qu'une seule
+  // personne suffisait par rôle et déclarait le projet complet trop tôt.
+  const [roleCounts, setRoleCounts] = useState(() => slotsOf(editingOffer || {}));
+
+  function setRoleCount(roleId, n) {
+    const value = Math.max(1, Math.min(SLOT_MAX, n));
+    setRoleCounts(prev => ({ ...prev, [roleId]: value }));
+  }
+
   const [offerStyles, setOfferStyles] = useState(
     editingOffer?.styles_needed ? editingOffer.styles_needed.split(', ').filter(Boolean) : []
   );
@@ -81,8 +92,23 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
     setShowCitySuggestions(false);
   }
 
+  const stepBtn = {
+    width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+    border: `1px solid ${inputBorder}`, background: 'transparent',
+    color: theme?.color, fontSize: '16px', lineHeight: 1, cursor: 'pointer',
+  };
+
   function toggleRole(roleId) {
-    setOfferRoles(prev => prev.includes(roleId) ? prev.filter(r => r !== roleId) : [...prev, roleId]);
+    setOfferRoles(prev => {
+      const has = prev.includes(roleId);
+      setRoleCounts(counts => {
+        const next = { ...counts };
+        if (has) delete next[roleId];
+        else if (!next[roleId]) next[roleId] = 1;
+        return next;
+      });
+      return has ? prev.filter(r => r !== roleId) : [...prev, roleId];
+    });
   }
 
   function toggleStyle(s) {
@@ -104,6 +130,9 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
       title: offerTitle,
       description: offerDesc,
       role_needed: offerRoles.join(', '),
+      // Seulement les rôles encore cochés : un rôle retiré ne doit pas laisser
+      // sa place derrière lui.
+      slots: Object.fromEntries(offerRoles.map(r => [r, roleCounts[r] || 1])),
       styles_needed: stylesToSave.join(', '),
       zone: offerZone,
       date: dateFlexible ? '' : offerDate,
@@ -120,7 +149,11 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
-      <div style={{ padding: '20px 16px 100px' }}>
+      {/* La marge qui écarte la barre d'état. Sans elle, l'en-tête passait
+          sous l'heure et l'encoche : le titre se superposait à l'horloge et la
+          flèche retour devenait inatteignable. Tous les autres écrans posés
+          par-dessus l'app l'avaient, celui-ci était le seul à l'oublier. */}
+      <div style={{ padding: `calc(env(safe-area-inset-top) + 20px) 16px calc(100px + env(safe-area-inset-bottom))` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button onClick={onClose} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color: theme?.color, fontSize: '20px', cursor: 'pointer' }}>←</button>
           <h2 style={{ fontSize: '18px', fontWeight: '800', color: theme?.color }}>
@@ -179,6 +212,47 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           })}
         </div>
 
+        {/* Combien de personnes pour chaque rôle choisi. Le compteur
+            n'apparaît que pour les rôles cochés, pour ne pas encombrer la
+            liste de vingt métiers au-dessus. */}
+        {offerRoles.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ color: subText, fontSize: '11px', marginBottom: '8px' }}>
+              {tx('How many people for each?', 'Combien de personnes pour chacun ?')}
+            </p>
+            {offerRoles.map(id => {
+              const role = ROLES.find(x => x.id === id);
+              const n = roleCounts[id] || 1;
+              return (
+                <div key={id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: '10px', padding: '8px 12px', marginBottom: '6px',
+                  borderRadius: '12px', border: `1px solid ${inputBorder}`,
+                }}>
+                  <span style={{ color: theme?.color, fontSize: '13px', fontWeight: '700', minWidth: 0 }}>
+                    {role?.icon} {role?.label || id}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <button
+                      onClick={() => setRoleCount(id, n - 1)}
+                      disabled={n <= 1}
+                      aria-label={tx('One less', 'Un de moins')}
+                      style={{ ...stepBtn, opacity: n <= 1 ? 0.3 : 1 }}
+                    >−</button>
+                    <span style={{ color: theme?.color, fontSize: '14px', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{n}</span>
+                    <button
+                      onClick={() => setRoleCount(id, n + 1)}
+                      disabled={n >= SLOT_MAX}
+                      aria-label={tx('One more', 'Un de plus')}
+                      style={{ ...stepBtn, opacity: n >= SLOT_MAX ? 0.3 : 1 }}
+                    >+</button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <p style={{ color: subText, fontSize: '11px', marginBottom: '8px', fontWeight: '600' }}>
           TAGS{offerStyles.length > 0 && <span style={{ color: theme?.color, marginLeft: '6px' }}>({offerStyles.length})</span>}
         </p>
@@ -232,6 +306,10 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
           )}
         </p>
 
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+          <span style={{ flex: 1, color: subText, fontSize: '11px' }}>{tx('City', 'Ville')}</span>
+          <span style={{ flex: 1, color: subText, fontSize: '11px' }}>Date</span>
+        </div>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <input

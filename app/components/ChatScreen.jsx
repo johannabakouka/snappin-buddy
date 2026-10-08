@@ -9,6 +9,10 @@ import ReportSheet from './ReportSheet';
 import { uploadChatImage } from '../image-upload';
 import { hasBlockedMe } from '../blocks';
 
+// Au-delà, le champ cesse de grandir et défile : cinq lignes environ, pour que
+// la conversation reste visible au-dessus.
+const COMPOSER_MAX_PX = 120;
+
 export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   const t = useT();
   const [messages, setMessages] = useState([]);
@@ -44,6 +48,15 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   // recevoir n'importe quelle photo sans que le destinataire ait le moindre
   // bouton, alors que les CGU interdisent nommément ce contenu.
   const [reportingMsg, setReportingMsg] = useState(null);
+
+  // Hauteur du champ de saisie, recalculée à chaque frappe.
+  const inputRef = useRef(null);
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, COMPOSER_MAX_PX) + 'px';
+  }, [text]);
 
   // Appui long sur un message : menu Répondre / Copier / Supprimer
   const [actionMsg, setActionMsg] = useState(null);
@@ -602,7 +615,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           </p>
         </div>
       ) : (
-      <div style={{ padding: keyboard ? '12px 16px' : '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div style={{ padding: keyboard ? '12px 16px' : '12px 16px calc(90px + env(safe-area-inset-bottom))', borderTop: `1px solid ${border}`, display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
         {/* Le sélecteur natif déclenche lui-même la demande d'accès aux photos du téléphone. */}
         <input
           ref={photoInputRef}
@@ -625,13 +638,31 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
             {sendingImage ? '…' : '📷'}
           </button>
         )}
-        <input
+        {/* Une zone de texte qui grandit, et plus un champ d'une seule ligne.
+            Un message long défilait horizontalement : on écrivait trois phrases
+            sans plus voir le début de la première.
+            Entrée envoie toujours, comme avant. Maj+Entrée va à la ligne, pour
+            ceux qui écrivent au clavier. */}
+        <textarea
+          ref={inputRef}
           value={text}
+          rows={1}
           onChange={e => setText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && (editing ? saveEdit() : sendMessage())}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (editing) saveEdit(); else sendMessage();
+            }
+          }}
           onFocus={() => setTimeout(() => bottomRef.current?.scrollIntoView({ block: 'end' }), 300)}
           placeholder={tx('Message...', 'Message...')}
-          style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: `1px solid ${inputBorder}`, background: inputBg, color, fontSize: '14px', outline: 'none' }}
+          style={{
+            flex: 1, padding: '12px 16px', borderRadius: '20px',
+            border: `1px solid ${inputBorder}`, background: inputBg, color,
+            fontSize: '14px', lineHeight: 1.4, outline: 'none',
+            resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+            maxHeight: `${COMPOSER_MAX_PX}px`, overflowY: 'auto',
+          }}
         />
         <button onClick={() => (editing ? saveEdit() : sendMessage())} aria-label={editing ? tx('Save', 'Enregistrer') : tx('Send', 'Envoyer')} style={{ width: '42px', height: '42px', borderRadius: '50%', background: text.trim() ? color : (darkMode ? '#333' : '#CCC'), border: 'none', fontSize: '18px', cursor: 'pointer', color: bg, flexShrink: 0, transition: 'background 0.2s' }}>↑</button>
       </div>

@@ -107,7 +107,7 @@ function ProfileScore({ profile, isEn, darkMode, theme, subText, onEdit }) {
   );
 }
 
-export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode, onOpenMyProjects, onOpenMyApplications }) {
+export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMode, setDarkMode, onOpenMyProjects, onOpenMyApplications, homeSignal = 0 }) {
   const t = useT();
   const ROLES = useRoles();
   const [editing, setEditing] = useState(false);
@@ -121,6 +121,17 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const [signingOutAll, setSigningOutAll] = useState(false);
   // Liste des projets validés, ouverte depuis la carte du compteur
   const [showValidated, setShowValidated] = useState(false);
+
+  // Rappui sur l'onglet Profil : on referme les sous-écrans ouverts (compte,
+  // CGU, comptes bloqués) plutôt que d'y rester coincé.
+  const [seenHome, setSeenHome] = useState(homeSignal);
+  if (homeSignal !== seenHome) {
+    setSeenHome(homeSignal);
+    setShowLegal(false);
+    setShowAccount(false);
+    setShowBlocked(false);
+    setShowValidated(false);
+  }
   const [validatedList, setValidatedList] = useState(null);
   const [status, setStatus] = useState(profile?.status || 'dispo');
   const [uploading, setUploading] = useState(false);

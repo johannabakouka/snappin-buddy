@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import BackLink from '../../components/BackLink';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '../../lib/server';
@@ -116,11 +117,16 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     <main style={{ background: '#0A0A0A', color: 'white', minHeight: '100dvh' }}>
       <div style={{ maxWidth: '520px', margin: '0 auto', padding: 'calc(env(safe-area-inset-top) + 32px) 20px calc(40px + env(safe-area-inset-bottom))' }}>
 
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#F2E050', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="" width={28} height={28} style={{ borderRadius: '7px', display: 'block' }} />
-          Snappin&apos;Buddy
-        </Link>
+        {/* Retour, puis le logo. La page s'ouvre depuis une story : sans
+            retour, on ne pouvait que repartir vers l'accueil de l'app. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <BackLink />
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#F2E050', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="" width={28} height={28} style={{ borderRadius: '7px', display: 'block' }} />
+            Snappin&apos;Buddy
+          </Link>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '28px 0 20px' }}>
           <div style={{

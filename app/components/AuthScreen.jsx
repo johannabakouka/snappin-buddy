@@ -252,7 +252,10 @@ export default function AuthScreen({ onLogin, theme }) {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
           background: darkMode ? 'rgba(10,10,10,0.97)' : 'rgba(245,245,245,0.97)',
-          overflowY: 'auto', padding: '24px 16px 60px',
+          overflowY: 'auto',
+          // Même oubli que le formulaire de projet : sans cette marge, l'en-tête
+          // et sa flèche retour passaient sous la barre d'état.
+          padding: 'calc(env(safe-area-inset-top) + 24px) 16px calc(60px + env(safe-area-inset-bottom))',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
             <button onClick={() => setShowLegal(false)} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>

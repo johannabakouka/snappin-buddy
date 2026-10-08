@@ -15,7 +15,7 @@ import PullIndicator from './PullIndicator';
 import { SkeletonList } from './Skeleton';
 import { tap } from '../haptics';
 
-export default function MessagesScreen({ theme, active = true, setScreen }) {
+export default function MessagesScreen({ theme, active = true, setScreen, homeSignal = 0 }) {
   const t = useT();
   const isEn = isNotFrench();
   const [activeBuddy, setActiveBuddy] = useState(null);
@@ -35,6 +35,17 @@ export default function MessagesScreen({ theme, active = true, setScreen }) {
   const [following, setFollowing] = useState([]);
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState('messages');
+
+  // Rappui sur l'onglet Messages : on referme la conversation ouverte et on
+  // revient à la liste. Les écrans restent montés en arrière-plan, donc sans ça
+  // on retombait toujours sur la conversation laissée ouverte.
+  const [seenHome, setSeenHome] = useState(homeSignal);
+  if (homeSignal !== seenHome) {
+    setSeenHome(homeSignal);
+    setActiveBuddy(null);
+    setViewingBuddy(null);
+    setTab('messages');
+  }
   const darkMode = theme?.dark ?? true;
   const subText = darkMode ? '#666' : '#888';
   const avatarBg = darkMode ? '#2C2C2C' : '#CCC';

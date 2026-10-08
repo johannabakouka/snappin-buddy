@@ -120,6 +120,18 @@ export default function Home() {
   // Lien « mot de passe oublié » ouvert : on affiche l'écran de nouveau mot de passe
   const [recovery, setRecovery] = useState(false);
   // Incrémenté pour demander à l'écran Match d'afficher « Mes projets »
+  // Rappuyer sur l'onglet où l'on se trouve déjà doit ramener à sa racine :
+  // fermer la conversation ouverte, le projet ouvert, et remonter en haut.
+  // Avant, il ne se passait rien du tout, parce que l'écran était déjà le bon
+  // et que React n'avait rien à changer. Les écrans restent montés en arrière-
+  // plan, donc leur sous-état survit tant que personne ne le remet à zéro.
+  const [homeSignal, setHomeSignal] = useState(0);
+
+  function selectScreen(next: string) {
+    if (next === screen) setHomeSignal(n => n + 1);
+    else setScreen(next);
+  }
+
   const [myProjectsSignal, setMyProjectsSignal] = useState(0);
   // Même mécanique pour « Mes candidatures », qui ouvre l'onglet Match
   const [myApplicationsSignal, setMyApplicationsSignal] = useState(0);
@@ -325,7 +337,7 @@ export default function Home() {
     const active = screen === name;
     switch (name) {
       case 'map': return <MapScreen theme={theme} active={active} />;
-      case 'explore': return <ExploreScreen theme={theme} active={active} />;
+      case 'explore': return <ExploreScreen theme={theme} active={active} homeSignal={homeSignal} />;
       case 'match': return (
         <MatchScreen
           theme={theme}
@@ -333,6 +345,7 @@ export default function Home() {
           active={active}
           myProjectsSignal={myProjectsSignal}
           myApplicationsSignal={myApplicationsSignal}
+          homeSignal={homeSignal}
           sharedOfferId={sharedOfferId || ''}
           onSharedOfferSeen={() => {
             setSharedOfferId(null);
@@ -342,8 +355,8 @@ export default function Home() {
           }}
         />
       );
-      case 'messages': return <MessagesScreen theme={theme} active={active} setScreen={setScreen} />;
-      case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} onOpenMyApplications={openMyApplications} />;
+      case 'messages': return <MessagesScreen theme={theme} active={active} setScreen={setScreen} homeSignal={homeSignal} />;
+      case 'profile': return <ProfileScreen profile={profile} theme={theme} darkMode={darkMode} setDarkMode={setDarkMode} onProfileUpdate={refreshProfile} onOpenMyProjects={openMyProjects} onOpenMyApplications={openMyApplications} homeSignal={homeSignal} />;
       default: return null;
     }
   }
@@ -365,7 +378,7 @@ export default function Home() {
           </ErrorBoundary>
         </div>
       ))}
-      <Navbar screen={screen} setScreen={setScreen} theme={theme} />
+      <Navbar screen={screen} setScreen={selectScreen} theme={theme} />
 
       {/* Rencontre validée par scan du QR */}
       {scanSession && (

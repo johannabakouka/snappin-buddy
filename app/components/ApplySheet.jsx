@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { tx } from '../tx';
 import { APPLY_NOTE_MAX } from '../constants';
+import { freeRolesOf } from '../slots';
+import { useRoles } from '../i18n';
 
 // Le panneau qui s'ouvre quand on se propose pour un projet.
 //
@@ -14,20 +16,30 @@ import { APPLY_NOTE_MAX } from '../constants';
 // dans une langue qui n'est pas la leur, et ce sont justement les gens que
 // l'app essaie de mettre en relation.
 
-export default function ApplySheet({ offer, theme, onSend, onClose }) {
+export default function ApplySheet({ offer, theme, myRoles = '', onSend, onClose }) {
   const darkMode = theme?.dark ?? true;
   const bg = theme?.bg ?? '#0A0A0A';
   const color = theme?.color ?? 'white';
   const subText = darkMode ? '#888' : '#777';
   const border = darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
 
+  const ROLES = useRoles();
+  // Les places encore libres sur ce projet.
+  const libres = freeRolesOf(offer);
+  // Si une seule place correspond à son propre métier, elle est déjà choisie :
+  // la question ne se pose que quand il y a vraiment un choix à faire.
+  const mine = String(myRoles || '').split(',').map(r => r.trim()).filter(Boolean);
+  const evidentes = libres.filter(r => mine.includes(r));
+  const defaut = libres.length === 1 ? libres[0] : (evidentes.length === 1 ? evidentes[0] : '');
+
+  const [role, setRole] = useState(defaut);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function send() {
     if (busy) return;
     setBusy(true);
-    await onSend(note);
+    await onSend(note, role || defaut || libres[0] || '');
     setBusy(false);
   }
 
@@ -54,6 +66,36 @@ export default function ApplySheet({ offer, theme, onSend, onClose }) {
         <p style={{ color: subText, fontSize: '12px', lineHeight: 1.5, marginBottom: '14px' }}>
           {offer?.title}
         </p>
+
+        {/* Sur quelle place on se propose. Affiché seulement quand il y a
+            plusieurs places libres : sinon la réponse est évidente et la
+            question n'est qu'une friction de plus. */}
+        {libres.length > 1 && (
+          <>
+            <p style={{ color: subText, fontSize: '12px', marginBottom: '8px' }}>
+              {tx('You are applying as', 'Tu te proposes comme')}
+            </p>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              {libres.map(id => {
+                const r = ROLES.find(x => x.id === id);
+                const active = role === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setRole(id)}
+                    style={{
+                      padding: '8px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
+                      cursor: 'pointer', border: `1px solid ${active ? color : border}`,
+                      background: active ? color : 'transparent', color: active ? bg : subText,
+                    }}
+                  >
+                    {r?.icon} {r?.label || id}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <p style={{ color: subText, fontSize: '12px', lineHeight: 1.6, marginBottom: '8px' }}>
           {tx(
@@ -92,7 +134,7 @@ export default function ApplySheet({ offer, theme, onSend, onClose }) {
           </button>
           <button
             onClick={send}
-            disabled={busy}
+            disabled={busy || (libres.length > 1 && !role)}
             style={{
               flex: 2, padding: '12px', borderRadius: '22px', border: 'none',
               background: color, color: bg, fontSize: '13px', fontWeight: '800',
