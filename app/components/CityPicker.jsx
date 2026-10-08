@@ -2,28 +2,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT, getLang } from '../i18n';
 import { loadCities, searchCities, normalizeCity } from '../cities';
-
-function useCountryName() {
-  const [fmt] = useState(() => {
-    try {
-      return new Intl.DisplayNames([getLang()], { type: 'region' });
-    } catch {
-      return null;
-    }
-  });
-  return code => {
-    try {
-      return fmt?.of(code) || code;
-    } catch {
-      return code;
-    }
-  };
-}
+// Le nom des pays vivait ici, en double avec la recherche par pays d'Explorer
+// et du fil des projets. Un seul endroit maintenant, qui ne renvoie jamais le
+// code brut : « BR » affiché à côté d'une ville ressemble à un bug.
+import { countryName } from '../countries';
 
 export default function CityPicker({ theme, onSelect, autoFocus = true }) {
   const t = useT();
   const darkMode = theme?.dark ?? true;
-  const countryName = useCountryName();
   const inputRef = useRef(null);
   const [cities, setCities] = useState(null);
   const [error, setError] = useState(false);
@@ -90,7 +76,7 @@ export default function CityPicker({ theme, onSelect, autoFocus = true }) {
               }}
             >
               <span style={{ fontSize: '14px', fontWeight: '700' }}>📍 {c.name}</span>
-              <span style={{ fontSize: '12px', color: subText }}>{countryName(c.country)}</span>
+              <span style={{ fontSize: '12px', color: subText }}>{countryName(c.country, getLang())}</span>
             </button>
           ))}
         </div>

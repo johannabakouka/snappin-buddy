@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useT, useRoles, useUnivers } from '../i18n';
+import { useT, useRoles, useUnivers, getLang } from '../i18n';
 import { tx, isNotFrench } from '../tx';
-import { loadCities, searchCities } from '../cities';
+import { loadCities, searchCities, normalizeCity } from '../cities';
+import { countryName } from '../countries';
 import { slotsOf, SLOT_MAX } from '../slots';
 
 const TITLE_MAX = 60;
@@ -43,6 +44,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
     editingOffer?.styles_needed ? editingOffer.styles_needed.split(', ').filter(Boolean) : []
   );
   const [offerZone, setOfferZone] = useState(editingOffer?.zone || '');
+  const [offerCountry, setOfferCountry] = useState(editingOffer?.country || '');
   const [offerDate, setOfferDate] = useState(editingOffer?.date || '');
   // Une date, ou le fait assumé qu'il n'y en a pas encore.
   //
@@ -79,17 +81,40 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
 
   function handleCityChange(val) {
     setOfferZone(val);
+    // La ville tapée ne correspond plus à celle choisie : le pays retenu ne
+    // vaut plus rien, on le recalculera à l'enregistrement.
+    setOfferCountry('');
     if (val.length < 2) { setShowCitySuggestions(false); return; }
     if (!citiesAsked) setCitiesAsked(true);
     if (!cities) { setShowCitySuggestions(false); return; }
-    const found = searchCities(cities, val, 5).map(c => c.name);
+    // On garde l'objet ville entier, et plus seulement son nom : c'est lui qui
+    // porte le code du pays, sans lequel une recherche « Brésil » ne trouverait
+    // aucun projet publié à Rio.
+    const found = searchCities(cities, val, 5);
     setCitySuggestions(found);
     setShowCitySuggestions(found.length > 0);
   }
 
   function selectCity(city) {
-    setOfferZone(city);
+    setOfferZone(city.name);
+    setOfferCountry(city.country || '');
     setShowCitySuggestions(false);
+  }
+
+  /**
+   * Le pays à enregistrer avec le projet.
+   *
+   * Si la ville a été choisie dans la liste, le pays est déjà connu. Si elle a
+   * été tapée à la main, on la retrouve dans la liste par son nom. Et si on ne
+   * la retrouve pas, on n'enregistre rien : un pays faux serait pire que pas de
+   * pays du tout.
+   */
+  function countryToSave() {
+    if (offerCountry) return offerCountry;
+    if (!cities || !offerZone.trim()) return null;
+    const cible = normalizeCity(offerZone);
+    const trouvee = cities.find(c => c.keys.includes(cible));
+    return trouvee?.country || null;
   }
 
   const stepBtn = {
@@ -135,6 +160,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
       slots: Object.fromEntries(offerRoles.map(r => [r, roleCounts[r] || 1])),
       styles_needed: stylesToSave.join(', '),
       zone: offerZone,
+      country: countryToSave(),
       date: dateFlexible ? '' : offerDate,
       paid: offerPaid,
     });
@@ -327,15 +353,24 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
                 borderRadius: '12px', marginTop: '4px',
                 overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
               }}>
+                {/* Le pays est écrit à côté de la ville, et la clé le contient.
+                    Depuis que le pays compte pour la recherche, deux villes du
+                    même nom ne sont plus interchangeables : choisir Paris au
+                    Texas en croyant prendre Paris en France mettrait le projet
+                    dans le mauvais pays, et React se plaignait en plus de deux
+                    clés identiques. */}
                 {citySuggestions.map(city => (
-                  <div key={city} onMouseDown={() => selectCity(city)} style={{
+                  <div key={`${city.name}·${city.country}·${city.lat}`} onMouseDown={() => selectCity(city)} style={{
                     padding: '11px 14px', cursor: 'pointer', fontSize: '14px',
                     color: theme?.color, borderBottom: `1px solid ${inputBorder}`,
                   }}
                     onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    📍 {city}
+                    📍 {city.name}
+                    {countryName(city.country, getLang()) && (
+                      <span style={{ color: subText, fontSize: '12px' }}> · {countryName(city.country, getLang())}</span>
+                    )}
                   </div>
                 ))}
               </div>

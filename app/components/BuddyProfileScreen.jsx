@@ -11,6 +11,7 @@ import ChatScreen from './ChatScreen';
 import PhotoViewer from './PhotoViewer';
 import ProfileShareCard from './ProfileShareCard';
 import { blockUser, unblockUser } from '../blocks';
+import { loadFollowingIds, followUser, unfollowUser, onFollowsChanged } from '../follows';
 import { cleanUrl, prettyUrl } from '../links';
 import { uploadProfileImage, AVATAR_BUCKET } from '../image-upload';
 import { messageEnvoi, prechauffeControle } from '../lib/image-check';
@@ -93,6 +94,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
   const [relation, setRelation] = useState('loading');
   const [chatOpen, setChatOpen] = useState(false);
   const [me, setMe] = useState(null);
+  // Suivi : une liste privée, sans notification pour la personne suivie.
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [followError, setFollowError] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -110,6 +115,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
         .eq('blocked_id', buddy.user_id)
         .limit(1);
       if (alive && blockRows?.length) setBlocked(true);
+
+      const suivis = await loadFollowingIds(user.id);
+      if (alive) setIsFollowing(suivis.has(buddy.user_id));
+
       const { data } = await supabase.from('collabs')
         .select('sender_id, status')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${buddy.user_id}),and(sender_id.eq.${buddy.user_id},receiver_id.eq.${user.id})`);
@@ -121,6 +130,33 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
     });
     return () => { alive = false; };
   }, [buddy?.user_id]);
+
+  // Le même suivi peut être retiré depuis l'onglet Suivis pendant que ce profil
+  // est ouvert : le bouton doit suivre.
+  useEffect(() => onFollowsChanged(async () => {
+    if (!me?.id || !buddy?.user_id) return;
+    const suivis = await loadFollowingIds(me.id);
+    setIsFollowing(suivis.has(buddy.user_id));
+  }), [me?.id, buddy?.user_id]);
+
+  async function toggleFollow() {
+    if (!me?.id || !buddy?.user_id || followBusy) return;
+    const etait = isFollowing;
+    setFollowBusy(true);
+    setFollowError('');
+    setIsFollowing(!etait);
+    try {
+      if (etait) await unfollowUser(me.id, buddy.user_id);
+      else await followUser(me.id, buddy.user_id);
+    } catch (e) {
+      console.error('toggleFollow', e);
+      setIsFollowing(etait);
+      setFollowError(etait
+        ? tx("Couldn't unfollow. Try again.", "Le retrait du suivi a échoué. Réessaie.")
+        : tx("Couldn't follow. Try again.", "Le suivi a échoué. Réessaie."));
+    }
+    setFollowBusy(false);
+  }
 
   const styles = (buddy?.styles || '').split(',').map(s => s.trim()).filter(Boolean);
   const lookingFor = lookingChips(buddy?.looking_for);
@@ -542,6 +578,39 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
           <button onClick={() => setShowInput(true)} style={{ width: '100%', background: color, color: bg, border: 'none', borderRadius: '24px', padding: '14px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
             {tx('⚡ Propose a collab', '⚡ Proposer une création ensemble')}
           </button>
+        )}
+
+        {/* Suivre, sans rien proposer.
+            C'est le geste intermédiaire qui manquait : on arrive ici depuis la
+            carte, le travail de la personne plaît, mais on n'a pas de projet à
+            lui proposer aujourd'hui. Sans ce bouton, il fallait tout de suite
+            écrire ou repartir et perdre la personne. Masqué en aperçu : on ne
+            se suit pas soi-même. */}
+        {!preview && !blocked && (
+          <div style={{ marginTop: '10px' }}>
+            <button
+              onClick={toggleFollow}
+              disabled={followBusy}
+              style={{
+                width: '100%', borderRadius: '24px', padding: '12px',
+                fontSize: '13px', fontWeight: '700',
+                cursor: followBusy ? 'default' : 'pointer',
+                border: `1px solid ${isFollowing ? tagBorder : (darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')}`,
+                background: 'transparent',
+                color: isFollowing ? subText : color,
+              }}
+            >
+              {isFollowing ? tx('🔖 Following ✓', '🔖 Suivi ✓') : tx('🔖 Follow', '🔖 Suivre')}
+            </button>
+            <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginTop: '6px', lineHeight: 1.5 }}>
+              {isFollowing
+                ? tx('In your private list, under Following.', 'Dans ta liste privée, onglet Suivis.')
+                : tx('A private list, to keep them in mind. They are not notified.', 'Une liste privée, pour la garder en tête. Elle n’en est pas prévenue.')}
+            </p>
+            {followError && (
+              <p style={{ color: '#FF4D4D', fontSize: '12px', lineHeight: 1.5, marginTop: '6px', textAlign: 'center' }}>{followError}</p>
+            )}
+          </div>
         )}
 
         {/* Blocage. Séparé du signalement : signaler s'adresse à la modération,

@@ -15,6 +15,7 @@ import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 import { SkeletonList } from './Skeleton';
 import { tap } from '../haptics';
+import { followUser, unfollowUser, onFollowsChanged } from '../follows';
 
 export default function MessagesScreen({ theme, active = true, setScreen, homeSignal = 0 }) {
   const t = useT();
@@ -200,6 +201,10 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
 
   // Le bouton change d'état avant la réponse du serveur. Sans ce retour en
   // arrière, on afficherait « Suivi » pour quelqu'un qu'on ne suit pas.
+  //
+  // L'écriture passe par le module partagé : c'est lui qui prévient les autres
+  // écrans, et sans ça un suivi fait ici n'apparaissait pas dans Explorer tant
+  // qu'on n'avait pas rechargé l'app.
   async function toggleFollow(targetUserId) {
     if (!user) return;
     setActionError('');
@@ -208,17 +213,19 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
     const snapshot = following;
     if (isF) {
       setFollowing(prev => prev.filter(f => f.user_id !== targetUserId));
-      const { error } = await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', targetUserId);
-      if (error) {
-        console.error('unfollow', error);
+      try {
+        await unfollowUser(user.id, targetUserId);
+      } catch (e) {
+        console.error('unfollow', e);
         setFollowing(snapshot);
         setActionError(tx("Couldn't unfollow. Try again.", "Le retrait du suivi a échoué. Réessaie."));
       }
       return;
     }
-    const { error } = await supabase.from('follows').insert({ follower_id: user.id, following_id: targetUserId });
-    if (error) {
-      console.error('follow', error);
+    try {
+      await followUser(user.id, targetUserId);
+    } catch (e) {
+      console.error('follow', e);
       setActionError(tx("Couldn't follow. Try again.", "Le suivi a échoué. Réessaie."));
       return;
     }
@@ -229,6 +236,12 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
   }
 
   const isFollowingUser = (uid) => following.some(f => f.user_id === uid);
+
+  // Un suivi ajouté depuis Explorer doit apparaître dans l'onglet Suivis sans
+  // qu'on ait à recharger l'app.
+  useEffect(() => onFollowsChanged(() => {
+    if (user?.id) loadFollowing(user.id);
+  }), [user?.id]);
 
   // Tirer vers le bas pour voir les nouveaux messages sans rouvrir l'app.
   const scrollRef = useRef(null);

@@ -5,25 +5,20 @@ import BuddyProfileScreen from './BuddyProfileScreen';
 import PhotoViewer from './PhotoViewer';
 import Header from './Header';
 import { hasRole, roleIcons, roleLabels } from '../constants';
-import { useT, useRoles, useUnivers } from '../i18n';
+import { useT, useRoles, useUnivers, getLang } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+// Recherche : on ignore les accents, les majuscules et le @ du handle, pour que
+// « sofia », « Sofía » et « @sofia » trouvent la même personne. La règle est
+// partagée avec le fil des projets.
+import { normalizeSearch } from '../search';
+import { countryMatches, countryName } from '../countries';
+import { loadFollowingIds, followUser, unfollowUser, onFollowsChanged } from '../follows';
 import Thumb from './Thumb';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
 import { SkeletonList } from './Skeleton';
-
-// Recherche : on ignore les accents, les majuscules et le @ du handle,
-// pour que « sofia », « Sofía » et « @sofia » trouvent la même personne.
-function normalizeSearch(str) {
-  return String(str || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/^@/, '')
-    .trim();
-}
 
 /** 2 = le pseudo commence par la recherche, 1 = il la contient, 0 = aucun rapport. */
 function searchRank(profile, q) {
@@ -40,6 +35,14 @@ function getMatchScore(myStyles, theirStyles) {
   const theirs = theirStyles.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
   return mine.filter(s => theirs.includes(s)).length;
 }
+
+// Les colonnes réellement affichées par cet écran.
+//
+// Il demandait tout (`select('*')`), donc chaque ouverture d'Explorer
+// téléchargeait la position, les dates, les champs de modération et les
+// réglages de tous les profils pour afficher un nom et une photo. C'est le même
+// gaspillage que celui qui avait fait exploser le quota sur la carte.
+const EXPLORE_COLUMNS = 'id, user_id, username, handle, avatar_url, role, role_other, styles, zone, city, country, status, hidden, portfolio_urls';
 
 export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) {
   const t = useT();
@@ -64,6 +67,12 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
   const [roleFilter, setRoleFilter] = useState(null);
   const [universFilter, setUniversFilter] = useState(null);
   const [search, setSearch] = useState('');
+  // Les créatifs que je suis. L'onglet Suivis conseillait de les suivre
+  // « depuis Explorer », où le bouton n'existait pas : on ne pouvait donc
+  // suivre que des gens déjà suivis.
+  const [followingIds, setFollowingIds] = useState(new Set());
+  const [followBusy, setFollowBusy] = useState(null);
+  const [followError, setFollowError] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const scrollRef = useRef(null);
@@ -83,8 +92,9 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
       const { data: me } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       setMyProfile(me);
     }
-    const { data } = await supabase.from('profiles').select('*');
+    const { data } = await supabase.from('profiles').select(EXPLORE_COLUMNS);
     const blocked = await loadBlockedIds(user?.id);
+    if (user?.id) setFollowingIds(await loadFollowingIds(user.id));
     // Mode invisible : hors de la carte et hors d'Explorer. Son propre profil
     // reste affiché, sinon on croirait son compte cassé.
     if (data) setProfiles(data.filter(p => (
@@ -100,6 +110,67 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
   }, []);
 
   useEffect(() => onBlocksChanged(() => { Promise.resolve().then(loadData); }), []);
+
+  // Un suivi ajouté ailleurs (l'onglet Suivis, le profil d'un créatif) doit
+  // s'afficher ici sans recharger la liste entière.
+  useEffect(() => onFollowsChanged(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) setFollowingIds(await loadFollowingIds(user.id));
+  }), []);
+
+  /**
+   * Suivre, ou ne plus suivre.
+   *
+   * Le bouton change d'état avant la réponse du serveur, et revient en arrière
+   * si l'écriture échoue : un bouton qui met une seconde à réagir donne
+   * l'impression de n'avoir pas été pressé.
+   */
+  async function toggleFollow(targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || followBusy) return;
+    const suivi = followingIds.has(targetId);
+    setFollowBusy(targetId);
+    setFollowError('');
+    setFollowingIds(prev => {
+      const next = new Set(prev);
+      if (suivi) next.delete(targetId); else next.add(targetId);
+      return next;
+    });
+    try {
+      if (suivi) await unfollowUser(user.id, targetId);
+      else await followUser(user.id, targetId);
+    } catch (e) {
+      console.error('toggleFollow', e);
+      setFollowingIds(prev => {
+        const next = new Set(prev);
+        if (suivi) next.add(targetId); else next.delete(targetId);
+        return next;
+      });
+      setFollowError(suivi
+        ? tx("Couldn't unfollow. Try again.", "Le retrait du suivi a échoué. Réessaie.")
+        : tx("Couldn't follow. Try again.", "Le suivi a échoué. Réessaie."));
+    }
+    setFollowBusy(null);
+  }
+
+  /**
+   * Le lieu d'un profil, en une ligne.
+   *
+   * La ville et la zone portent souvent le même nom, et « Paris · Paris »
+   * s'affichait. Le pays n'est ajouté que s'il n'est pas le nôtre.
+   */
+  function lieuLabel(p) {
+    const parts = [];
+    for (const v of [p.city, p.zone]) {
+      const propre = String(v || '').trim();
+      if (propre && !parts.some(x => normalizeSearch(x) === normalizeSearch(propre))) parts.push(propre);
+    }
+    if (p.country && p.country !== myProfile?.country) {
+      const nom = countryName(p.country, getLang());
+      if (nom) parts.push(nom);
+    }
+    return parts.join(' · ');
+  }
 
   // Retour sur l'onglet : mise à jour silencieuse des profils
   const wasActive = useRef(active);
@@ -117,7 +188,10 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
     if (q.length >= 1) {
       const filtered = profiles
         .filter(p => myProfile ? p.user_id !== myProfile.user_id : true)
-        .map(p => ({ p, rank: searchRank(p, q) }))
+        .map(p => ({
+          p,
+          rank: searchRank(p, q) || (countryMatches(p.country, val, getLang()) ? 0.5 : 0),
+        }))
         .filter(x => x.rank > 0)
         .sort((a, b) => b.rank - a.rank)
         .slice(0, 5)
@@ -153,7 +227,12 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
         rank: searchRank(p, q)
           || ((normalizeSearch(p.role).includes(q)
             || normalizeSearch(p.city).includes(q)
-            || normalizeSearch(p.zone).includes(q)) ? 0.5 : 0),
+            || normalizeSearch(p.zone).includes(q)
+            // Le pays n'est pas écrit sur le profil, il est déduit de la ville,
+            // et son nom dépend de la langue du téléphone : il se compare donc
+            // à part. Sans ça, « Brésil » ne trouvait personne alors que dix
+            // créatifs étaient à Rio.
+            || countryMatches(p.country, search, getLang())) ? 0.5 : 0),
       }))
       .filter(x => x.rank > 0)
       .sort((a, b) => b.rank - a.rank)
@@ -238,7 +317,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
             onChange={e => handleSearchChange(e.target.value)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             onFocus={() => search.length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder={tx('🔍 Search a @handle, a name, a role, a city...', '🔍 Chercher un @pseudo, un nom, un rôle, une ville...')}
+            placeholder={tx('🔍 Search a @handle, a name, a role, a city, a country...', '🔍 Chercher un @pseudo, un nom, un rôle, une ville, un pays...')}
             autoCapitalize="none"
             autoCorrect="off"
             style={{
@@ -338,6 +417,10 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
           {!search.trim() && universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
         </p>
 
+        {followError && (
+          <p style={{ color: '#FF4D4D', fontSize: '12px', marginBottom: '12px' }}>{followError}</p>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {displayed.map(p => {
             const score = getMatchScore(myProfile?.styles, p.styles);
@@ -374,9 +457,13 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                     {/* Le lieu était introuvable sans ouvrir le profil, alors
                         que c'est la première question qu'on se pose dans une
                         liste de créatifs « autour de toi ». */}
-                    {(p.city || p.zone) && (
+                    {(p.city || p.zone || p.country) && (
                       <div style={{ color: subText, fontSize: '12px', marginTop: '2px' }}>
-                        📍 {[p.city, p.zone].filter(Boolean).join(' · ')}
+                        {/* Le pays n'apparaît que s'il n'est pas le nôtre :
+                            « Paris · France » vu de France est du bruit, alors
+                            que « Rio de Janeiro · Brésil » est précisément ce
+                            qu'on veut savoir. */}
+                        📍 {lieuLabel(p)}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
@@ -403,9 +490,28 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                       })}
                     </div>
                   </div>
-                  <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
-                    {tx('View', 'Voir')}
-                  </button>
+                  {/* Deux actions, l'une sous l'autre : ouvrir le profil, et
+                      mettre la personne de côté sans quitter la liste. Le bouton
+                      Suivre manquait ici, alors que l'onglet Suivis disait
+                      d'aller suivre des créatifs « depuis Explorer ». */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                    <button onClick={() => setActiveBuddy(p)} style={{ background: theme?.color, color: theme?.bg, border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                      {tx('View', 'Voir')}
+                    </button>
+                    <button
+                      onClick={() => toggleFollow(p.user_id)}
+                      disabled={followBusy === p.user_id}
+                      style={{
+                        padding: '7px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                        cursor: followBusy === p.user_id ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                        border: `1px solid ${followingIds.has(p.user_id) ? cardBorder : (darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')}`,
+                        background: 'transparent',
+                        color: followingIds.has(p.user_id) ? subText : theme?.color,
+                      }}
+                    >
+                      {followingIds.has(p.user_id) ? tx('Following ✓', 'Suivi ✓') : tx('Follow', 'Suivre')}
+                    </button>
+                  </div>
                 </div>
 
                 {portfolio.length > 0 && (

@@ -13,7 +13,7 @@ import { nearestCity } from '../cities';
 // réseau plutôt que depuis le disque : les fichiers de public/ ne sont pas
 // forcément présents à côté du code une fois déployé.
 
-type Row = { user_id: string; lat: number; lng: number };
+type Row = { user_id: string; lat: number; lng: number; city: string | null; country: string | null };
 type City = { name: string; country: string; lat: number; lng: number };
 
 export type BackfillResult = { candidats: number; remplis: number };
@@ -25,10 +25,13 @@ const MAX_PAR_PASSAGE = 500;
 export async function backfillCities(): Promise<BackfillResult> {
   const db = supabaseAdmin();
 
+  // Ville manquante OU pays manquant : le pays est arrivé après la ville, donc
+  // les profils déjà remplis n'en ont pas et resteraient introuvables par une
+  // recherche de pays.
   const { data, error } = await db
     .from('profiles')
-    .select('user_id, lat, lng')
-    .is('city', null)
+    .select('user_id, lat, lng, city, country')
+    .or('city.is.null,country.is.null')
     .not('lat', 'is', null)
     .not('lng', 'is', null)
     .limit(MAX_PAR_PASSAGE);
@@ -43,16 +46,21 @@ export async function backfillCities(): Promise<BackfillResult> {
 
   let remplis = 0;
   for (const row of rows) {
-    const city = nearestCity(cities, row.lat, row.lng)?.name;
+    const found = nearestCity(cities, row.lat, row.lng);
     // Pas de ville assez proche : on laisse vide plutôt que d'écrire un lieu faux.
-    if (!city) continue;
-    const { error: upError } = await db
-      .from('profiles')
-      .update({ city })
-      .eq('user_id', row.user_id)
-      // Quelqu'un a pu enregistrer sa ville entre la lecture et ici : on ne
-      // vient pas écraser ce qu'il a choisi lui-même.
-      .is('city', null);
+    if (!found?.name) continue;
+
+    // On n'écrit que ce qui manque. Quelqu'un a pu choisir sa ville à la main
+    // entre la lecture et ici, et son choix doit gagner sur notre calcul.
+    const champs: { city?: string; country?: string } = {};
+    if (!row.city) champs.city = found.name;
+    if (!row.country && found.country) champs.country = found.country;
+    if (Object.keys(champs).length === 0) continue;
+
+    let requete = db.from('profiles').update(champs).eq('user_id', row.user_id);
+    if (champs.city) requete = requete.is('city', null);
+    if (champs.country) requete = requete.is('country', null);
+    const { error: upError } = await requete;
     if (upError) {
       console.error('backfillCities', row.user_id, upError);
       continue;

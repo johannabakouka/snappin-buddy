@@ -8,8 +8,11 @@ import BuddyProfileScreen from './BuddyProfileScreen';
 import PhotoViewer from './PhotoViewer';
 import ShareCard from './ShareCard';
 import ChatScreen from './ChatScreen';
-import { useT, useRoles, useUnivers } from '../i18n';
+import { useT, useRoles, useUnivers, getLang } from '../i18n';
 import { tx, isNotFrench } from '../tx';
+import { normalizeSearch } from '../search';
+import { countryMatches, countryName } from '../countries';
+import { loadSavedOfferIds, saveOffer, unsaveOffer, onSavedChanged } from '../saved-offers';
 import Thumb from './Thumb';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
@@ -112,6 +115,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const [filterUnivers, setFilterUnivers] = useState(null);
   const [filterZone, setFilterZone] = useState('');
   const [sortBy, setSortBy] = useState('match');
+  // Les projets mis de côté. Le filtre est à part des autres : il ne restreint
+  // pas le fil, il montre une autre liste.
+  const [savedIds, setSavedIds] = useState(new Set());
+  const [filterSaved, setFilterSaved] = useState(false);
+  const [savingOffer, setSavingOffer] = useState(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -120,6 +128,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
         loadCollabs(data.user.id);
         loadOffers(data.user.id);
         loadApplied(data.user.id);
+        loadSavedOfferIds(data.user.id).then(setSavedIds);
         supabase.from('profiles').select('*').eq('user_id', data.user.id).single().then(({ data: p }) => setMyProfile(p));
       }
     });
@@ -226,6 +235,50 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   useEffect(() => onBlocksChanged(() => { if (user?.id) loadOffers(user.id); }), [user]);
+
+  // Un enregistrement fait ailleurs dans l'app (sur un projet ouvert par un
+  // lien, par exemple) doit se voir ici sans changer d'onglet.
+  useEffect(() => onSavedChanged(() => {
+    if (user?.id) loadSavedOfferIds(user.id).then(setSavedIds);
+  }), [user]);
+
+  /**
+   * Mettre un projet de côté, ou le reprendre.
+   *
+   * La liste locale est mise à jour tout de suite, avant la réponse du serveur :
+   * un signet qui met une seconde à s'allumer donne l'impression que le bouton
+   * n'a pas marché, et on reclique.
+   */
+  async function toggleSaved(offerId) {
+    if (!user?.id || savingOffer) return;
+    const cle = String(offerId);
+    const etait = savedIds.has(cle);
+    setSavingOffer(cle);
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      if (etait) next.delete(cle); else next.add(cle);
+      return next;
+    });
+    try {
+      if (etait) await unsaveOffer(user.id, offerId);
+      else await saveOffer(user.id, offerId);
+      tap();
+    } catch (e) {
+      console.error('toggleSaved', e);
+      // On remet la liste comme elle était : mieux vaut un signet qui revient
+      // en arrière qu'un signet allumé sur rien.
+      setSavedIds(prev => {
+        const next = new Set(prev);
+        if (etait) next.add(cle); else next.delete(cle);
+        return next;
+      });
+      setActionError(tx(
+        "Couldn't save this project. Try again.",
+        "L’enregistrement de ce projet a échoué. Réessaie.",
+      ));
+    }
+    setSavingOffer(null);
+  }
 
   // « Marquer comme réalisé » : ferme la collab quand les deux l'ont confirmée.
   // Ça ne fait pas monter le compteur « Projets validés » — ça, c'est réservé au
@@ -772,26 +825,46 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   // d'ouvrir par un lien reste affiché : la personne a cliqué exprès, mieux vaut
   // lui montrer le projet marqué « passé » qu'une page vide.
   displayedOffers = displayedOffers.filter(o =>
-    (o.status !== 'closed' && !isPast(o)) || (sharedOffer && o.id === sharedOffer.id),
+    (o.status !== 'closed' && !isPast(o))
+    || (sharedOffer && o.id === sharedOffer.id)
+    // Un projet qu'on a mis de côté reste visible dans sa liste même s'il s'est
+    // fermé depuis : on veut savoir ce qu'il est devenu, pas le voir disparaître
+    // sans un mot.
+    || (filterSaved && savedIds.has(String(o.id))),
   );
+  if (filterSaved) displayedOffers = displayedOffers.filter(o => savedIds.has(String(o.id)));
   if (filterRole) displayedOffers = displayedOffers.filter(o => o.role_needed?.includes(filterRole));
   if (filterUnivers) {
     const filterFR = isEn ? (() => { try { const { UNIVERS_FR: fr, UNIVERS_EN: en } = require('../constants'); const i = en.indexOf(filterUnivers); return i >= 0 ? fr[i] : filterUnivers; } catch { return filterUnivers; } })() : filterUnivers;
     displayedOffers = displayedOffers.filter(o => (o.styles_needed || '').toLowerCase().includes(filterFR.toLowerCase()));
   }
-  // La recherche cherche dans la ville, mais aussi dans le pseudo et le nom de
-  // l'auteur, et dans le titre : on cherche souvent « le projet de @keyliagkn ».
+  // La recherche cherche dans la ville, le pays, le titre, la description, et
+  // dans le pseudo comme dans le nom de l'auteur : on cherche souvent « le
+  // projet de @keyliagkn ».
+  //
+  // Les accents sont ignorés des deux côtés. Sans ça, « bresil » ne trouvait
+  // pas « Brésil » et « cinema » ne trouvait pas un projet dont la description
+  // parlait de cinéma : il fallait taper les accents au clavier du téléphone,
+  // ce que personne ne fait dans une barre de recherche.
   if (filterZone) {
-    const q = filterZone.toLowerCase().replace(/^@/, '').trim();
-    displayedOffers = displayedOffers.filter(o => {
-      const author = o.authorProfile || {};
-      return [
-        o.zone,
-        o.title,
-        author.username,
-        String(author.handle || '').replace(/^@/, ''),
-      ].some(v => String(v || '').toLowerCase().includes(q));
-    });
+    const brut = filterZone.replace(/^@/, '').trim();
+    const q = normalizeSearch(brut);
+    if (q) {
+      displayedOffers = displayedOffers.filter(o => {
+        const author = o.authorProfile || {};
+        const champs = [
+          o.zone,
+          o.title,
+          o.description,
+          author.username,
+          String(author.handle || '').replace(/^@/, ''),
+        ];
+        if (champs.some(v => normalizeSearch(v).includes(q))) return true;
+        // Le pays est comparé à part : il n'est pas écrit dans le projet, il
+        // est déduit de sa ville, et son nom dépend de la langue du téléphone.
+        return countryMatches(o.country, brut, getLang());
+      });
+    }
   }
   if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => {
     if (sharedOffer) {
@@ -1074,12 +1147,15 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
             <div style={{ marginBottom: '12px' }}>
               <input value={filterZone} onChange={e => setFilterZone(e.target.value)}
-                placeholder={tx('🔎 City, @handle, project...', '🔎 Ville, @pseudo, projet...')}
+                placeholder={tx('🔎 City, country, @handle, project...', '🔎 Ville, pays, @pseudo, projet...')}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                 <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
                 <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {tx('Recent', 'Récent')}</button>
+                <button onClick={() => setFilterSaved(v => !v)} style={pillStyle(filterSaved)}>
+                  🔖 {tx('Saved', 'Enregistrés')}{savedIds.size > 0 ? ` ${savedIds.size}` : ''}
+                </button>
                 {ROLES.slice(0, 6).map(r => (
                   <button key={r.id} onClick={() => setFilterRole(filterRole === r.id ? null : r.id)} style={pillStyle(filterRole === r.id)}>{r.icon} {r.label}</button>
                 ))}
@@ -1135,6 +1211,27 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                             {score}✓ match
                           </div>
                         )}
+                        {/* Mettre de côté. L'arrêt de la propagation est
+                            indispensable : toute la ligne ouvre le profil de
+                            l'auteur, et sans ça un clic sur le signet quittait
+                            le fil. */}
+                        <button
+                          onClick={e => { e.stopPropagation(); toggleSaved(o.id); }}
+                          disabled={savingOffer === String(o.id)}
+                          aria-label={savedIds.has(String(o.id))
+                            ? tx('Remove from saved', 'Retirer des enregistrés')
+                            : tx('Save this project', 'Enregistrer ce projet')}
+                          title={savedIds.has(String(o.id))
+                            ? tx('Remove from saved', 'Retirer des enregistrés')
+                            : tx('Save this project', 'Enregistrer ce projet')}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
+                            fontSize: '17px', lineHeight: 1, padding: '2px 0 2px 4px',
+                            opacity: savedIds.has(String(o.id)) ? 1 : 0.4,
+                          }}
+                        >
+                          {savedIds.has(String(o.id)) ? '🔖' : '🏷'}
+                        </button>
                       </div>
                       <p style={{ fontWeight: '800', fontSize: '15px', color: theme?.color, marginBottom: '6px' }}>{o.title}</p>
                       {o.description && <p style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', marginBottom: '10px', lineHeight: 1.4 }}>{o.description}</p>}
@@ -1166,7 +1263,16 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           const isMyStyle = myProfile?.styles?.toLowerCase().includes(s.toLowerCase());
                           return <span key={s} style={{ fontSize: '11px', color: isMyStyle ? theme?.color : subText, border: `1px solid ${isMyStyle ? theme?.color : cardBorder}`, borderRadius: '20px', padding: '3px 10px', fontWeight: isMyStyle ? '700' : '400' }}>{s}</span>;
                         })}
-                        {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>📍 {o.zone}</span>}
+                        {/* Le pays n'est affiché que s'il n'est pas le nôtre :
+                            « Paris · France » pour quelqu'un en France est du
+                            bruit, « Rio de Janeiro · Brésil » est l'information
+                            qui décide si on peut y aller. */}
+                        {o.zone && <span style={{ fontSize: '11px', color: subText, border: `1px solid ${cardBorder}`, borderRadius: '20px', padding: '3px 10px' }}>
+                          📍 {o.zone}
+                          {o.country && o.country !== myProfile?.country && countryName(o.country, getLang())
+                            ? ` · ${countryName(o.country, getLang())}`
+                            : ''}
+                        </span>}
                         {/* Sans date, on le dit. Rester muet laissait croire que
                             l'information manquait par accident, et beaucoup
                             écrivaient leur date dans le texte du projet. */}
@@ -1247,6 +1353,31 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
               </>
             ) : firstLoad ? (
               <SkeletonList count={3} darkMode={darkMode} />
+            ) : filterSaved ? (
+              /* La liste des enregistrés est vide : proposer de créer un projet
+                 serait hors sujet, ce n'est pas ce qu'on cherchait. */
+              <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                <p style={{ fontSize: '32px', marginBottom: '12px' }}>🔖</p>
+                <p style={{ color: theme?.color, fontWeight: '700', marginBottom: '4px' }}>
+                  {tx('No saved projects', 'Aucun projet enregistré')}
+                </p>
+                <p style={{ color: subText, fontSize: '13px', marginBottom: '16px', lineHeight: 1.5 }}>
+                  {tx(
+                    'Tap the tag on a project to put it aside and find it here.',
+                    'Appuie sur l’étiquette d’un projet pour le mettre de côté et le retrouver ici.',
+                  )}
+                </p>
+                <button
+                  onClick={() => setFilterSaved(false)}
+                  style={{
+                    padding: '11px 20px', borderRadius: '22px', cursor: 'pointer',
+                    border: `1px solid ${cardBorder}`, background: 'transparent',
+                    color: theme?.color, fontSize: '13px', fontWeight: '700',
+                  }}
+                >
+                  {tx('Back to the feed', 'Revenir au fil')}
+                </button>
+              </div>
             ) : (
               <div style={{ textAlign: 'center', marginTop: '40px' }}>
                 <p style={{ fontSize: '32px', marginBottom: '12px' }}>🎨</p>

@@ -26,7 +26,13 @@ const PIONEER_SNOOZE_DAYS = 7;
 
 // Les colonnes dont la carte a besoin. Elle prenait tout, y compris les bios,
 // les portfolios et les tableaux de liens, pour dessiner des pastilles.
-const MAP_COLUMNS = 'user_id, username, handle, avatar_url, role, role_other, styles, zone, city, status, lat, lng, hidden, is_early_adopter, validated_projects, bio, portfolio_urls, portfolio_url, looking_for';
+// country est indispensable ici, pas seulement pour l'affichage : c'est lui qui
+// dit au rattrapage ci-dessous que le profil est déjà complet. Sans la colonne,
+// mine.country vaut toujours undefined, le rattrapage se relance à chaque
+// ouverture de la carte, retélécharge les 765 Ko de la liste des villes et
+// réécrit la même ville en base. C'est exactement le gaspillage qu'on vient de
+// corriger ailleurs.
+const MAP_COLUMNS = 'user_id, username, handle, avatar_url, role, role_other, styles, zone, city, country, status, lat, lng, hidden, is_early_adopter, validated_projects, bio, portfolio_urls, portfolio_url, looking_for';
 
 // Temps minimum entre deux relectures des profils quand on revient sur l'onglet.
 const MIN_RELOAD_MS = 60000;
@@ -261,26 +267,31 @@ export default function MapComponent({ theme, active = true }) {
             // La ville la plus proche, pour qu'Explorer puisse écrire un lieu.
             // Le téléchargement de la liste n'arrive qu'ici, une fois, au
             // moment où la position est posée.
-            const city = await cityNameFor(latitude, longitude);
+            const { city, country } = await cityNameFor(latitude, longitude);
             await supabase.from('profiles')
-              .update({ lat: fuzzed.lat, lng: fuzzed.lng, city })
+              .update({ lat: fuzzed.lat, lng: fuzzed.lng, city, country })
               .eq('user_id', user.id);
-            setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng, city } : p));
+            setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng, city, country } : p));
           }
         }, () => onGeoError?.(), { timeout: 15000 });
       }
     });
   }
 
-  // Le nom de la ville la plus proche, ou null. Une coupure réseau ne doit pas
-  // faire échouer l'enregistrement de la position, qui est l'essentiel.
+  // La ville la plus proche et son pays, ou deux fois null. Une coupure réseau
+  // ne doit pas faire échouer l'enregistrement de la position, qui est
+  // l'essentiel.
+  //
+  // Le pays vient de la même liste, qui porte déjà son code : on ne demande
+  // donc rien de plus à personne pour qu'une recherche « Brésil » fonctionne.
   async function cityNameFor(lat, lng) {
     try {
       const cities = await loadCities();
-      return nearestCity(cities, lat, lng)?.name || null;
+      const found = nearestCity(cities, lat, lng);
+      return { city: found?.name || null, country: found?.country || null };
     } catch (e) {
       console.error('cityNameFor', e);
-      return null;
+      return { city: null, country: null };
     }
   }
 
@@ -289,13 +300,16 @@ export default function MapComponent({ theme, active = true }) {
   // carte, une seule fois.
   useEffect(() => {
     const mine = profiles.find(p => p._isMe);
-    if (!mine || mine.city || !mine.lat || !mine.lng) return;
+    // On repasse aussi pour ceux qui ont déjà une ville mais pas de pays : le
+    // pays est arrivé après, et sans ce test ils resteraient introuvables par
+    // une recherche de pays pour toujours.
+    if (!mine || (mine.city && mine.country) || !mine.lat || !mine.lng) return;
     let alive = true;
     (async () => {
-      const city = await cityNameFor(mine.lat, mine.lng);
+      const { city, country } = await cityNameFor(mine.lat, mine.lng);
       if (!alive || !city) return;
-      await supabase.from('profiles').update({ city }).eq('user_id', mine.user_id);
-      setProfiles(prev => prev.map(p => p._isMe ? { ...p, city } : p));
+      await supabase.from('profiles').update({ city, country }).eq('user_id', mine.user_id);
+      setProfiles(prev => prev.map(p => p._isMe ? { ...p, city, country } : p));
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -391,7 +405,7 @@ export default function MapComponent({ theme, active = true }) {
       const { error } = await supabase.from('profiles')
         // Le nom de la ville était perdu : seules les coordonnées étaient
         // gardées, donc Explorer ne pouvait afficher aucun lieu.
-        .update({ lat: fuzzed.lat, lng: fuzzed.lng, city: city.name || null })
+        .update({ lat: fuzzed.lat, lng: fuzzed.lng, city: city.name || null, country: city.country || null })
         .eq('user_id', user.id);
       if (error) {
         // L'erreur n'était que dans la console : la personne choisissait sa
@@ -401,7 +415,7 @@ export default function MapComponent({ theme, active = true }) {
         setSavingCity(false);
         return;
       }
-      setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng, city: city.name || null } : p));
+      setProfiles(prev => prev.map(p => p._isMe ? { ...p, lat: fuzzed.lat, lng: fuzzed.lng, city: city.name || null, country: city.country || null } : p));
     }
     localStorage.setItem('geoMode', 'city');
     mapInstance.current?.setView([city.lat, city.lng], openingZoom(L, mapInstance.current, city.lat, city.lng, profiles));
