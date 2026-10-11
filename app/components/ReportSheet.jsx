@@ -45,7 +45,8 @@ export default function ReportSheet({ targetType, targetId, theme, onClose }) {
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 3000,
+        // Même raison que dans ApplySheet : la barre d'onglets est en 9999.
+        position: 'fixed', inset: 0, zIndex: 10050,
         background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}

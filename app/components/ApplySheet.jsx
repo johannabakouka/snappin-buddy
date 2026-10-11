@@ -46,7 +46,11 @@ export default function ApplySheet({ offer, theme, myRoles = '', onSend, onClose
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.55)',
+        // La barre d'onglets du bas est en z-index 9999. À 3000, le panneau
+        // passait dessous et les boutons « Annuler » et « Envoyer ma
+        // candidature » se retrouvaient cachés derrière elle, donc
+        // incliquables. On passe au-dessus.
+        position: 'fixed', inset: 0, zIndex: 10050, background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
       onClick={onClose}
