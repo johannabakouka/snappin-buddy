@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+        <string>Snappin'Buddy</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Les phrases affichées par iOS quand l'app demande l'accès. Elles sont
+	     obligatoires : sans elles, l'app plante à la première demande, et Apple
+	     refuse la publication. Elles doivent dire à quoi sert l'accès, pas le
+	     réclamer : « nous avons besoin de vos photos » est un motif de refus. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Snappin'Buddy needs access to your photos so you can set your profile picture, add work to your portfolio and send photos in a conversation.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Snappin'Buddy needs access to your camera so you can take a photo for your profile, your portfolio or a conversation.</string>
+	<!-- L'app n'utilise que le chiffrement standard d'iOS (HTTPS). Sans cette
+	     ligne, App Store Connect pose la question de la conformité à l'export à
+	     chaque envoi de build, et bloque la diffusion TestFlight tant qu'on n'y
+	     a pas répondu à la main. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<!-- Portrait uniquement. L'interface est une colonne de 390 px pensée pour
+	     le pouce : en paysage, les écrans s'étirent et les panneaux du bas
+	     passent sous le clavier. Instagram et TikTok font le même choix. -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

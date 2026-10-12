@@ -1,0 +1,117 @@
+# Fabrication de l'app iPhone, sur un Mac loué à la minute.
+#
+# Ce fichier est lu par Codemagic à chaque fois qu'on lui demande une
+# compilation. Il décrit, dans l'ordre, ce qu'un Mac devrait faire si on
+# l'avait sous la main : installer les dépendances, compiler l'interface,
+# la recopier dans le projet Xcode, signer, fabriquer le fichier .ipa, et
+# l'envoyer sur TestFlight.
+#
+# Rien ici ne concerne le site. snappinbuddy.com continue d'être compilé et
+# publié par Vercel, qui ignore complètement ce fichier.
+
+workflows:
+  ios:
+    name: Snappin'Buddy iPhone
+    # Au-delà, Codemagic coupe. Une compilation normale prend 10 à 15 minutes ;
+    # 60 laisse de la marge sans gaspiller les minutes du forfait en cas de
+    # blocage.
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      # Le nom EXACT donné à la clé App Store Connect dans Codemagic
+      # (Teams > Integrations > App Store Connect). S'il ne correspond pas,
+      # la compilation s'arrête tout de suite avec « integration not found ».
+      app_store_connect: snappinbuddy
+
+    environment:
+      xcode: latest
+      cocoapods: default
+      # La même version que celle qui compile le site sans problème.
+      node: 22
+
+      ios_signing:
+        # Codemagic crée lui-même le certificat et le profil chez Apple, à
+        # partir de la clé ci-dessus. Il n'y a rien à générer à la main.
+        distribution_type: app_store
+        bundle_identifier: com.snappinbuddy.app
+
+      # Le groupe de variables créé dans Codemagic, qui contient les trois
+      # réglages publics dont la compilation a besoin :
+      #   NEXT_PUBLIC_SUPABASE_ANON_KEY
+      #   NEXT_PUBLIC_APP_URL        -> https://snappinbuddy.com
+      #   NEXT_PUBLIC_MAPTILER_KEY
+      # Ce sont les mêmes valeurs que sur Vercel.
+      groups:
+        - snappinbuddy
+
+      vars:
+        XCODE_WORKSPACE: "App.xcworkspace"
+        XCODE_SCHEME: "App"
+
+    scripts:
+      # Un oubli de variable ne casse pas la compilation : elle réussit, et
+      # l'app arrive sur le téléphone incapable de se connecter à Supabase.
+      # Autant s'arrêter ici, où le message est lisible.
+      - name: Vérifier les variables
+        script: |
+          manquantes=""
+          for v in NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_APP_URL NEXT_PUBLIC_MAPTILER_KEY; do
+            eval "valeur=\$$v"
+            [ -z "$valeur" ] && manquantes="$manquantes $v"
+          done
+          if [ -n "$manquantes" ]; then
+            echo "Variables absentes du groupe « snappinbuddy » :$manquantes"
+            echo "Codemagic > l'application > Settings > Environment variables."
+            exit 1
+          fi
+          echo "Les trois variables sont présentes."
+
+      - name: Installer les dépendances
+        script: npm ci
+
+      - name: Compiler l'interface
+        # Produit out/, les fichiers statiques embarqués dans l'app.
+        script: npm run build:app
+
+      - name: Recopier l'interface dans le projet Xcode
+        # cap sync fait deux choses : il recopie out/ dans
+        # ios/App/App/public, et il met à jour les greffons natifs
+        # (pod install compris).
+        script: npx cap sync ios
+
+      - name: Préparer la signature
+        script: xcode-project use-profiles
+
+      - name: Numéroter le build
+        # Apple refuse deux envois portant le même numéro. BUILD_NUMBER est
+        # fourni par Codemagic et augmente de 1 à chaque compilation, ce qui
+        # suffit tant qu'on n'envoie que depuis ici.
+        # Le numéro de version affiché (1.0) ne bouge pas : il se change à la
+        # main dans Xcode, ou ici, quand on publie une vraie nouvelle version.
+        script: |
+          cd $CM_BUILD_DIR/ios/App
+          agvtool new-version -all $(($BUILD_NUMBER))
+
+      - name: Fabriquer l'app
+        script: |
+          cd $CM_BUILD_DIR/ios/App
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      # Les journaux de compilation : le seul endroit où lire ce qui a échoué.
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        # Réutilise la clé déclarée dans integrations, en haut.
+        auth: integration
+        # Envoie sur TestFlight, pas sur l'App Store. Rien n'est publié
+        # publiquement : le build devient installable par les testeurs
+        # internes ajoutés dans App Store Connect.
+        submit_to_testflight: true
+        submit_to_app_store: false
