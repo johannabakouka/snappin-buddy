@@ -60,6 +60,25 @@ const CONTEXTES: Record<string, string> = {
   autre: 'ailleurs',
 };
 
+// Lecture des scores du modèle embarqué.
+//
+// La photo elle-même n'existe nulle part : le contrôle a lieu dans le téléphone
+// et rien n'est envoyé. Il ne reste que ces nombres, et c'est à eux de dire si
+// le refus était justifié.
+//
+// Porn et Hentai désignent du contenu explicite. Sexy désigne du suggestif, et
+// c'est lui qui se déclenche à tort sur la mode, un portrait serré ou une épaule
+// nue. Un refus où Sexy est haut mais Porn et Hentai bas est presque toujours un
+// faux positif, et c'est précisément le cas d'un photographe qui remplit son book.
+const pct = (v?: number) => Math.round((v || 0) * 100) + ' %';
+const explicite = (s?: Record<string, number> | null) => (s?.Porn || 0) + (s?.Hentai || 0);
+
+/** Vrai quand aucun des refus de la personne ne montre de contenu explicite. */
+function probableFauxPositif(liste: { scores: Record<string, number> | null }[]) {
+  const avec = liste.filter(b => b.scores);
+  return avec.length > 0 && avec.every(b => explicite(b.scores) < 0.25);
+}
+
 const dim = { color: 'rgba(255,255,255,0.5)', fontSize: 13 } as const;
 const card = {
   background: '#151515', border: '1px solid rgba(255,255,255,0.08)',
@@ -94,6 +113,8 @@ export default function ModerationPage() {
   const [state, setState] = useState<'loading' | 'ok' | 'anonyme' | 'refuse' | 'error'>('loading');
   const [qui, setQui] = useState<{ vous: string; attendu: string } | null>(null);
   const [onlyOpen, setOnlyOpen] = useState(true);
+  // Les personnes dont on a déplié le détail des refus.
+  const [detail, setDetail] = useState<string[]>([]);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
   const [backfillMsg, setBackfillMsg] = useState('');
@@ -213,12 +234,13 @@ export default function ModerationPage() {
 
   // Les refus regroupés par personne : une photo refusée est un accident,
   // cinq en une soirée est un comportement. Seul le second mérite un geste.
-  const parPersonne = new Map<string, { n: number; dernier: string; ou: string[] }>();
+  const parPersonne = new Map<string, { n: number; dernier: string; ou: string[]; liste: Block[] }>();
   for (const b of blocks) {
-    const g = parPersonne.get(b.user_id) || { n: 0, dernier: b.created_at, ou: [] };
+    const g = parPersonne.get(b.user_id) || { n: 0, dernier: b.created_at, ou: [], liste: [] };
     g.n += 1;
     if (b.created_at > g.dernier) g.dernier = b.created_at;
     if (!g.ou.includes(b.context)) g.ou.push(b.context);
+    g.liste.push(b);
     parPersonne.set(b.user_id, g);
   }
   const refus = [...parPersonne.entries()].sort((a, b) => b[1].n - a[1].n);
@@ -419,6 +441,52 @@ export default function ModerationPage() {
                   <br />
                   Depuis : {g.ou.map(c => CONTEXTES[c] || c).join(', ')}
                 </p>
+
+                {/* Le verdict avant les boutons : suspendre un photographe que
+                    le modèle a mal lu serait pire que de ne rien faire. */}
+                {probableFauxPositif(g.liste) ? (
+                  <p style={{ color: '#2ECC71', fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>
+                    Probablement des faux positifs : aucun de ces refus ne montre de contenu
+                    explicite. Le modèle a réagi au caractère suggestif, ce qui arrive sur la
+                    mode, les portraits serrés ou une épaule nue.
+                  </p>
+                ) : (
+                  <p style={{ color: '#FF4D4D', fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>
+                    Au moins un refus montre un score de contenu explicite élevé. À regarder
+                    de près avant de décider.
+                  </p>
+                )}
+
+                <button
+                  onClick={() => setDetail(d => d.includes(userId) ? d.filter(x => x !== userId) : [...d, userId])}
+                  style={{ ...ghost, marginBottom: 10 }}
+                >
+                  {detail.includes(userId) ? 'Masquer le détail' : 'Voir le détail des scores'}
+                </button>
+
+                {detail.includes(userId) && (
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ ...dim, fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                      Les photos ne sont pas conservées : le contrôle a lieu dans le téléphone,
+                      rien n’est envoyé. Il ne reste que ce que le modèle a mesuré.
+                    </p>
+                    {g.liste.map(b => (
+                      <div key={b.id} style={{ ...dim, fontSize: 11, lineHeight: 1.6, padding: '6px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                        {new Date(b.created_at).toLocaleString('fr-FR')}
+                        {' · '}{CONTEXTES[b.context] || b.context}
+                        <br />
+                        {b.scores ? (
+                          <>
+                            Explicite {pct(b.scores.Porn)} · Hentai {pct(b.scores.Hentai)}
+                            {' · '}<b style={{ color: '#fff' }}>Suggestif {pct(b.scores.Sexy)}</b>
+                            {' · '}Neutre {pct(b.scores.Neutral)}
+                          </>
+                        ) : 'Scores non enregistrés'}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button
                     disabled={!!busy}
