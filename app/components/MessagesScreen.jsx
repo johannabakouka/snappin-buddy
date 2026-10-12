@@ -311,7 +311,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
   );
 
   if (activeBuddy) return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: theme?.bg }}>
+    <div className="sb-ecran" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: theme?.bg }}>
       <ChatScreen
         buddy={activeBuddy}
         onBack={() => { setActiveBuddy(null); if (user) loadConversations(user.id); }}

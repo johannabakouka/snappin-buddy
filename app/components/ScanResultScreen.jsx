@@ -107,7 +107,7 @@ export default function ScanResultScreen({ sessionId, theme, onDone }) {
   const info = messages[state] || messages.error;
 
   return (
-    <div style={{
+    <div className="sb-ecran" style={{
       position: 'fixed', inset: 0, zIndex: 9800, background: bg, color,
       overflowY: 'auto',
       padding: 'calc(env(safe-area-inset-top) + 60px) 24px calc(40px + env(safe-area-inset-bottom))',

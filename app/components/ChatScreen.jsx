@@ -424,7 +424,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
   };
 
   return (
-    <div style={{ height: `calc(100dvh - ${keyboard}px)`, maxHeight: '100dvh', display: 'flex', flexDirection: 'column', background: bg, color }}>
+    <div className="sb-ecran" style={{ height: `calc(100dvh - ${keyboard}px)`, maxHeight: '100dvh', display: 'flex', flexDirection: 'column', background: bg, color }}>
 
       <div style={{ padding: `calc(env(safe-area-inset-top) + 16px) 16px 16px`, borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={onBack} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>

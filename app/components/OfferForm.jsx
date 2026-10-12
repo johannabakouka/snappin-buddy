@@ -174,7 +174,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   }
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
+    <div className="sb-ecran" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: darkMode ? '#0A0A0A' : '#F5F5F5', overflowY: 'auto' }}>
       {/* La marge qui écarte la barre d'état. Sans elle, l'en-tête passait
           sous l'heure et l'encoche : le titre se superposait à l'horloge et la
           flèche retour devenait inatteignable. Tous les autres écrans posés

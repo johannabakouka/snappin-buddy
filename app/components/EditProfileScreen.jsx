@@ -272,7 +272,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
   const embedUrl = getVideoEmbed(videoUrl);
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto', padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(60px + env(safe-area-inset-bottom))` }}>
+    <div className="sb-ecran" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: bg, overflowY: 'auto', padding: `calc(env(safe-area-inset-top) + 24px) 16px calc(60px + env(safe-area-inset-bottom))` }}>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
         <button onClick={onBack} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>

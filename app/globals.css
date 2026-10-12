@@ -28,6 +28,65 @@ html, body {
   overscroll-behavior-y: none;
 }
 
+/* L'appui long, le détail qui trahit le plus une app web.
+
+   Sur iPhone, garder le doigt appuyé sur n'importe quel texte le sélectionne
+   en bleu et fait surgir le menu « Copier / Partager » du système. Sur une
+   vraie app ça n'arrive jamais : on appuie longtemps sur une carte de projet,
+   il ne se passe rien. Même chose pour les images, qu'un appui long propose
+   d'enregistrer, et qu'un glissement arrache de la page.
+
+   On coupe partout, et on rend la sélection là où elle sert vraiment : dans
+   les champs de saisie, et sur le texte des messages, qu'il faut pouvoir
+   copier. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+[contenteditable],
+[data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+/* L'arrivée d'un écran par-dessus un autre.
+
+   Ouvrir un profil, une conversation ou un formulaire remplaçait l'écran d'un
+   coup, sans transition : c'est le changement de page d'un site web. Sur
+   iPhone, un écran qui s'ouvre glisse depuis la droite. Ces quelques images
+   suffisent à faire comprendre qu'on est entré quelque part, et donc que le
+   geste de retour existe.
+
+   La courbe n'est pas décorative : elle démarre vite et finit en douceur, c'est
+   celle qu'iOS utilise pour ses propres écrans.
+
+   Pas de fill-mode, volontairement. Une transformation, même terminée, change
+   la façon dont les éléments fixes placés à l'intérieur se positionnent, et
+   l'app en contient (les panneaux du bas). Sans fill-mode, la transformation
+   disparaît complètement dès la fin de l'animation. */
+@keyframes sb-arrivee {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+.sb-ecran {
+  animation: sb-arrivee 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-ecran { animation: none; }
+}
+
 /* Le doigt doit sentir qu'il a appuyé.
    L'app n'avait aucun état pressé : on touchait un bouton et rien ne bougeait
    avant que l'écran suivant arrive. C'est le détail qui sépare une app d'un
