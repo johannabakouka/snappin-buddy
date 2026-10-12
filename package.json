@@ -6,9 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:app": "node scripts/build-app.mjs",
+    "sync:app": "npm run build:app && npx cap sync"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/camera": "^7.0.2",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/haptics": "^7.0.2",
+    "@capacitor/ios": "^7.4.4",
+    "@capacitor/keyboard": "^7.0.3",
+    "@capacitor/share": "^7.0.2",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3",
     "@stripe/stripe-js": "^9.8.0",
     "@supabase/supabase-js": "^2.105.3",
     "@tensorflow/tfjs": "^4.22.0",
@@ -23,6 +35,8 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.4.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
