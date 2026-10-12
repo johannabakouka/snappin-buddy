@@ -76,6 +76,17 @@ export function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Affiche un pseudo avec un seul @, échappé pour le HTML.
+ *
+ * Les pseudos sont enregistrés avec leur @ (voir cleanHandle). Les mails
+ * écrivaient « @ » devant, ce qui donnait « @@agsphotography ».
+ */
+export function atHandle(handle: unknown): string {
+  const body = String(handle ?? '').replace(/^@+/, '');
+  return body ? `@${escapeHtml(body)}` : '';
+}
+
 /** Extrait le titre du projet d'un message de candidature « Je me propose pour : Titre ». */
 export function offerTitleFromMessage(message?: string | null): string {
   if (!message) return '';
@@ -343,7 +354,7 @@ export function uploadBlockedMail(
     to,
     subject: `🚫 Photos refusées · ${who.username || who.id}`.slice(0, 120),
     titleFr: 'Plusieurs photos refusées par le contrôle automatique',
-    bodyFr: `<b>${nom}</b> (@${escapeHtml(who.handle)}, id ${escapeHtml(who.id)}) a vu ` +
+    bodyFr: `<b>${nom}</b> (${atHandle(who.handle)}, id ${escapeHtml(who.id)}) a vu ` +
       `<b>${who.count}</b> photos refusées en 24 heures, la dernière sur « ${escapeHtml(who.contexte)} ».<br><br>` +
       'Aucune de ces photos n’est arrivée dans le stockage. Le détail est dans l’écran de modération.',
     titleEn: 'Several photos blocked by the automatic check',
@@ -356,7 +367,7 @@ export function reportMail(to: string, reporterId: string, reported: { id: strin
     to,
     subject: `🚩 Signalement · ${reported.username || reported.id}`.slice(0, 120),
     titleFr: 'Nouveau signalement',
-    bodyFr: `Profil signalé : <b>${escapeHtml(reported.username)}</b> (@${escapeHtml(reported.handle)}, id ${escapeHtml(reported.id)})<br>` +
+    bodyFr: `Profil signalé : <b>${escapeHtml(reported.username)}</b> (${atHandle(reported.handle)}, id ${escapeHtml(reported.id)})<br>` +
       `Signalé par : ${escapeHtml(reporterId)}<br><br>Motif :<br>${escapeHtml(reason).replace(/\n/g, '<br>')}`,
     titleEn: 'New report',
     bodyEn: 'See details above.',
