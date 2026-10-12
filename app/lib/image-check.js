@@ -25,6 +25,23 @@ import { tx } from '../tx';
 const SEUIL_EXPLICITE = 0.6; // Porn + Hentai à eux seuls
 const SEUIL_CUMULE = 0.93; // les trois catégories ensemble, quand le score se disperse
 
+// La règle cumulée existe pour le cas où le modèle hésite entre « porno » et
+// « suggestif » et répartit le score entre les deux : une photo à 0,45 de Porn
+// et 0,50 de Sexy est bien du contenu explicite, et aucun des deux seuils pris
+// séparément ne l'attrape.
+//
+// Mais seule, cette règle refusait tout. Les cinq scores font une somme de 1,
+// donc « Porn + Hentai + Sexy ≥ 0,93 » veut simplement dire « Neutral + Drawing
+// ≤ 0,07 », c'est-à-dire : le modèle ne reconnaît pas une scène ordinaire. Un
+// portrait serré, une photo de mode ou une photo de plage tombent là-dedans. Un
+// photographe a vu onze envois refusés d'affilée avec 1 % de Porn et 99 % de
+// Sexy : rien d'explicite, juste une photo que le modèle ne savait pas ranger.
+//
+// D'où ce plancher : la règle cumulée ne s'applique que s'il y a déjà une vraie
+// part d'explicite. En dessous, c'est du suggestif, et le suggestif n'est pas
+// interdit par les CGU.
+const PLANCHER_EXPLICITE = 0.45;
+
 // Au-delà, on laisse passer : un modèle qui refuse de se charger ne doit pas
 // empêcher les gens d'avoir une photo de profil.
 const DELAI_MAX_MS = 20000;
@@ -90,7 +107,9 @@ export function estBloquee(scores) {
   const porn = scores?.Porn || 0;
   const hentai = scores?.Hentai || 0;
   const sexy = scores?.Sexy || 0;
-  return porn + hentai >= SEUIL_EXPLICITE || porn + hentai + sexy >= SEUIL_CUMULE;
+  const explicite = porn + hentai;
+  if (explicite >= SEUIL_EXPLICITE) return true;
+  return explicite >= PLANCHER_EXPLICITE && explicite + sexy >= SEUIL_CUMULE;
 }
 
 /**

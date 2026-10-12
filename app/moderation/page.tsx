@@ -73,10 +73,14 @@ const CONTEXTES: Record<string, string> = {
 const pct = (v?: number) => Math.round((v || 0) * 100) + ' %';
 const explicite = (s?: Record<string, number> | null) => (s?.Porn || 0) + (s?.Hentai || 0);
 
-/** Vrai quand aucun des refus de la personne ne montre de contenu explicite. */
+/**
+ * Vrai quand aucun des refus de la personne n'atteint la part d'explicite
+ * minimale (0,45). En dessous, le refus venait de la seule règle cumulée, celle
+ * qui refusait toute photo que le modèle ne rangeait pas en « scène ordinaire ».
+ */
 function probableFauxPositif(liste: { scores: Record<string, number> | null }[]) {
   const avec = liste.filter(b => b.scores);
-  return avec.length > 0 && avec.every(b => explicite(b.scores) < 0.25);
+  return avec.length > 0 && avec.every(b => explicite(b.scores) < 0.45);
 }
 
 const dim = { color: 'rgba(255,255,255,0.5)', fontSize: 13 } as const;
