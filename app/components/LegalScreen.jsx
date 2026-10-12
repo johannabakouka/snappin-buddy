@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { tx } from '../tx';
 import { LEGAL_SECTIONS } from '../legal-content';
+import { api } from '../api-url';
 
 export default function LegalScreen({ theme, onBack }) {
   const darkMode = theme?.dark ?? true;
@@ -39,7 +40,7 @@ export default function LegalScreen({ theme, onBack }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('session expirée');
 
-      const res = await fetch('/api/delete-account', {
+      const res = await fetch(api('/api/delete-account'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -86,7 +87,7 @@ export default function LegalScreen({ theme, onBack }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('session expirée');
 
-      const res = await fetch('/api/export-data', {
+      const res = await fetch(api('/api/export-data'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../supabase';
+import { api } from '../api-url';
 
 // L'écran de modération, pour la personne qui tient l'app.
 //
@@ -126,7 +127,7 @@ export default function ModerationPage() {
   const call = useCallback(async (payload: Record<string, unknown>) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { status: 401, body: {} as Record<string, unknown> };
-    const res = await fetch('/api/moderate', {
+    const res = await fetch(api('/api/moderate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify(payload),

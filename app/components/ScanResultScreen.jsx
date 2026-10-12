@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { tx } from '../tx';
+import { api } from '../api-url';
 
 // Écran affiché après avoir scanné le QR d'un buddy avec l'appareil photo.
 // C'est le moment le plus enthousiaste de l'app : deux personnes viennent de
@@ -27,7 +28,7 @@ export default function ScanResultScreen({ sessionId, theme, onDone }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { if (alive) setState('signed_out'); return; }
 
-        const res = await fetch('/api/validate-scan', {
+        const res = await fetch(api('/api/validate-scan'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ sessionId }),

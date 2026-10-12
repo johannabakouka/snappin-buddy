@@ -1,6 +1,7 @@
 'use client';
 import { supabase } from './supabase';
 import { tx } from './tx';
+import { api } from './api-url';
 
 // Signaler un profil, un message ou un projet.
 //
@@ -32,7 +33,7 @@ export async function sendReport({ targetType, targetId, reason, details = '' })
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return tx('Sign in again to report.', 'Reconnecte-toi pour signaler.');
 
-    const res = await fetch('/api/report', {
+    const res = await fetch(api('/api/report'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

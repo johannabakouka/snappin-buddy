@@ -10,6 +10,7 @@ import ReportSheet from './ReportSheet';
 import { uploadChatImage } from '../image-upload';
 import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { hasBlockedMe } from '../blocks';
+import { api } from '../api-url';
 
 // Au-delà, le champ cesse de grandir et défile : cinq lignes environ, pour que
 // la conversation reste visible au-dessus.
@@ -118,7 +119,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      await fetch('/api/mark-read', {
+      await fetch(api('/api/mark-read'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ buddyId }),
@@ -249,7 +250,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      await fetch('/api/send-email', {
+      await fetch(api('/api/send-email'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ type: 'new_message', toUserId: buddyUserId }),
@@ -285,7 +286,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
-      const res = await fetch('/api/message-action', {
+      const res = await fetch(api('/api/message-action'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify(payload),
@@ -398,7 +399,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      await fetch('/api/delete-message', {
+      await fetch(api('/api/delete-message'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ messageId: m.id }),

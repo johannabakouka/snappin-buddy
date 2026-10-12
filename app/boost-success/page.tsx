@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { api } from '../api-url';
 
 function BoostSuccessContent() {
   const searchParams = useSearchParams();
@@ -14,7 +15,7 @@ function BoostSuccessContent() {
       if (!sessionId) { setState('error'); return; }
       try {
         // Le serveur vérifie auprès de Stripe que le paiement est bien passé avant d'activer le boost
-        const res = await fetch('/api/confirm-boost', {
+        const res = await fetch(api('/api/confirm-boost'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId }),

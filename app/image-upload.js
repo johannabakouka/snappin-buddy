@@ -1,6 +1,7 @@
 'use client';
 import { supabase } from './supabase';
 import { imageFormat, analyseContenu, ImageRefusee } from './lib/image-check';
+import { api } from './api-url';
 
 // Envoi d'une photo dans une conversation.
 // La photo est redimensionnée dans le téléphone AVANT l'envoi : une photo d'iPhone
@@ -78,7 +79,7 @@ function journaliseRefus(contexte, scores) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      await fetch('/api/upload-blocked', {
+      await fetch(api('/api/upload-blocked'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

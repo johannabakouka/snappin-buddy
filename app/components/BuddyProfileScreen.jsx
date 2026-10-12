@@ -16,6 +16,7 @@ import { cleanUrl, prettyUrl } from '../links';
 import { uploadProfileImage, AVATAR_BUCKET } from '../image-upload';
 import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { withAt } from '../handles';
+import { api } from '../api-url';
 
 function getVideoEmbed(url) {
   if (!url) return null;
@@ -255,7 +256,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
       // Prévient la personne par email (le serveur retrouve son adresse)
       if (collab?.id) {
         const { data: { session } } = await supabase.auth.getSession();
-        fetch('/api/send-email', {
+        fetch(api('/api/send-email'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
           body: JSON.stringify({ type: 'new_proposal', collabId: collab.id }),

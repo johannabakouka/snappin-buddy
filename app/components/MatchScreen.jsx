@@ -26,13 +26,14 @@ import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
 import { hasRole, roleLabels, splitRoles, APPLY_NOTE_MAX } from '../constants';
+import { api } from '../api-url';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
 async function sendEmail(type, payload) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    await fetch('/api/send-email', {
+    await fetch(api('/api/send-email'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ type, ...payload }),
@@ -290,7 +291,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     setMarkingDone(collab.id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/mark-done', {
+      const res = await fetch(api('/api/mark-done'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ collabId: collab.id }),
@@ -400,7 +401,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     // encore une réponse, et seule une route serveur peut écrire aux gens.
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/close-offer', {
+      const res = await fetch(api('/api/close-offer'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ offerId }),
@@ -430,7 +431,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function deleteOffer(offerId) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/delete-offer', {
+      const res = await fetch(api('/api/delete-offer'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ offerId }),
@@ -451,7 +452,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function boostOffer(offer, days) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/create-checkout-session', {
+      const res = await fetch(api('/api/create-checkout-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ offerId: offer.id, boostDays: days }),
@@ -511,7 +512,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     setActionError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/withdraw-application', {
+      const res = await fetch(api('/api/withdraw-application'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ collabId }),
@@ -572,7 +573,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     let result = {};
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/respond-application', {
+      const res = await fetch(api('/api/respond-application'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ collabId: id, decision: status }),
@@ -656,7 +657,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function deleteOffer(offerId) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/delete-offer', {
+      const res = await fetch(api('/api/delete-offer'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ offerId }),
@@ -677,7 +678,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   async function boostOffer(offer, days) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/create-checkout-session', {
+      const res = await fetch(api('/api/create-checkout-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ offerId: offer.id, boostDays: days }),
@@ -721,7 +722,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     setActionError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/withdraw-application', {
+      const res = await fetch(api('/api/withdraw-application'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ collabId }),
