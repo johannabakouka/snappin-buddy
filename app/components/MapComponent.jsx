@@ -37,14 +37,35 @@ const MAP_COLUMNS = 'user_id, username, handle, avatar_url, role, role_other, st
 // Temps minimum entre deux relectures des profils quand on revient sur l'onglet.
 const MIN_RELOAD_MS = 60000;
 
-// Fond de carte : MapTiler si la clé est configurée (style sombre soigné),
-// sinon OpenStreetMap, qui reste le filet de sécurité gratuit et sans clé.
-const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || '';
+// Fond de carte : CARTO si la clé est configurée (un style clair et un style
+// sombre, tous deux soignés), sinon OpenStreetMap, qui reste le filet de
+// sécurité gratuit et sans clé.
+//
+// Pourquoi plus MapTiler : son forfait gratuit comptait chaque tuile de 512 px
+// pour QUATRE requêtes, ce qui ramenait les 100 000 requêtes mensuelles à
+// 25 000 tuiles. Le quota a sauté le 13 octobre 2026, deux jours après la
+// vidéo TikTok, et la carte a disparu du site sans prévenir. CARTO compte une
+// requête par tuile et en offre un million par mois en usage commercial : la
+// même carte, quarante fois plus de marge.
+//
+// L'attribution n'est pas décorative : la gratuité de CARTO y est conditionnée,
+// elle doit rester visible sur la carte.
+const CARTO_KEY = process.env.NEXT_PUBLIC_CARTO_KEY || '';
 const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIB = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const MAPTILER_ATTRIB = '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const maptilerUrl = (dark) =>
-  `https://api.maptiler.com/maps/${dark ? 'dataviz-dark' : 'dataviz-light'}/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`;
+const CARTO_ATTRIB = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>';
+
+// Sur un écran à forte densité, on demande la tuile en double résolution. Elle
+// couvre exactement la même surface, compte pour la même requête, et le texte
+// des rues cesse d'être pâteux. C'est volontairement fait à la main plutôt
+// qu'avec l'option detectRetina de Leaflet, qui obtient la netteté en chargeant
+// un niveau de zoom plus profond : quatre fois plus de tuiles.
+const enDoubleResolution = () =>
+  typeof window !== 'undefined' && window.devicePixelRatio > 1;
+
+const cartoUrl = (dark) =>
+  `https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'light_all'}` +
+  `/{z}/{x}/{y}${enDoubleResolution() ? '@2x' : ''}.png?key=${CARTO_KEY}`;
 // À l'ouverture, la carte s'élargit jusqu'à montrer les NEAREST créatifs les plus proches,
 // sans descendre sous MIN_OPEN_ZOOM (≈ un pays) ni zoomer plus que MAX_OPEN_ZOOM (≈ toute l’Île-de-France).
 const NEAREST = 8;
@@ -203,22 +224,27 @@ export default function MapComponent({ theme, active = true }) {
       const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], MAP_ZOOM);
       mapInstance.current = map;
 
-      const useMaptiler = !!MAPTILER_KEY;
-      // MapTiler sert des tuiles de 512 px : sans le préciser, Leaflet les réduit de moitié
-      // et les noms de villes deviennent illisibles.
+      const useCarto = !!CARTO_KEY;
+      // CARTO sert des tuiles de 256 px, la taille standard : rien à corriger,
+      // contrairement à MapTiler dont les tuiles de 512 px devaient être
+      // déclarées sous peine de voir les noms de villes réduits de moitié.
+      // Les quatre sous-domaines a, b, c et d laissent le navigateur ouvrir
+      // plusieurs connexions en parallèle, donc la carte s'affiche plus vite.
       const tiles = LeafletModule.tileLayer(
-        useMaptiler ? maptilerUrl(darkMode) : OSM_URL,
-        useMaptiler
-          ? { attribution: MAPTILER_ATTRIB, maxZoom: 20, tileSize: 512, zoomOffset: -1 }
+        useCarto ? cartoUrl(darkMode) : OSM_URL,
+        useCarto
+          ? { attribution: CARTO_ATTRIB, subdomains: 'abcd', maxZoom: 20 }
           : { attribution: OSM_ATTRIB, maxZoom: 20 }
       ).addTo(map);
       tilesRef.current = tiles;
-      if (!useMaptiler) {
+      if (!useCarto) {
         fallbackRef.current = true;
+        // OpenStreetMap n'existe qu'en clair : en mode sombre on l'inverse par
+        // filtre. CARTO, lui, a un vrai style sombre, donc pas de filtre.
         setUseFilter(true);
       }
 
-      // Si MapTiler ne répond pas (clé absente, quota, coupure), on repasse sur OpenStreetMap
+      // Si CARTO ne répond pas (clé absente, quota, coupure), on repasse sur OpenStreetMap
       let tileErrors = 0;
       tiles.on('tileerror', () => {
         tileErrors += 1;
@@ -317,8 +343,8 @@ export default function MapComponent({ theme, active = true }) {
 
   // Bascule clair / sombre : on change le fond sans recharger la carte
   useEffect(() => {
-    if (!tilesRef.current || fallbackRef.current || !MAPTILER_KEY) return;
-    tilesRef.current.setUrl(maptilerUrl(darkMode));
+    if (!tilesRef.current || fallbackRef.current || !CARTO_KEY) return;
+    tilesRef.current.setUrl(cartoUrl(darkMode));
   }, [darkMode]);
 
   useEffect(() => {
