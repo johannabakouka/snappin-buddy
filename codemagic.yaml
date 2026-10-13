@@ -40,7 +40,10 @@ workflows:
       # réglages publics dont la compilation a besoin :
       #   NEXT_PUBLIC_SUPABASE_ANON_KEY
       #   NEXT_PUBLIC_APP_URL        -> https://snappinbuddy.com
-      #   NEXT_PUBLIC_MAPTILER_KEY
+      #   NEXT_PUBLIC_CARTO_KEY      -> le fond de carte, CARTO depuis le
+      #                                 13 octobre 2026 (MapTiler comptait
+      #                                 chaque tuile quatre fois et son quota
+      #                                 a sauté)
       # Ce sont les mêmes valeurs que sur Vercel.
       groups:
         - snappinbuddy
@@ -56,7 +59,7 @@ workflows:
       - name: Vérifier les variables
         script: |
           manquantes=""
-          for v in NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_APP_URL NEXT_PUBLIC_MAPTILER_KEY; do
+          for v in NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_APP_URL NEXT_PUBLIC_CARTO_KEY; do
             eval "valeur=\$$v"
             [ -z "$valeur" ] && manquantes="$manquantes $v"
           done
