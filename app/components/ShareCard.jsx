@@ -4,6 +4,7 @@ import { useRoles, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { withAt } from '../handles';
 import { isPast } from '../offers-life';
+import { partagerLien } from '../partage';
 
 export default function ShareCard({ offer, profile, onClose }) {
   const t = useT();
@@ -272,6 +273,12 @@ export default function ShareCard({ offer, profile, onClose }) {
     setSaving(true);
     setShareError('');
     try {
+      // Dans l'app installée, le panneau de partage d'iOS passe par Capacitor
+      // et prend un lien plutôt qu'une image. On essaie d'abord, parce que la
+      // suite de cette fonction ne mène à rien là-bas : le partage de fichiers
+      // n'existe pas dans le WKWebView, et un téléchargement non plus.
+      if (await partagerLien(link, offer.title || "Snappin'Buddy")) return;
+
       const blob = await buildImage();
       // Sans image, le bouton revenait simplement à son état normal : on avait
       // l'impression d'avoir enregistré quelque chose qui n'existait pas.
@@ -521,7 +528,7 @@ export default function ShareCard({ offer, profile, onClose }) {
 
       {cardImage && (
         <div onClick={() => setCardImage(null)} style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.94)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', padding: '24px' }}>
-          <img src={cardImage} alt="" onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh', maxWidth: '100%', borderRadius: '14px' }} />
+          <img src={cardImage} alt="" data-enregistrable onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh', maxWidth: '100%', borderRadius: '14px' }} />
           <p style={{ color: 'white', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
             {tx('Press and hold the image to save it.', 'Appuie longuement sur l’image pour l’enregistrer.')}
           </p>

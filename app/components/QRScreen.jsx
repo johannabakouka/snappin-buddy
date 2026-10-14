@@ -308,7 +308,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
 
       {cardImage && (
         <div onClick={() => setCardImage(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '14px' }}>
-          <img src={cardImage} alt="Snappin'Buddy collab" onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh', maxWidth: '100%', borderRadius: '14px', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }} />
+          <img src={cardImage} alt="Snappin'Buddy collab" data-enregistrable onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh', maxWidth: '100%', borderRadius: '14px', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }} />
           <p style={{ color: 'white', fontSize: '14px', fontWeight: '700', textAlign: 'center', lineHeight: 1.5 }}>
             {tx('Press and hold the image to save it, then share it on your story!', 'Appuie longuement sur l’image pour l’enregistrer, puis partage-la en story !')}
           </p>

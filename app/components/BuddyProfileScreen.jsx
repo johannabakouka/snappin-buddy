@@ -69,6 +69,10 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
 
   // Photo de portfolio ouverte en plein écran : son rang, ou null
   const [viewerAt, setViewerAt] = useState(null);
+  // La photo de profil s'ouvre en grand, comme les photos du portfolio.
+  // En rond et en 88 pixels, on ne voyait pas le visage de la personne à qui
+  // on s'apprête à proposer un shooting.
+  const [avatarOuvert, setAvatarOuvert] = useState(false);
   // Ma propre photo de profil : null tant qu'on ne sait pas, '' si je n'en ai pas.
   const [myAvatar, setMyAvatar] = useState(null);
   const [nudgeHidden, setNudgeHidden] = useState(false);
@@ -353,7 +357,16 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
         )}
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: avatarBg, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${avatarBorder}`, overflow: 'hidden' }}>
+          {/* Cliquable seulement s'il y a une photo : sur le cercle vide, un
+              curseur en forme de main promettrait quelque chose qui n'arrive pas. */}
+          <div
+            onClick={buddy?.avatar_url ? () => setAvatarOuvert(true) : undefined}
+            role={buddy?.avatar_url ? 'button' : undefined}
+            tabIndex={buddy?.avatar_url ? 0 : undefined}
+            onKeyDown={buddy?.avatar_url ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAvatarOuvert(true); } } : undefined}
+            aria-label={buddy?.avatar_url ? tx('View photo', 'Voir la photo') : undefined}
+            style={{ width: '88px', height: '88px', borderRadius: '50%', background: avatarBg, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', border: `2px solid ${avatarBorder}`, overflow: 'hidden', cursor: buddy?.avatar_url ? 'pointer' : 'default' }}
+          >
             {buddy?.avatar_url ? <img src={buddy.avatar_url} alt={buddy.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '◉'}
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{buddy?.username}</h2>
@@ -694,6 +707,9 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
       )}
       {viewerAt !== null && (
         <PhotoViewer photos={portfolio} startIndex={viewerAt} onClose={() => setViewerAt(null)} />
+      )}
+      {avatarOuvert && buddy?.avatar_url && (
+        <PhotoViewer photos={[buddy.avatar_url]} onClose={() => setAvatarOuvert(false)} />
       )}
     </div>
   );

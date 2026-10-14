@@ -26,7 +26,7 @@ import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
 import { hasRole, roleLabels, splitRoles, APPLY_NOTE_MAX } from '../constants';
-import { api } from '../api-url';
+import { api, COMPILE_POUR_LAPP } from '../api-url';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
 async function sendEmail(type, payload) {
@@ -1126,8 +1126,18 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           <button onClick={e => { e.stopPropagation(); setSharingOffer(o); }} style={{ background: 'none', border: `1px solid ${cardBorder}`, color: subText, borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}>
                             📸 {tx('Share', 'Partager')}
                           </button>
-                          {/* Pas de boost sur un projet passé : on ne fait pas payer une mise en avant qui ne servira à personne. */}
-                          {o.status === 'open' && !isBoosted && !past && (
+                          {/* Pas de boost sur un projet passé : on ne fait pas payer une mise en avant qui ne servira à personne.
+
+                              Et pas de boost du tout dans l'app installée. Apple
+                              et Google exigent que tout achat numérique passe par
+                              leur propre système de paiement, et prennent 30 %
+                              au passage. Une app qui encaisse par Stripe se fait
+                              refuser. Le Boost reste vendu sur snappinbuddy.com,
+                              où ces règles ne s'appliquent pas, et un projet
+                              boosté depuis le site apparaît bien en tête dans
+                              l'app : c'est seulement le bouton d'achat qui
+                              disparaît ici, pas la fonctionnalité. */}
+                          {o.status === 'open' && !isBoosted && !past && !COMPILE_POUR_LAPP && (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button onClick={e => { e.stopPropagation(); boostOffer(o, 1, 199); }} style={{ background: 'linear-gradient(135deg, #F0B429, #FF6B35)', border: 'none', color: '#000', borderRadius: '12px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
                                 🚀 1j 1,99€

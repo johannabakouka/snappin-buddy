@@ -59,6 +59,16 @@ img {
   -webkit-touch-callout: none;
 }
 
+/* L'exception : les cartes à partager.
+   Quand le partage natif n'est pas disponible, l'app affiche l'image fabriquée
+   et compte sur l'appui long pour l'enregistrer dans la pellicule. La règle
+   ci-dessus supprimait précisément ce menu, donc le dernier recours ne menait
+   plus nulle part. */
+img[data-enregistrable] {
+  -webkit-touch-callout: default;
+  -webkit-user-drag: auto;
+}
+
 /* L'arrivée d'un écran par-dessus un autre.
 
    Ouvrir un profil, une conversation ou un formulaire remplaçait l'écran d'un

@@ -17,6 +17,19 @@
 const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://snappinbuddy.com';
 
 /**
+ * Vrai dans le paquet compilé pour l'app, faux dans celui du site.
+ *
+ * Posée par next.config.ts au moment de `npm run build:app`. C'est une
+ * constante, pas une détection : elle vaut la même chose à la compilation et à
+ * l'affichage, ce qui en fait la seule façon sûre de ne PAS afficher quelque
+ * chose dans l'app. Une détection à l'exécution arrive toujours après le
+ * premier rendu, et un bouton interdit aurait le temps d'apparaître.
+ *
+ * Pour tout le reste, c'est dansLApp() ci-dessous qu'il faut utiliser.
+ */
+export const COMPILE_POUR_LAPP = process.env.NEXT_PUBLIC_DANS_APP === '1';
+
+/**
  * Sommes-nous dans l'app installée plutôt que dans un navigateur ?
  *
  * Capacitor pose un objet global qui répond à la question. On ne l'importe pas :
@@ -24,8 +37,14 @@ const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://snappinbuddy.com';
  *
  * Sans cet objet, on regarde le protocole. L'app iOS sert ses fichiers depuis
  * « capacitor:// », ce qui n'est ni http ni https.
+ *
+ * Exportée, parce qu'elle ne sert plus seulement à construire des adresses :
+ * certaines choses n'ont pas le droit d'exister dans l'app installée. Apple
+ * interdit de vendre quoi que ce soit de numérique autrement que par son
+ * propre système de paiement, et Google applique la même règle. Le Boost, qui
+ * passe par Stripe, est donc masqué dans l'app et reste disponible sur le site.
  */
-function dansLApp() {
+export function dansLApp() {
   if (typeof window === 'undefined') return false;
   const cap = window.Capacitor;
   if (cap && typeof cap.isNativePlatform === 'function') {

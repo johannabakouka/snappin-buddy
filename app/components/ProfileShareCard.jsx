@@ -5,6 +5,7 @@ import { tx } from '../tx';
 import { UNIVERS_FR, UNIVERS_EN, splitRoles, OTHER_ROLE_ID } from '../constants';
 import { withAt } from '../handles';
 import { isNotFrench } from '../tx';
+import { partagerLien } from '../partage';
 
 // Carte de partage d'un profil, au format story 1080x1920.
 // Jumelle de ShareCard.jsx, qui fait la même chose pour un projet :
@@ -305,6 +306,10 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
     setSaving(true);
     setShareError('');
     try {
+      // Dans l'app installée, on passe par le panneau de partage d'iOS avec le
+      // lien du profil : le partage de fichiers n'existe pas dans le WKWebView.
+      if (await partagerLien(link, profile?.username || "Snappin'Buddy")) return;
+
       const blob = await buildImage();
       // Sans ce message, un échec de fabrication de l'image rendait simplement
       // le bouton à son état normal, comme si tout s'était bien passé.
@@ -446,7 +451,7 @@ export default function ProfileShareCard({ profile, onClose, mine = true }) {
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', textAlign: 'center', marginBottom: '8px' }}>
             {tx('Press and hold the image to save it', 'Appuie longtemps sur l’image pour l’enregistrer')}
           </p>
-          <img src={cardImage} alt="" style={{ width: '100%', borderRadius: '16px' }} />
+          <img src={cardImage} alt="" data-enregistrable style={{ width: '100%', borderRadius: '16px' }} />
         </div>
       )}
 
