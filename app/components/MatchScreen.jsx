@@ -47,22 +47,6 @@ async function sendEmail(type, payload) {
  * La date d'un projet, écrite comme on la lit : « sam. 26 sept. ».
  * Elle est stockée en aaaa-mm-jj, qui ne se lit pas d'un coup d'œil.
  */
-// Le score d'affinité, traduit en étoiles.
-//
-// Le chiffre brut ne voulait rien dire pour personne : « 4✓ match » se lisait
-// comme « quatre personnes intéressées », alors que c'est un score personnel,
-// différent pour chacun sur le même projet. Trois étoiles se comprennent sans
-// explication, et l'explication est quand même donnée au survol et en légende.
-//
-// Le score vaut 3 si le rôle recherché est l'un des tiens, plus 1 par univers
-// créatif en commun. Les seuils sont donc : le rôle seul fait deux étoiles, le
-// rôle plus trois univers en fait trois.
-function etoilesDe(score) {
-  if (score >= 6) return 3;
-  if (score >= 3) return 2;
-  return 1;
-}
-
 function offerDateLabel(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -817,20 +801,54 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     loadCollabs(user.id);
   }
 
-  function getMatchScore(offer) {
-    if (!myProfile) return 0;
-    let score = 0;
+  /**
+   * Ce qu'un projet a en commun avec toi, en deux morceaux séparés.
+   *
+   * Les deux comptent, mais pas pareil : être le rôle recherché, c'est pouvoir
+   * se proposer ; partager des univers, c'est avoir envie de le faire. On les
+   * garde donc distincts au lieu de les additionner dans un chiffre unique,
+   * parce que c'est cette distinction qui rend les étoiles explicables.
+   */
+  function matchDetail(offer) {
+    if (!myProfile) return { role: false, univers: 0 };
+    let role = false;
     if (offer.role_needed && myProfile.role) {
       const wanted = offer.role_needed.split(',').map(r => r.trim());
       const mine = splitRoles(myProfile.role);
-      if (wanted.some(r => mine.includes(r))) score += 3;
+      role = wanted.some(r => mine.includes(r));
     }
+    let univers = 0;
     if (offer.styles_needed && myProfile.styles) {
       const os = offer.styles_needed.toLowerCase().split(',').map(s => s.trim());
       const ms = myProfile.styles.toLowerCase().split(',').map(s => s.trim());
-      score += os.filter(s => ms.includes(s)).length;
+      univers = os.filter(s => ms.includes(s)).length;
     }
-    return score;
+    return { role, univers };
+  }
+
+  // Le score chiffré ne sert plus qu'au tri du fil. Il n'est plus montré à
+  // personne : c'est son affichage brut qui induisait en erreur.
+  function getMatchScore(offer) {
+    const { role, univers } = matchDetail(offer);
+    return (role ? 3 : 0) + univers;
+  }
+
+  /**
+   * Les étoiles, et la règle tient en une phrase :
+   *
+   *   ★★★  ton rôle est recherché ET vous partagez des univers
+   *   ★★   ton rôle est recherché
+   *   ★    vous partagez des univers, mais le rôle cherché n'est pas le tien
+   *
+   * Aucun seuil chiffré, donc rien à deviner. C'est la règle écrite dans la
+   * légende sous le titre de la liste, mot pour mot.
+   */
+  function etoilesDe(offer) {
+    const { role, univers } = matchDetail(offer);
+    if (role && univers > 0) return 3;
+    if (role) return 2;
+    if (univers > 0) return 1;
+    return 0;
   }
 
   let displayedOffers = [...offers];
@@ -1203,8 +1221,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                     décoration dont personne ne devine la règle. */}
                 <p style={{ color: subText, fontSize: '11px', lineHeight: 1.5, marginBottom: '12px', letterSpacing: 0 }}>
                   {tx(
-                    '★ marks projects that match your role and your creative worlds. The more stars, the closer the match.',
-                    '★ signale les projets qui correspondent à ton rôle et à tes univers. Plus il y a d’étoiles, plus ça colle.',
+                    '★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds',
+                    '★★★ ton rôle est recherché et vous partagez des univers · ★★ ton rôle est recherché · ★ vous partagez des univers',
                   )}
                 </p>
                 {displayedOffers.map(o => {
@@ -1244,12 +1262,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         {score > 0 && o.status === 'open' && !isBoosted && (
                           <div
                             title={tx(
-                              'This project matches your role and your creative worlds. The more stars, the closer the match.',
-                              'Ce projet correspond à ton rôle et à tes univers. Plus il y a d’étoiles, plus ça colle.',
+                              '★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds',
+                              '★★★ ton rôle est recherché et vous partagez des univers · ★★ ton rôle est recherché · ★ vous partagez des univers',
                             )}
                             style={{ background: '#2ECC71', color: '#000', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '900', letterSpacing: '0.5px' }}
                           >
-                            {'★'.repeat(etoilesDe(score))} {tx('for you', 'pour toi')}
+                            {'★'.repeat(etoilesDe(o))} {tx('for you', 'pour toi')}
                           </div>
                         )}
                         {/* Mettre de côté. L'arrêt de la propagation est
