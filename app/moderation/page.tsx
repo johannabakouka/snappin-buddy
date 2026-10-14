@@ -35,6 +35,13 @@ type Profile = {
 // Une photo refusée par le contrôle automatique, à l'envoi. Ce n'est pas un
 // signalement : rien n'est arrivé dans le stockage, et personne ne s'est
 // plaint. Ce qui compte ici, c'est la répétition.
+/** Les chiffres de l'app, comptés par le serveur. */
+type Stats = {
+  profils: number; profilsRecents: number; profilsMasques: number;
+  projets: number; projetsOuverts: number; projetsRecents: number;
+  candidatures: number; candidaturesEnAttente: number; candidaturesAcceptees: number;
+  collabsValidees: number; photosRefusees: number; signalementsOuverts: number;
+};
 type Block = {
   id: number;
   user_id: string;
@@ -98,6 +105,33 @@ const btn = {
   fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.15)',
 } as const;
 const ghost = { ...btn, background: 'transparent', color: 'rgba(255,255,255,0.75)' } as const;
+
+/**
+ * Une case de chiffre.
+ *
+ * `variation` est le nombre des sept derniers jours : affiché seulement s'il
+ * est supérieur à zéro, parce qu'un « +0 » vert est une mauvaise nouvelle
+ * déguisée en bonne.
+ */
+function Chiffre({ valeur, libelle, variation, total, detail }: {
+  valeur: number; libelle: string; variation?: number; total?: number; detail?: string;
+}) {
+  return (
+    <div>
+      <p style={{ fontWeight: 900, fontSize: 24, lineHeight: 1.1 }}>
+        {valeur}
+        {typeof total === 'number' && total !== valeur && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.35)' }}> / {total}</span>
+        )}
+      </p>
+      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{libelle}</p>
+      {typeof variation === 'number' && variation > 0 && (
+        <p style={{ fontSize: 11, color: '#2ECC71', fontWeight: 700 }}>+{variation} en 7 j</p>
+      )}
+      {detail && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>{detail}</p>}
+    </div>
+  );
+}
 const danger = { ...btn, background: 'rgba(255,77,77,0.12)', color: '#FF6B6B', border: '1px solid rgba(255,77,77,0.35)' } as const;
 const ok = { ...btn, background: '#2ECC71', color: '#000', border: 'none' } as const;
 const input = {
@@ -112,6 +146,7 @@ export default function ModerationPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   // 'anonyme' = aucun compte connecté dans ce navigateur.
   // 'refuse'  = connecté, mais ce n'est pas le compte administrateur.
   // Les distinguer est tout l'intérêt : les deux se réparent autrement.
@@ -158,6 +193,12 @@ export default function ModerationPage() {
       setOffers((body.offers || []) as Offer[]);
       setBlocks((body.blocks || []) as Block[]);
       setState('ok');
+      // Les chiffres arrivent après, dans un second appel : s'ils échouent,
+      // la modération reste utilisable. C'est l'inverse qui serait absurde.
+      const chiffres = await call({ action: 'stats' });
+      if (alive && chiffres.status === 200 && chiffres.body.stats) {
+        setStats(chiffres.body.stats as Stats);
+      }
     })();
     return () => { alive = false; };
   }, [call, tick]);
@@ -260,6 +301,29 @@ export default function ModerationPage() {
           {onlyOpen ? 'Tout voir' : 'En attente'}
         </button>
       </div>
+
+      {/* Les chiffres, en haut parce que c'est la première question qu'on se
+          pose en ouvrant cet écran : est-ce que l'app vit ?
+
+          Chaque case donne un total et, quand ça veut dire quelque chose, ce
+          qui a bougé en sept jours. Un total seul ne dit pas si la courbe monte
+          ou si elle s'est arrêtée il y a un mois. */}
+      {stats && (
+        <div style={card}>
+          <p style={{ fontWeight: 800, fontSize: 13, marginBottom: 10 }}>📊 Où en est l’app</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
+            <Chiffre valeur={stats.profils} libelle="créatifs" variation={stats.profilsRecents} />
+            <Chiffre valeur={stats.projetsOuverts} libelle="projets ouverts" variation={stats.projetsRecents} total={stats.projets} />
+            <Chiffre valeur={stats.candidatures} libelle="candidatures" detail={`${stats.candidaturesEnAttente} en attente · ${stats.candidaturesAcceptees} acceptées`} />
+            <Chiffre valeur={stats.collabsValidees} libelle="collabs validées" />
+          </div>
+          <p style={{ ...dim, fontSize: 11, lineHeight: 1.6, marginTop: 10 }}>
+            {stats.signalementsOuverts} signalement{stats.signalementsOuverts > 1 ? 's' : ''} en attente ·{' '}
+            {stats.photosRefusees} photo{stats.photosRefusees > 1 ? 's' : ''} refusée{stats.photosRefusees > 1 ? 's' : ''} à l’envoi ·{' '}
+            {stats.profilsMasques} profil{stats.profilsMasques > 1 ? 's' : ''} masqué{stats.profilsMasques > 1 ? 's' : ''}
+          </p>
+        </div>
+      )}
 
       {/* Entretien. Séparé des signalements : ce n'est pas de la modération,
           c'est du rattrapage de données, et ça n'a pas à attendre 9 h. */}

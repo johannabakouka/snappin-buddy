@@ -47,6 +47,22 @@ async function sendEmail(type, payload) {
  * La date d'un projet, écrite comme on la lit : « sam. 26 sept. ».
  * Elle est stockée en aaaa-mm-jj, qui ne se lit pas d'un coup d'œil.
  */
+// Le score d'affinité, traduit en étoiles.
+//
+// Le chiffre brut ne voulait rien dire pour personne : « 4✓ match » se lisait
+// comme « quatre personnes intéressées », alors que c'est un score personnel,
+// différent pour chacun sur le même projet. Trois étoiles se comprennent sans
+// explication, et l'explication est quand même donnée au survol et en légende.
+//
+// Le score vaut 3 si le rôle recherché est l'un des tiens, plus 1 par univers
+// créatif en commun. Les seuils sont donc : le rôle seul fait deux étoiles, le
+// rôle plus trois univers en fait trois.
+function etoilesDe(score) {
+  if (score >= 6) return 3;
+  if (score >= 3) return 2;
+  return 1;
+}
+
 function offerDateLabel(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -1180,8 +1196,16 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
             {displayedOffers.length > 0 ? (
               <>
-                <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '12px' }}>
+                <p style={{ color: subText, fontSize: '11px', letterSpacing: '1px', marginBottom: '6px' }}>
                   {sortBy === 'match' ? (tx('MATCHING YOUR PROFILE', 'CORRESPOND À TON UNIVERS')) : t.offersNow}
+                </p>
+                {/* La légende des étoiles. Sans elle, le badge reste une
+                    décoration dont personne ne devine la règle. */}
+                <p style={{ color: subText, fontSize: '11px', lineHeight: 1.5, marginBottom: '12px', letterSpacing: 0 }}>
+                  {tx(
+                    '★ marks projects that match your role and your creative worlds. The more stars, the closer the match.',
+                    '★ signale les projets qui correspondent à ton rôle et à tes univers. Plus il y a d’étoiles, plus ça colle.',
+                  )}
                 </p>
                 {displayedOffers.map(o => {
                   const isShared = sharedOffer && o.id === sharedOffer.id;
@@ -1218,8 +1242,14 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         </div>
                         {isBoosted && <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #F0B429, #FF6B35)', color: '#000', borderRadius: '8px', padding: '2px 8px', fontWeight: '700' }}>🚀 Boost</span>}
                         {score > 0 && o.status === 'open' && !isBoosted && (
-                          <div style={{ background: '#2ECC71', color: '#000', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '900' }}>
-                            {score}✓ match
+                          <div
+                            title={tx(
+                              'This project matches your role and your creative worlds. The more stars, the closer the match.',
+                              'Ce projet correspond à ton rôle et à tes univers. Plus il y a d’étoiles, plus ça colle.',
+                            )}
+                            style={{ background: '#2ECC71', color: '#000', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '900', letterSpacing: '0.5px' }}
+                          >
+                            {'★'.repeat(etoilesDe(score))} {tx('for you', 'pour toi')}
                           </div>
                         )}
                         {/* Mettre de côté. L'arrêt de la propagation est

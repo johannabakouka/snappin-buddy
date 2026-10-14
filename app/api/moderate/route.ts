@@ -16,7 +16,7 @@ import { backfillCities } from '../../lib/backfill-cities';
 // l'adresse directement.
 
 type Action =
-  | 'list'
+  | 'list' | 'stats'
   | 'hide_profile' | 'show_profile'
   | 'remove_avatar' | 'clear_portfolio'
   | 'delete_message'
@@ -118,6 +118,62 @@ export async function POST(request: Request) {
         profiles: profiles || [],
         messages: messages || [],
         offers: offers || [],
+      });
+    }
+
+    // Les chiffres de l'app, en un coup d'œil.
+    //
+    // Ils ne peuvent pas être lus depuis le téléphone comme le reste : les
+    // règles de sécurité de Supabase ne montrent à chacun que ses propres
+    // candidatures, ce qui est exactement ce qu'on veut pour les utilisateurs
+    // et exactement ce qui empêche d'avoir un total. Ils sont donc comptés ici,
+    // côté serveur, avec les droits d'administration, et seulement pour
+    // l'adresse administratrice.
+    //
+    // `head: true` ne rapatrie aucune ligne : Supabase renvoie juste le nombre.
+    // C'est ce qui permet de compter des milliers de lignes sans rien charger.
+    if (action === 'stats') {
+      const ilYASeptJours = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Chaque appel construit sa requête complète et ne renvoie que le nombre.
+      // Passer la requête déjà bâtie plutôt qu'un nom de table et un filtre
+      // évite de se battre avec les types de Supabase, qui changent à chaque
+      // méthode chaînée.
+      async function nb(requete: PromiseLike<{ count: number | null; error: unknown }>) {
+        const { count, error } = await requete;
+        if (error) throw error;
+        return count || 0;
+      }
+      const tous = { count: 'exact' as const, head: true };
+
+      const [
+        profils, profilsRecents, profilsMasques,
+        projets, projetsOuverts, projetsRecents,
+        candidatures, candidaturesEnAttente, candidaturesAcceptees,
+        collabsValidees, photosRefusees, signalementsOuverts,
+      ] = await Promise.all([
+        nb(db.from('profiles').select('*', tous)),
+        nb(db.from('profiles').select('*', tous).gte('created_at', ilYASeptJours)),
+        nb(db.from('profiles').select('*', tous).eq('hidden', true)),
+        nb(db.from('offers').select('*', tous)),
+        nb(db.from('offers').select('*', tous).eq('status', 'open')),
+        nb(db.from('offers').select('*', tous).gte('created_at', ilYASeptJours)),
+        nb(db.from('collabs').select('*', tous)),
+        nb(db.from('collabs').select('*', tous).eq('status', 'pending')),
+        nb(db.from('collabs').select('*', tous).eq('status', 'accepted')),
+        nb(db.from('collabs').select('*', tous).not('validated_at', 'is', null)),
+        nb(db.from('upload_blocks').select('*', tous)),
+        nb(db.from('reports').select('*', tous).eq('status', 'open')),
+      ]);
+
+      return Response.json({
+        ok: true,
+        stats: {
+          profils, profilsRecents, profilsMasques,
+          projets, projetsOuverts, projetsRecents,
+          candidatures, candidaturesEnAttente, candidaturesAcceptees,
+          collabsValidees, photosRefusees, signalementsOuverts,
+        },
       });
     }
 
