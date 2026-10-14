@@ -1,0 +1,133 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  /* Le fond suit le thème choisi. Avant, il était en noir dur ici, donc en
+     mode clair les marges de part et d'autre de la colonne restaient noires
+     sur tout écran plus large que 390 px. La valeur est posée par l'app au
+     chargement, et ce noir ne sert plus que de fond avant l'affichage. */
+  background: var(--sb-bg, #0A0A0A);
+  color: var(--sb-color, #FFFFFF);
+  /* La police du téléphone : San Francisco sur iPhone, Roboto sur Android.
+     L'app a l'air native, rien n'est téléchargé, et le texte suit le réglage
+     de taille de caractères de la personne.
+     Avant, cette ligne demandait 'Nunito Sans', une police qui n'était jamais
+     chargée : tout le corps de l'app tombait sur la police par défaut sans
+     que ce soit voulu, pendant que les titres, eux, étaient en Nunito.
+     Nunito reste, pour le nom et les titres, via var(--font-nunito). */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
+  -webkit-font-smoothing: antialiased;
+  /* Le rebond du navigateur entrait en conflit avec le geste « tirer pour
+     rafraîchir » : les premiers pixels partaient dans l'élastique du système. */
+  overscroll-behavior-y: none;
+}
+
+/* L'appui long, le détail qui trahit le plus une app web.
+
+   Sur iPhone, garder le doigt appuyé sur n'importe quel texte le sélectionne
+   en bleu et fait surgir le menu « Copier / Partager » du système. Sur une
+   vraie app ça n'arrive jamais : on appuie longtemps sur une carte de projet,
+   il ne se passe rien. Même chose pour les images, qu'un appui long propose
+   d'enregistrer, et qu'un glissement arrache de la page.
+
+   On coupe partout, et on rend la sélection là où elle sert vraiment : dans
+   les champs de saisie, et sur le texte des messages, qu'il faut pouvoir
+   copier. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+[contenteditable],
+[data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+/* L'exception : les cartes à partager.
+   Quand le partage natif n'est pas disponible, l'app affiche l'image fabriquée
+   et compte sur l'appui long pour l'enregistrer dans la pellicule. La règle
+   ci-dessus supprimait précisément ce menu, donc le dernier recours ne menait
+   plus nulle part. */
+img[data-enregistrable] {
+  -webkit-touch-callout: default;
+  -webkit-user-drag: auto;
+}
+
+/* L'arrivée d'un écran par-dessus un autre.
+
+   Ouvrir un profil, une conversation ou un formulaire remplaçait l'écran d'un
+   coup, sans transition : c'est le changement de page d'un site web. Sur
+   iPhone, un écran qui s'ouvre glisse depuis la droite. Ces quelques images
+   suffisent à faire comprendre qu'on est entré quelque part, et donc que le
+   geste de retour existe.
+
+   La courbe n'est pas décorative : elle démarre vite et finit en douceur, c'est
+   celle qu'iOS utilise pour ses propres écrans.
+
+   Pas de fill-mode, volontairement. Une transformation, même terminée, change
+   la façon dont les éléments fixes placés à l'intérieur se positionnent, et
+   l'app en contient (les panneaux du bas). Sans fill-mode, la transformation
+   disparaît complètement dès la fin de l'animation. */
+@keyframes sb-arrivee {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+.sb-ecran {
+  animation: sb-arrivee 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-ecran { animation: none; }
+}
+
+/* Le doigt doit sentir qu'il a appuyé.
+   L'app n'avait aucun état pressé : on touchait un bouton et rien ne bougeait
+   avant que l'écran suivant arrive. C'est le détail qui sépare une app d'un
+   site web. */
+button,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, opacity 0.08s ease;
+}
+
+button:active:not(:disabled),
+[role='button']:active {
+  transform: scale(0.97);
+  opacity: 0.82;
+}
+
+/* Les champs retiraient tous leur contour de focus sans rien mettre à la
+   place : au clavier, on ne savait plus où on était. */
+:focus-visible {
+  outline: 2px solid #F2E050;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  [role='button'] {
+    transition: none;
+  }
+  button:active:not(:disabled),
+  [role='button']:active {
+    transform: none;
+  }
+}
