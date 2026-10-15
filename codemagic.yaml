@@ -84,24 +84,19 @@ workflows:
         script: npx cap sync ios
 
       - name: Préparer la signature
-        # On repart systématiquement des fichiers d'Apple, jamais d'une copie.
+        # Codemagic ne récupère PAS les profils chez Apple.
         #
-        # Quatre compilations de suite ont été refusées avec « doesn't include
-        # the aps-environment entitlement ». L'étape de vérification a donné la
-        # réponse : la machine recevait un profil daté du 12 octobre, supprimé
-        # chez Apple depuis, et conservé quelque part par Codemagic. Tout ce
-        # qu'on faisait côté Apple ne pouvait donc rien changer.
+        # C'est le point qui nous a coûté une soirée. La clé App Store Connect
+        # configurée plus haut sert à envoyer le build sur TestFlight, pas à
+        # télécharger les fichiers de signature : ceux-ci viennent uniquement
+        # de ce qui a été téléversé à la main dans Codemagic, sous
+        # Settings > Code signing identities > iOS provisioning profiles.
         #
-        # On efface ce qui traîne, on repart d'un trousseau neuf, on redemande
-        # les fichiers à Apple, et on ne pose la signature qu'ensuite. Quelques
-        # secondes de plus par compilation, et plus jamais ce doute.
-        script: |
-          rm -rf "$HOME/Library/MobileDevice/Provisioning Profiles"
-          keychain initialize
-          app-store-connect fetch-signing-files "com.snappinbuddy.app" \
-            --type IOS_APP_STORE --create
-          keychain add-certificates
-          xcode-project use-profiles
+        # Autrement dit, régénérer un profil chez Apple ne change rien tant
+        # qu'on ne l'a pas aussi téléversé là-bas. Une tentative d'effacer les
+        # profils de la machine pour forcer un téléchargement a été retirée :
+        # elle supprimait le seul fichier dont la compilation disposait.
+        script: xcode-project use-profiles
 
       # Afficher ce que la machine a VRAIMENT reçu comme profil.
       #
