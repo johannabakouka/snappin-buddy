@@ -4,11 +4,12 @@
 // l'interface. Il n'existe que dans l'app : sur le site, il n'y a rien à
 // masquer et les fonctions d'ici ne font rien.
 //
-// On passe par window.Capacitor plutôt que par un import du paquet
-// @capacitor/splash-screen, comme pour le partage natif dans partage.js :
-// l'import ferait entrer du code Capacitor dans la compilation du site, qui
-// est fabriquée par un serveur où `window` n'existe pas. Le greffon natif, lui,
-// s'inscrit tout seul dans window.Capacitor.Plugins au lancement de l'app.
+// Le greffon s'importe. Lu sur `window.Capacitor.Plugins`, il était toujours
+// absent : cet objet n'est rempli que par l'import du paquet. L'appel ci-dessous
+// ne partait donc jamais, et le logo restait les trois secondes entières du
+// filet de sécurité, à chaque lancement.
+
+import { SplashScreen } from '@capacitor/splash-screen';
 
 /**
  * Dit à l'app « l'interface est prête, tu peux retirer le logo ».
@@ -22,8 +23,7 @@
 export function masquerSplash() {
   if (typeof window === 'undefined') return;
   try {
-    const greffon = window.Capacitor?.Plugins?.SplashScreen;
-    if (greffon?.hide) greffon.hide();
+    SplashScreen.hide();
   } catch {
     // Sur le site il n'y a pas d'écran de démarrage, et dans l'app un échec
     // ici n'a pas de conséquence : iOS le retire seul au bout de trois

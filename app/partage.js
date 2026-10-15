@@ -1,5 +1,6 @@
 'use client';
 
+import { Share } from '@capacitor/share';
 import { dansLApp } from './api-url';
 
 // Le partage, selon l'endroit d'où l'app tourne.
@@ -18,10 +19,12 @@ import { dansLApp } from './api-url';
 // façon ce qu'on veut envoyer à quelqu'un : il ouvre la page du projet ou du
 // profil, image comprise.
 
-/** Le greffon de partage de Capacitor, ou rien si on n'est pas dans l'app. */
+// Le greffon s'importe, il ne se cueille pas sur window : `Capacitor.Plugins`
+// reste vide tant que le paquet n'a pas été importé. Lu sur window, ce partage
+// natif n'est jamais parti une seule fois.
+/** Le panneau de partage du système. */
 function panneauNatif() {
-  if (typeof window === 'undefined') return null;
-  return window.Capacitor?.Plugins?.Share || null;
+  return Share;
 }
 
 /**

@@ -1,48 +1,56 @@
 'use client';
 
-// Vibration courte sur les actions qui comptent. Jamais pour décorer :
-// seulement là où quelque chose vient vraiment de partir.
-//
-// Pourquoi deux chemins : `navigator.vibrate` ne fait strictement RIEN sur
-// iPhone. Safari ne l'a jamais implémenté, et aucune page web ne peut faire
-// vibrer un iPhone. Dans l'app installée en revanche, Capacitor donne accès au
-// moteur haptique du téléphone, celui qui produit le petit coup sec qu'on sent
-// dans Instagram quand on aime une photo.
-//
-// On passe par l'objet global que Capacitor pose lui-même plutôt que par un
-// import : ce fichier doit rester utilisable sur le web, où le module n'existe
-// pas, et un import manquant casserait la compilation.
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
-/** Le greffon haptique de Capacitor, ou rien si on n'est pas dans l'app. */
-function moteurNatif() {
-  if (typeof window === 'undefined') return null;
-  const plugins = window.Capacitor?.Plugins;
-  return plugins?.Haptics || null;
+// Vibration courte sur les actions qui comptent. Jamais pour décorer :
+// seulement là où quelque chose vient vraiment de partir, ou là où la
+// sélection vient de changer.
+//
+// POURQUOI UN IMPORT, ET PAS `window.Capacitor.Plugins.Haptics`
+//
+// Ce fichier lisait le greffon sur l'objet global. Cet objet existe, mais il
+// reste VIDE tant que le paquet n'a pas été importé : dans @capacitor/core, la
+// ligne `Plugins[pluginName] = proxy` ne s'exécute qu'à l'intérieur de
+// `registerPlugin()`, appelée par l'import du paquet et par rien d'autre.
+// Résultat : pas une seule vibration n'est jamais partie sur iPhone, et le
+// repli `navigator.vibrate` n'y changeait rien puisque Safari ne l'a jamais
+// implémenté. Le même motif avait été recopié dans partage.js et splash.js.
+//
+// L'import est sans danger pour le site : @capacitor/core se rattache à
+// `globalThis` et s'importe sans erreur sur un serveur, et l'implémentation
+// web du greffon, qui appelle `navigator.vibrate`, n'est chargée qu'au premier
+// appel depuis un navigateur. Sur le site, ces fonctions font donc exactement
+// ce que le navigateur sait faire, c'est-à-dire rien du tout sur iPhone.
+
+/**
+ * Demande une vibration sans jamais laisser une erreur remonter.
+ *
+ * Les méthodes du greffon renvoient une promesse : un simple try/catch ne
+ * suffirait pas, un refus arrivant plus tard deviendrait un rejet non traité
+ * dans la console. Une vibration qui ne part pas ne doit jamais rien casser.
+ */
+function demander(action) {
+  try {
+    action()?.catch?.(() => {});
+  } catch { /* le greffon refuse parfois hors geste utilisateur */ }
 }
 
 /**
  * Le coup sec d'une action réussie : un message parti, une proposition envoyée.
  *
- * `ms` ne sert que sur Android et sur le web, où la vibration se demande en
- * millisecondes. Sur iPhone, le système choisit lui-même l'intensité à partir
- * du style demandé, et c'est ce qui donne cette sensation nette plutôt qu'un
- * bourdonnement.
+ * Sur iPhone, le système choisit lui-même l'intensité à partir du style
+ * demandé, et c'est ce qui donne cette sensation nette plutôt qu'un
+ * bourdonnement. L'argument en millisecondes de l'ancienne version ne servait
+ * qu'au repli `navigator.vibrate`, qui ne faisait rien : les appels qui le
+ * passent encore restent valables, il est simplement ignoré.
  */
-export function tap(ms = 18) {
-  try {
-    const natif = moteurNatif();
-    if (natif?.impact) { natif.impact({ style: 'Light' }); return; }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
-  } catch { /* certains navigateurs refusent hors geste utilisateur */ }
+export function tap() {
+  demander(() => Haptics.impact({ style: ImpactStyle.Light }));
 }
 
 /** Plus appuyé : une collaboration validée, un paiement passé. */
 export function tapFort() {
-  try {
-    const natif = moteurNatif();
-    if (natif?.impact) { natif.impact({ style: 'Medium' }); return; }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(30);
-  } catch { /* idem */ }
+  demander(() => Haptics.impact({ style: ImpactStyle.Medium }));
 }
 
 /**
@@ -57,24 +65,15 @@ export function tapFort() {
  * Utiliser l'impact pour ça rendrait l'app fatigante au bout de dix minutes.
  */
 export function tapChoix() {
-  try {
-    const natif = moteurNatif();
-    if (natif?.selectionChanged) { natif.selectionChanged(); return; }
-    if (natif?.impact) { natif.impact({ style: 'Light' }); return; }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(8);
-  } catch { /* idem */ }
+  demander(() => Haptics.selectionChanged());
 }
 
 /**
  * La secousse d'un refus : photo bloquée, formulaire incomplet.
  *
- * Sur iPhone, c'est une vibration de notification d'erreur, reconnaissable
- * entre toutes. Ailleurs, deux impulsions brèves, ce que le système sait faire.
+ * Sur iPhone, c'est la vibration de notification d'erreur du système,
+ * reconnaissable entre toutes.
  */
 export function tapErreur() {
-  try {
-    const natif = moteurNatif();
-    if (natif?.notification) { natif.notification({ type: 'Error' }); return; }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([12, 60, 12]);
-  } catch { /* idem */ }
+  demander(() => Haptics.notification({ type: NotificationType.Error }));
 }
