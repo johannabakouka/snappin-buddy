@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import PhotoViewer from './PhotoViewer';
 import Header from './Header';
@@ -87,7 +88,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
   const isEn = isNotFrench();
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (user) {
       const { data: me } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       setMyProfile(me);
@@ -114,7 +115,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
   // Un suivi ajouté ailleurs (l'onglet Suivis, le profil d'un créatif) doit
   // s'afficher ici sans recharger la liste entière.
   useEffect(() => onFollowsChanged(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (user?.id) setFollowingIds(await loadFollowingIds(user.id));
   }), []);
 
@@ -126,7 +127,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
    * l'impression de n'avoir pas été pressé.
    */
   async function toggleFollow(targetId) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (!user || followBusy) return;
     const suivi = followingIds.has(targetId);
     setFollowBusy(targetId);

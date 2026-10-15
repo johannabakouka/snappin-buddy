@@ -42,7 +42,9 @@ export async function POST(request: Request) {
       const expediteur = await getProfile(user.id);
       await pousser(toUserId, {
         titre: expediteur?.username || 'Un créatif',
-        corps: 'vous a envoyé un message',
+        // Tutoiement, comme partout ailleurs dans l'app. Cette ligne était la
+        // seule des quatre notifications à vouvoyer.
+        corps: 't\'a envoyé un message',
         lien: '/?screen=messages',
       });
 

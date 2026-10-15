@@ -127,8 +127,30 @@ async function pastille(userId: string): Promise<number | undefined> {
   try {
     const db = supabaseAdmin();
     const commun = { count: 'exact' as const, head: true };
+    // Les conversations mises en sourdine ne comptent pas.
+    //
+    // La barre du bas les exclut déjà de sa pastille : c'est tout l'intérêt de
+    // la sourdine. Sans la même exclusion ici, l'icône de l'app annonçait 3 là
+    // où l'onglet Messages affichait 1, et c'est le genre d'écart qui fait
+    // cesser de croire la pastille.
+    const { data: sourdines } = await db
+      .from('conversation_prefs')
+      .select('buddy_id')
+      .eq('user_id', userId)
+      .eq('muted', true);
+    const tus = (sourdines || []).map(r => r.buddy_id as string).filter(Boolean);
+
+    let nonLus = db.from('messages').select('*', commun)
+      .eq('receiver_id', userId)
+      // `read.is.null` en plus de `read.eq.false`, exactement comme la barre du
+      // bas : les messages antérieurs à la colonne ont NULL et ne sont donc ni
+      // lus ni non lus. Sans ça, l'icône et l'onglet ne comptent pas la même
+      // chose.
+      .or('read.is.null,read.eq.false');
+    if (tus.length) nonLus = nonLus.not('sender_id', 'in', `(${tus.join(',')})`);
+
     const [{ count: messages }, { count: candidatures }] = await Promise.all([
-      db.from('messages').select('*', commun).eq('receiver_id', userId).eq('read', false),
+      nonLus,
       db.from('collabs').select('*', commun).eq('receiver_id', userId).eq('status', 'pending'),
     ]);
     return (messages || 0) + (candidatures || 0);

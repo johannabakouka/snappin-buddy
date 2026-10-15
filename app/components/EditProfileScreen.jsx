@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { useRoles, useUnivers, useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { cleanHandle, isHandleValid, checkHandle } from '../handles';
@@ -151,7 +152,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
     setError('');
     setUploadingAvatar(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await utilisateur();
       if (!user) throw new Error('session expirée');
 
       const previous = avatarUrl;
@@ -184,7 +185,7 @@ export default function EditProfileScreen({ profile, onSave, onBack, onAvatarCha
     setError('');
     setUploadingPortfolio(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await utilisateur();
       if (!user) throw new Error('session expirée');
 
       const newUrls = [...portfolioUrls];

@@ -76,6 +76,22 @@ const config: CapacitorConfig = {
       resize: 'native',
       style: 'dark',
     },
+    PushNotifications: {
+      // Ce qu'iOS a le droit de faire d'une notification qui arrive PENDANT
+      // qu'on se sert de l'app.
+      //
+      // Sans ce réglage, le greffon renvoie une liste vide au système, ce qui
+      // veut dire « n'affiche rien ». Et « rien », chez Apple, va plus loin
+      // qu'on ne le croit : pas de bandeau, pas de son, pas de pastille, et
+      // surtout la notification n'est jamais déposée dans le centre de
+      // notifications. Elle est purement et simplement jetée. L'app ouverte,
+      // on ne voyait donc strictement rien arriver, et on ne retrouvait rien
+      // après coup en balayant depuis le haut de l'écran.
+      //
+      // C'est le cas de loin le plus courant pendant qu'on teste, et aussi
+      // quand deux personnes s'écrivent en même temps.
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
     StatusBar: {
       // L'heure et la batterie en blanc, puisque le fond est sombre.
       style: 'dark',

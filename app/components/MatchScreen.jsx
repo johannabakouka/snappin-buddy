@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import Header from './Header';
 import QRScreen from './QRScreen';
 import OfferForm from './OfferForm';
@@ -123,7 +124,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   const [savingOffer, setSavingOffer] = useState(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    utilisateur().then(({ data }) => {
       if (data.user) {
         setUser(data.user);
         loadCollabs(data.user.id);
@@ -535,7 +536,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function applyToOffer(o, note = '', roleApplied = '') {
-    const { data: { user: u } } = await supabase.auth.getUser();
+    const { data: { user: u } } = await utilisateur();
     if (!u) return;
     setActionError('');
     tap();
@@ -744,7 +745,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function applyToOffer(o, note = '') {
-    const { data: { user: u } } = await supabase.auth.getUser();
+    const { data: { user: u } } = await utilisateur();
     if (!u) return;
     setActionError('');
     tap();

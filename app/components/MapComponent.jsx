@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import CityPicker from './CityPicker';
@@ -221,7 +222,20 @@ export default function MapComponent({ theme, active = true }) {
     if (mapInstance.current) return;
     import('leaflet').then(async (LeafletModule) => {
       import('leaflet/dist/leaflet.css');
-      const map = LeafletModule.map(mapRef.current, { zoomControl: false }).setView([48.8566, 2.3522], MAP_ZOOM);
+      // `minZoom: 2` : en dessous, le planisphère devient plus court que
+      // l'écran et il reste des bandes vides au-dessus et en dessous, que
+      // Leaflet remplit de gris clair. Sur une app entièrement sombre, ça a
+      // l'air d'un bug d'affichage. À 2, la carte fait 1024 px de haut et
+      // couvre n'importe quel téléphone, donc on ne peut plus l'atteindre.
+      //
+      // `maxBounds` empêche en plus de faire glisser le monde hors de l'écran
+      // vers le haut ou le bas. 1.0 de viscosité le ramène sans rebond.
+      const map = LeafletModule.map(mapRef.current, {
+        zoomControl: false,
+        minZoom: 2,
+        maxBounds: [[-85, -Infinity], [85, Infinity]],
+        maxBoundsViscosity: 1.0,
+      }).setView([48.8566, 2.3522], MAP_ZOOM);
       mapInstance.current = map;
 
       const useCarto = !!CARTO_KEY;
@@ -262,7 +276,7 @@ export default function MapComponent({ theme, active = true }) {
 
       lastLoad.current = Date.now();
       const { data: profileData } = await supabase.from('profiles').select(MAP_COLUMNS);
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await utilisateur();
       // Les personnes bloquées, dans un sens comme dans l'autre, n'apparaissent pas.
       const blocked = await loadBlockedIds(user?.id);
 
@@ -375,7 +389,7 @@ export default function MapComponent({ theme, active = true }) {
       (async () => {
         const [{ data: profileData }, { data: { user } }] = await Promise.all([
           supabase.from('profiles').select(MAP_COLUMNS),
-          supabase.auth.getUser(),
+          utilisateur(),
         ]);
         const blocked = await loadBlockedIds(user?.id);
         if (profileData) setProfiles(profileData
@@ -391,7 +405,7 @@ export default function MapComponent({ theme, active = true }) {
     lastLoad.current = Date.now();
     const [{ data: profileData }, { data: { user } }] = await Promise.all([
       supabase.from('profiles').select(MAP_COLUMNS),
-      supabase.auth.getUser(),
+      utilisateur(),
     ]);
     const blocked = await loadBlockedIds(user?.id);
     if (profileData) setProfiles(profileData
@@ -426,7 +440,7 @@ export default function MapComponent({ theme, active = true }) {
     if (savingCity) return;
     setSavingCity(true);
     const fuzzed = fuzzPosition(city.lat, city.lng, CITY_FUZZ);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (user) {
       const { error } = await supabase.from('profiles')
         // Le nom de la ville était perdu : seules les coordonnées étaient

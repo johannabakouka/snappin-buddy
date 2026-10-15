@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { useT } from '../i18n';
 import { tx } from '../tx';
 import Thumb from './Thumb';
@@ -110,7 +111,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     : (tx('Available', 'Disponible'));
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    utilisateur().then(({ data }) => {
       setUser(data.user);
       if (data.user && buddyUserId) {
         loadMessages(data.user.id, buddyUserId);
@@ -509,7 +510,15 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
           const isSystem = !m.image_url && (body.includes('Collab acceptée') || body.includes('Collab accepted') || body.includes('Créons'));
           if (isSystem) return (
             <div key={m.id} style={{ textAlign: 'center', margin: '8px 0' }}>
-              <span style={{ fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(46,204,113,0.08)' : 'rgba(46,204,113,0.1)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(46,204,113,0.2)' }}>
+              {/* `inline-block` et non `inline` : une pastille arrondie en
+                  élément `inline` ne tient pas sur deux lignes. Le fond et la
+                  bordure se coupent en deux morceaux, le coin arrondi
+                  réapparaît au milieu de la phrase, et les 14 px de marge ne
+                  s'appliquent qu'au tout début et à la toute fin. C'est ce qui
+                  faisait déborder « On se retrouve quand ? » hors de son
+                  cadre. En `inline-block`, la pastille reste une seule boîte
+                  qui va à la ligne proprement à l'intérieur. */}
+              <span style={{ display: 'inline-block', maxWidth: '85%', textAlign: 'center', lineHeight: 1.5, fontSize: '12px', color: '#2ECC71', background: darkMode ? 'rgba(46,204,113,0.08)' : 'rgba(46,204,113,0.1)', padding: '8px 14px', borderRadius: '16px', border: '1px solid rgba(46,204,113,0.2)' }}>
                 {m.content}
               </span>
             </div>
@@ -532,6 +541,11 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
                   background: isMe ? (darkMode ? 'white' : '#111') : (darkMode ? '#1A1A1A' : '#E0E0E0'),
                   color: isMe ? (darkMode ? 'black' : 'white') : color,
                   fontSize: '14px', lineHeight: 1.4,
+                  // Sans ça, une adresse web collée dans la conversation, ou
+                  // un mot très long, sort de la bulle au lieu d'aller à la
+                  // ligne : le navigateur ne coupe jamais à l'intérieur d'un
+                  // mot de lui-même.
+                  overflowWrap: 'anywhere',
                   cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                 }}
               >

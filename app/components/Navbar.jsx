@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { loadMutedIds } from '../conversations';
 import { useT } from '../i18n';
 import { tapChoix } from '../haptics';
@@ -51,7 +52,7 @@ export default function Navbar({ screen, setScreen, theme }) {
 
     // Le temps réel n'est qu'un bonus : quand il passe, la pastille arrive tout
     // de suite au lieu d'attendre le prochain recomptage.
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    utilisateur().then(({ data: { user } }) => {
       if (!alive || !user) return;
       userId = user.id;
       refresh();

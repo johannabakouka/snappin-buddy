@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { useT, useRoles } from '../i18n';
 import MapPreviewCard from './MapPreviewCard';
 import { tx, isNotFrench } from '../tx';
@@ -106,7 +107,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
 
   useEffect(() => {
     let alive = true;
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    utilisateur().then(async ({ data: { user } }) => {
       if (!alive) return;
       setMe(user || null);
       if (!user || !buddy?.user_id) { setRelation('none'); return; }
@@ -194,7 +195,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
     if (preview) return;   // en aperçu, aucune requête : l'écran est en lecture seule
     let alive = true;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await utilisateur();
       if (!user || !alive) return;
       const { data } = await supabase.from('profiles').select('avatar_url').eq('user_id', user.id).maybeSingle();
       if (alive) setMyAvatar(data?.avatar_url || '');
@@ -211,7 +212,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
     setNudgeError('');
     setNudgeBusy(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await utilisateur();
       if (!user) throw new Error('session expirée');
       const url = await uploadProfileImage(file, user.id, AVATAR_BUCKET);
       const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
@@ -231,7 +232,7 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
   async function sendCollab() {
     setSending(true);
     setSendError('');
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (!user) {
       setSendError(tx('Your session expired. Sign in again.', 'Ta session a expiré. Reconnecte-toi.'));
       setSending(false);

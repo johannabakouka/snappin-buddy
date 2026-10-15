@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import ChatScreen from './ChatScreen';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import Header from './Header';
@@ -55,7 +56,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
   const cardBorder = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    utilisateur().then(({ data }) => {
       if (data.user) {
         setUser(data.user);
         loadConversations(data.user.id);

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { useT } from '../i18n';
 import { tx } from '../tx';
 import { authErrorMessage } from '../auth-errors';
@@ -55,7 +56,7 @@ export default function AccountScreen({ theme, onBack }) {
 
   useEffect(() => {
     let alive = true;
-    supabase.auth.getUser().then(({ data }) => {
+    utilisateur().then(({ data }) => {
       if (!alive) return;
       setMyEmail(data.user?.email || '');
       // Supabase garde la future adresse ici tant que le lien n'est pas ouvert.
@@ -125,7 +126,7 @@ export default function AccountScreen({ theme, onBack }) {
     // Selon les réglages du projet, le changement est immédiat ou attend que le
     // lien reçu par email soit ouvert. On regarde ce qui s'est réellement passé
     // au lieu d'annoncer l'un ou l'autre au hasard.
-    const { data } = await supabase.auth.getUser();
+    const { data } = await utilisateur();
     const now = (data.user?.email || '').toLowerCase();
     setEmailBusy(false);
     if (now === clean) {

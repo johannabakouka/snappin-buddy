@@ -131,3 +131,15 @@ button:active:not(:disabled),
     transform: none;
   }
 }
+
+/* Le fond de la carte, derrière les tuiles.
+
+   Leaflet pose un gris clair (#ddd) par défaut sur son conteneur. On le voit
+   partout où il n'y a pas encore de tuile : pendant le chargement, et surtout
+   quand on dézoome jusqu'à ce que le planisphère ne couvre plus toute la
+   hauteur. Dans une app entièrement sombre, ces bandes grises ressemblent à un
+   écran cassé. On reprend donc la couleur de fond de l'app, et le chargement
+   des tuiles devient invisible. */
+.leaflet-container {
+  background: var(--sb-bg, #0A0A0A);
+}

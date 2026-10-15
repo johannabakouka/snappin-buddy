@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { tap } from '../haptics';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
@@ -218,7 +219,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   async function toggleReceipts() {
     const next = !receipts;
     setReceipts(next);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (!user) return;
     await supabase.from('profiles').update({ read_receipts: next }).eq('user_id', user.id);
   }
@@ -241,7 +242,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     // le retour franc, pas le petit clic d'un filtre.
     tap();
     setStatus(newStatus);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await utilisateur();
     if (user) {
       await supabase.from('profiles').update({ status: newStatus }).eq('user_id', user.id);
       await onProfileUpdate();
@@ -264,7 +265,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
     setAvatarError('');
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await utilisateur();
       if (!user) throw new Error('session expirée');
 
       const previous = avatarUrl;

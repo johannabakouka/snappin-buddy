@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { utilisateur } from '../session';
 import { tx } from '../tx';
 import { LEGAL_SECTIONS } from '../legal-content';
 import { api } from '../api-url';
@@ -26,7 +27,7 @@ export default function LegalScreen({ theme, onBack }) {
   const [exportError, setExportError] = useState('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMyEmail(data.user?.email || ''));
+    utilisateur().then(({ data }) => setMyEmail(data.user?.email || ''));
   }, []);
 
   // La suppression est faite par le serveur : depuis l'app, les règles de sécurité
