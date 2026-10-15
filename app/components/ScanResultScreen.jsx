@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { tx } from '../tx';
 import { api } from '../api-url';
+import { tapFort, tapErreur } from '../haptics';
 
 // Écran affiché après avoir scanné le QR d'un buddy avec l'appareil photo.
 // C'est le moment le plus enthousiaste de l'app : deux personnes viennent de
@@ -37,9 +38,13 @@ export default function ScanResultScreen({ sessionId, theme, onDone }) {
         if (!alive) return;
 
         if (res.ok) {
+          // La rencontre vient d'être validée pour les deux : c'est le moment
+          // que l'app tout entière sert à produire. Il se sent dans la main.
+          tapFort();
           setResult(body);
           setState('ok');
         } else {
+          tapErreur();
           setResult(body);
           setState(body.reason || 'error');
         }

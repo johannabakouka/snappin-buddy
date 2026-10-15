@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { loadMutedIds } from '../conversations';
 import { useT } from '../i18n';
+import { tapChoix } from '../haptics';
 
 export default function Navbar({ screen, setScreen, theme }) {
   const t = useT();
@@ -118,7 +119,7 @@ export default function Navbar({ screen, setScreen, theme }) {
       padding: '12px 0 calc(24px + env(safe-area-inset-bottom))', zIndex: 9999,
     }}>
       {tabs.map(tab => (
-        <button key={tab.id} onClick={() => setScreen(tab.id)} style={{
+        <button key={tab.id} onClick={() => { tapChoix(); setScreen(tab.id); }} style={{
           background: 'none', border: 'none',
           color: screen === tab.id ? (darkMode ? '#FFFFFF' : '#000000') : '#888',
           display: 'flex', flexDirection: 'column', alignItems: 'center',

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { tap } from '../haptics';
 import EditProfileScreen from './EditProfileScreen';
 import LegalScreen from './LegalScreen';
 import AccountScreen from './AccountScreen';
@@ -236,6 +237,9 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
   const { pull, refreshing, trigger } = usePullToRefresh(scrollRef, async () => { await onProfileUpdate(); });
 
   async function updateStatus(newStatus) {
+    // Dire « je suis dispo » est une déclaration, pas un réglage : elle mérite
+    // le retour franc, pas le petit clic d'un filtre.
+    tap();
     setStatus(newStatus);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {

@@ -21,7 +21,7 @@ import ReportSheet from './ReportSheet';
 import ApplySheet from './ApplySheet';
 import WithdrawSheet from './WithdrawSheet';
 import { slotsOf, filledOf, isFilled } from '../slots';
-import { tap } from '../haptics';
+import { tap, tapChoix, tapFort } from '../haptics';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
@@ -1057,7 +1057,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
               )}
               {c.status === 'pending' && (
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => { respondCollab(c.id, 'accepted', c.sender_id); setSelectedOffer(null); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#2ECC71', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>{t.accept}</button>
+                  <button onClick={() => { tapFort(); respondCollab(c.id, 'accepted', c.sender_id); setSelectedOffer(null); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: '#2ECC71', color: '#000', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>{t.accept}</button>
                   <button onClick={() => { respondCollab(c.id, 'declined', null); openOfferCandidates(selectedOffer); }} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #FF4D4D', background: 'transparent', color: '#FF4D4D', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>{t.decline}</button>
                 </div>
               )}
@@ -1073,8 +1073,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       <Header theme={theme} />
 
       <div style={{ display: 'flex', borderBottom: `1px solid ${cardBorder}`, flexShrink: 0 }}>
-        <button style={tabStyle(tab === 'offres')} onClick={() => setTab('offres')}>{t.offers}</button>
-        <button style={tabStyle(tab === 'match')} onClick={() => setTab('match')}>
+        <button style={tabStyle(tab === 'offres')} onClick={() => { tapChoix(); setTab('offres'); }}>{t.offers}</button>
+        <button style={tabStyle(tab === 'match')} onClick={() => { tapChoix(); setTab('match'); }}>
           {t.matchTab}
           {pendingReceived > 0 && (
             <span style={{ marginLeft: '6px', background: '#FF4D4D', color: 'white', borderRadius: '10px', minWidth: '18px', height: '18px', padding: '0 5px', fontSize: '10px', fontWeight: '900', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle' }}>
@@ -1196,8 +1196,8 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '20px', border: `1px solid ${cardBorder}`, background: inputBg, color: theme?.color, fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                <button onClick={() => setSortBy('match')} style={pillStyle(sortBy === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
-                <button onClick={() => setSortBy('recent')} style={pillStyle(sortBy === 'recent')}>🕐 {tx('Recent', 'Récent')}</button>
+                <button onClick={() => { tapChoix(); setSortBy('match'); }} style={pillStyle(sortBy === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
+                <button onClick={() => { tapChoix(); setSortBy('recent'); }} style={pillStyle(sortBy === 'recent')}>🕐 {tx('Recent', 'Récent')}</button>
                 <button onClick={() => setFilterSaved(v => !v)} style={pillStyle(filterSaved)}>
                   🔖 {tx('Saved', 'Enregistrés')}{savedIds.size > 0 ? ` ${savedIds.size}` : ''}
                 </button>

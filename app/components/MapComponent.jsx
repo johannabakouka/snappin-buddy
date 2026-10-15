@@ -13,7 +13,7 @@ import {
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 import { loadMyWatch, watchNearby, unwatchNearby } from '../city-watch';
-import { tap } from '../haptics';
+import { tap, tapChoix } from '../haptics';
 import { thumbUrl } from '../image-upload';
 
 // ~400 m pour une position GPS, ~2 km pour une ville choisie (répartit les pins dans la ville)
@@ -819,19 +819,19 @@ export default function MapComponent({ theme, active = true }) {
 
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '0 16px 8px', scrollbarWidth: 'none', alignItems: 'center' }}>
           {STATUS_FILTERS.map(f => (
-            <button key={f.id} onClick={() => setStatusFilter(f.id)} style={pillStyle(statusFilter === f.id)}>
+            <button key={f.id} onClick={() => { tapChoix(); setStatusFilter(f.id); }} style={pillStyle(statusFilter === f.id)}>
               {f.label}
             </button>
           ))}
           {sep}
           {MAP_ROLE_FILTERS.map(r => (
-            <button key={r.id} onClick={() => setRoleFilter(roleFilter === r.id ? null : r.id)} style={pillStyle(roleFilter === r.id)}>
+            <button key={r.id} onClick={() => { tapChoix(); setRoleFilter(roleFilter === r.id ? null : r.id); }} style={pillStyle(roleFilter === r.id)}>
               {r.label}
             </button>
           ))}
           {sep}
           {UNIVERS.map(s => (
-            <button key={s} onClick={() => setUniversFilter(universFilter === s ? null : s)} style={pillStyle(universFilter === s)}>
+            <button key={s} onClick={() => { tapChoix(); setUniversFilter(universFilter === s ? null : s); }} style={pillStyle(universFilter === s)}>
               {s}
             </button>
           ))}
