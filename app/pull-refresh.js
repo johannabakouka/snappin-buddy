@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { tapChoix } from './haptics';
 
 // Tirer vers le bas pour recharger.
 //
@@ -23,7 +24,7 @@ export function usePullToRefresh(scrollRef, onRefresh, enabled = true) {
   // Ces références servent à l'intérieur des écouteurs tactiles, qui sont
   // installés une seule fois : sans elles il faudrait les réinstaller à chaque
   // pixel parcouru et à chaque rendu du parent.
-  const gesture = useRef({ startY: 0, pulling: false, armed: false, distance: 0 });
+  const gesture = useRef({ startY: 0, pulling: false, armed: false, distance: 0, annonce: false });
   const handler = useRef(onRefresh);
   const busy = useRef(false);
 
@@ -39,6 +40,7 @@ export function usePullToRefresh(scrollRef, onRefresh, enabled = true) {
       gesture.current.startY = e.touches[0].clientY;
       gesture.current.pulling = false;
       gesture.current.distance = 0;
+      gesture.current.annonce = false;
     }
 
     function onMove(e) {
@@ -54,6 +56,14 @@ export function usePullToRefresh(scrollRef, onRefresh, enabled = true) {
       // Résistance : le doigt avance plus vite que l'indicateur, le geste ne
       // part pas tout seul au moindre frôlement.
       g.distance = Math.min(MAX, (dy - SLOP) * 0.5);
+      // Le petit clic au moment précis où le geste devient suffisant.
+      //
+      // C'est ce qui permet de relâcher sans regarder l'écran : le doigt sait
+      // que c'est bon. Sans lui, on tire au jugé et on recommence souvent.
+      // Une seule fois par geste, sinon c'est un bourdonnement continu dès
+      // qu'on tremble autour du seuil.
+      if (g.distance >= TRIGGER && !g.annonce) { g.annonce = true; tapChoix(); }
+      else if (g.distance < TRIGGER) g.annonce = false;
       setPull(g.distance);
       if (e.cancelable) e.preventDefault();
     }

@@ -46,6 +46,26 @@ export function tapFort() {
 }
 
 /**
+ * Le petit clic d'un choix : on change d'onglet, on touche un filtre.
+ *
+ * Ce n'est pas la même chose que `tap`. `tap` confirme qu'une action est
+ * partie ; ici rien ne part, c'est la sélection qui a changé. iOS fait la même
+ * distinction avec son retour « selection », nettement plus discret qu'un
+ * impact : c'est exactement la sensation du sélecteur de date du système, ou
+ * du passage d'un onglet à l'autre dans Instagram.
+ *
+ * Utiliser l'impact pour ça rendrait l'app fatigante au bout de dix minutes.
+ */
+export function tapChoix() {
+  try {
+    const natif = moteurNatif();
+    if (natif?.selectionChanged) { natif.selectionChanged(); return; }
+    if (natif?.impact) { natif.impact({ style: 'Light' }); return; }
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(8);
+  } catch { /* idem */ }
+}
+
+/**
  * La secousse d'un refus : photo bloquée, formulaire incomplet.
  *
  * Sur iPhone, c'est une vibration de notification d'erreur, reconnaissable
