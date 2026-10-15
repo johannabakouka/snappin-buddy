@@ -31,9 +31,21 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     if (!vv) return;
     function measure() {
-      const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // `offsetTop` n'entre plus dans le calcul.
+      //
+      // Il dit de combien la fenêtre visible a été déplacée, ce qui n'a rien à
+      // voir avec la hauteur du clavier, et il bougeait au moindre rebond. À
+      // chaque pixel de rebond, cette mesure repassait au-dessus puis en
+      // dessous du seuil, la hauteur de tout l'écran changeait, et React
+      // redessinait la conversation entière : c'est ce qui rendait le
+      // défilement si accrocheur.
+      const hidden = Math.max(0, window.innerHeight - vv.height);
       // En dessous de 80 px c'est la barre du navigateur, pas un clavier.
-      setKeyboard(hidden > 80 ? hidden : 0);
+      const valeur = hidden > 80 ? Math.round(hidden) : 0;
+      // On ne redessine que si la hauteur a vraiment changé. Les quelques
+      // pixels que le système fait varier pendant l'animation du clavier ne
+      // valent pas un rendu complet.
+      setKeyboard(ancien => (Math.abs(ancien - valeur) > 2 ? valeur : ancien));
     }
     measure();
     vv.addEventListener('resize', measure);
