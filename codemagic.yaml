@@ -86,6 +86,35 @@ workflows:
       - name: Préparer la signature
         script: xcode-project use-profiles
 
+      # Afficher ce que la machine a VRAIMENT reçu comme profil.
+      #
+      # Trois compilations de suite ont été refusées avec « doesn't include the
+      # aps-environment entitlement », alors que chez Apple l'identifiant a bien
+      # la capacité Push et que le profil a été recréé après. Les pages web
+      # d'Apple montrent les capacités de l'IDENTIFIANT, pas le contenu réel du
+      # fichier de signature : elles ne permettent donc pas de trancher.
+      #
+      # Cette étape ouvre le fichier reçu par le Mac et lit ses droits. Elle ne
+      # fait échouer aucune compilation : elle ne sert qu'à voir.
+      - name: Vérifier le profil reçu
+        script: |
+          dossier="$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "=== Profils présents sur la machine ==="
+          ls -1 "$dossier" 2>/dev/null || echo "(aucun)"
+          for f in "$dossier"/*.mobileprovision; do
+            [ -e "$f" ] || continue
+            echo ""
+            echo "--- $f"
+            security cms -D -i "$f" > /tmp/profil.plist 2>/dev/null || continue
+            echo -n "Nom         : "
+            /usr/libexec/PlistBuddy -c 'Print :Name' /tmp/profil.plist 2>/dev/null
+            echo -n "Créé le     : "
+            /usr/libexec/PlistBuddy -c 'Print :CreationDate' /tmp/profil.plist 2>/dev/null
+            echo -n "aps-env     : "
+            /usr/libexec/PlistBuddy -c 'Print :Entitlements:aps-environment' /tmp/profil.plist 2>/dev/null \
+              || echo "ABSENT  <-- c'est la cause du refus"
+          done
+
       - name: Numéroter le build
         # Apple refuse deux envois portant le même numéro. BUILD_NUMBER est
         # fourni par Codemagic et augmente de 1 à chaque compilation, ce qui
