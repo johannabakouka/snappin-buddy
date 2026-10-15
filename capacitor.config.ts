@@ -28,10 +28,16 @@ const config: CapacitorConfig = {
     // entièrement sombre.
     backgroundColor: '#0A0A0A',
 
-    // Le rebond élastique du WebView quand on tire au-delà du contenu. Aucune
-    // app native ne fait ça sur une liste qui ne se rafraîchit pas, et ça entre
-    // en conflit avec le tirer-pour-rafraîchir de l'app.
-    scrollEnabled: true,
+    // Le WebView ne défile pas lui-même.
+    //
+    // Ce réglage était à `true`, en contradiction avec son propre commentaire.
+    // Chaque écran de l'app fait exactement la hauteur de la fenêtre et tout
+    // le défilement se passe à l'intérieur, dans les listes. Le WebView n'avait
+    // donc rien à faire défiler, mais sa propre vue de défilement restait
+    // active et captait les gestes en même temps que la liste : c'est ce qui
+    // rendait le défilement d'une conversation mou et accrocheur, avec un
+    // rebond élastique qu'aucune app native n'a.
+    scrollEnabled: false,
     contentInset: 'never',
   },
 
@@ -51,11 +57,15 @@ const config: CapacitorConfig = {
       //
       // La leçon n'est pas de remettre le réglage dans l'autre sens, c'est de
       // ne jamais confier à du JavaScript le seul moyen de sortir d'un écran.
-      // iOS retire donc le logo de lui-même au bout de trois secondes, même si
-      // l'interface n'arrive jamais à se monter : on verra alors l'écran de
-      // chargement de l'app, ou son message d'erreur, mais jamais un logo figé.
+      // iOS retire donc le logo de lui-même, même si l'interface n'arrive
+      // jamais à se monter : on verra alors l'écran de chargement de l'app, ou
+      // son message d'erreur, mais jamais un logo figé.
+      //
+      // Deux secondes et non trois : app/splash.js le retire désormais pour de
+      // bon dès que l'interface est montée, donc ce délai n'est plus qu'un
+      // filet, et un filet doit être court.
       launchAutoHide: true,
-      launchShowDuration: 3000,
+      launchShowDuration: 2000,
       launchFadeOutDuration: 200,
       backgroundColor: '#0A0A0A',
       showSpinner: false,
