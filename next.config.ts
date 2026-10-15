@@ -25,6 +25,43 @@ const nextConfig: NextConfig = pourLApp
       // seconde avant de disparaître.
       env: { NEXT_PUBLIC_DANS_APP: '1' },
     }
-  : {};
+  : {
+      // Autoriser l'app installée à parler aux routes serveur.
+      //
+      // Dans l'app, l'interface n'est pas servie par snappinbuddy.com : elle est
+      // embarquée dans le téléphone et servie depuis « capacitor://localhost ».
+      // Chaque appel à /api/... est donc, pour le navigateur interne, un appel
+      // vers un AUTRE site. Avant d'envoyer un POST qui porte un en-tête
+      // Authorization, il demande d'abord la permission au serveur. Aucune
+      // route ne répondait à cette question, donc toutes les demandes étaient
+      // refusées avant même de partir, avec pour seul message « Load failed ».
+      //
+      // Les dix-huit routes appelées depuis l'app étaient concernées, pas
+      // seulement l'enregistrement des notifications : signaler un contenu,
+      // supprimer un message, valider un scan, prévenir par email d'un nouveau
+      // message. Toutes échouaient en silence, parce qu'aucune n'attend de
+      // réponse.
+      //
+      // L'étoile ne rend rien public : ces routes vérifient toutes le jeton de
+      // la personne, aucune ne s'appuie sur un cookie, et la permission donnée
+      // ici ne fait que laisser le navigateur poser la question. C'est
+      // exactement ce que fait Supabase pour sa propre API.
+      async headers() {
+        return [
+          {
+            source: '/api/:path*',
+            headers: [
+              { key: 'Access-Control-Allow-Origin', value: '*' },
+              { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
+              { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+              // Sans ça, une question de permission partirait avant CHAQUE
+              // appel : deux allers-retours au lieu d'un, sur un téléphone en
+              // 4G, pour chaque message envoyé.
+              { key: 'Access-Control-Max-Age', value: '86400' },
+            ],
+          },
+        ];
+      },
+    };
 
 export default nextConfig;
