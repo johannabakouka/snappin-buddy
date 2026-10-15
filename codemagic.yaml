@@ -103,6 +103,36 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
+      # Afficher ce que la machine a VRAIMENT reçu comme profil.
+      #
+      # C'est cette étape qui a permis de trouver la cause : elle a montré que
+      # le Mac recevait un profil daté du 12 octobre, supprimé chez Apple
+      # depuis, et dépourvu du droit aps-environment. Les pages web d'Apple
+      # affichent les capacités de l'IDENTIFIANT, pas le contenu réel du
+      # fichier de signature : elles ne permettaient pas de trancher.
+      #
+      # Elle reste en place. Elle ne coûte rien, elle ne peut pas faire échouer
+      # une compilation, et le jour où la signature recommencera à poser
+      # problème, la réponse sera déjà dans le journal.
+      - name: Vérifier le profil reçu
+        script: |
+          dossier="$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "=== Profils présents sur la machine ==="
+          ls -1 "$dossier" 2>/dev/null || echo "(aucun)"
+          for f in "$dossier"/*.mobileprovision; do
+            [ -e "$f" ] || continue
+            echo ""
+            echo "--- $f"
+            security cms -D -i "$f" > /tmp/profil.plist 2>/dev/null || continue
+            echo -n "Nom         : "
+            /usr/libexec/PlistBuddy -c 'Print :Name' /tmp/profil.plist 2>/dev/null
+            echo -n "Créé le     : "
+            /usr/libexec/PlistBuddy -c 'Print :CreationDate' /tmp/profil.plist 2>/dev/null
+            echo -n "aps-env     : "
+            /usr/libexec/PlistBuddy -c 'Print :Entitlements:aps-environment' /tmp/profil.plist 2>/dev/null \
+              || echo "ABSENT  <-- c'est la cause du refus"
+          done
+
       - name: Numéroter le build
         # Apple refuse deux envois portant le même numéro. BUILD_NUMBER est
         # fourni par Codemagic et augmente de 1 à chaque compilation, ce qui
