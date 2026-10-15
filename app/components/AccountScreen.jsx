@@ -5,6 +5,8 @@ import { utilisateur } from '../session';
 import { useT } from '../i18n';
 import { tx } from '../tx';
 import { authErrorMessage } from '../auth-errors';
+import { derniereEtape, permissionActuelle, reessayerNotifications } from '../notifications';
+import { dansLApp } from '../api-url';
 
 // Écran « Compte & sécurité » : changer son adresse email, changer son mot de passe.
 // Il manquait complètement — on ne pouvait changer son mot de passe qu'en passant
@@ -53,6 +55,57 @@ export default function AccountScreen({ theme, onBack }) {
   const [passBusy, setPassBusy] = useState(false);
   const [passError, setPassError] = useState('');
   const [passOk, setPassOk] = useState('');
+
+  // État des notifications : l'autorisation vue par iOS, et la dernière étape
+  // atteinte par l'enregistrement de l'appareil.
+  const [notifPerm, setNotifPerm] = useState(null);
+  const [notifEtape, setNotifEtape] = useState(null);
+  const [notifBusy, setNotifBusy] = useState(false);
+
+  async function rafraichirNotifs() {
+    setNotifPerm(await permissionActuelle());
+    setNotifEtape(derniereEtape());
+  }
+  useEffect(() => {
+    // `alive` : l'autorisation se lit en passant par le greffon natif, donc
+    // la réponse arrive après coup. Sans ce garde-fou, quitter l'écran
+    // pendant ce court instant fait écrire dans un composant démonté.
+    let alive = true;
+    (async () => {
+      const perm = await permissionActuelle();
+      if (!alive) return;
+      setNotifPerm(perm);
+      setNotifEtape(derniereEtape());
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  async function reessayer() {
+    setNotifBusy(true);
+    await reessayerNotifications();
+    // iOS remet le jeton quelques instants plus tard, pas dans la foulée.
+    await new Promise(r => setTimeout(r, 2500));
+    await rafraichirNotifs();
+    setNotifBusy(false);
+  }
+
+  // Ce que chaque étape veut dire, en français, et de quelle couleur.
+  // Vert : tout va bien. Orange : la personne peut y remédier elle-même.
+  // Rouge : c'est l'app ou le serveur, et c'est à nous de le réparer.
+  const ETAPES = {
+    'enregistre': ['#2ECC71', tx('This device is registered. Notifications will arrive.', 'Cet appareil est enregistré. Les notifications arriveront.')],
+    'jeton-recu': ['#FF9A3D', tx('Identifier received, not yet saved on the server.', 'Identifiant reçu, pas encore enregistré sur le serveur.')],
+    'attente-jeton': ['#FF9A3D', tx('Waiting for the identifier from Apple...', 'En attente de l’identifiant donné par Apple...')],
+    'refuse': ['#FF9A3D', tx('Notifications are turned off for this app. Turn them back on in the iPhone Settings, under Snappin’Buddy.', 'Les notifications sont refusées pour cette app. Réactive-les dans les Réglages de l’iPhone, à la rubrique Snappin’Buddy.')],
+    'jamais-repondu': ['#FF9A3D', tx('The question was asked but never answered. Use Retry.', 'La question a été posée mais jamais tranchée. Utilise Réessayer.')],
+    'refus-ios': ['#FF4D4D', tx('iOS refused to register this device.', 'iOS a refusé d’enregistrer cet appareil.')],
+    'refus-serveur': ['#FF4D4D', tx('The server refused the identifier.', 'Le serveur a refusé l’identifiant.')],
+    'erreur-reseau': ['#FF4D4D', tx('Network unreachable at that moment. Retry.', 'Réseau injoignable à ce moment-là. Réessaie.')],
+    'erreur-greffon': ['#FF4D4D', tx('The notifications module failed.', 'Le module de notifications a échoué.')],
+    'pas-de-session': ['#FF4D4D', tx('No session when registering.', 'Aucune session au moment de l’enregistrement.')],
+    'jeton-vide': ['#FF4D4D', tx('Apple returned an empty identifier.', 'Apple a renvoyé un identifiant vide.')],
+    'hors-app': ['#888', tx('Notifications only exist in the installed app.', 'Les notifications n’existent que dans l’app installée.')],
+  };
 
   useEffect(() => {
     let alive = true;
@@ -266,6 +319,56 @@ export default function AccountScreen({ theme, onBack }) {
             </div>
           )}
         </div>
+
+        {/* ──────────── Notifications ────────────
+
+            Pourquoi cet encart existe : tout ce qui concerne les notifications
+            se joue entre iOS, le greffon et le serveur, hors de vue, et quand
+            ça casse, ça casse sans un mot. Une personne qui ne reçoit rien n'a
+            aujourd'hui aucun moyen de savoir si elle a refusé l'autorisation,
+            si son téléphone est connu du serveur, ou si l'app est en panne.
+            Ici elle le lit, et le bouton lui permet de relancer la tentative
+            sans réinstaller quoi que ce soit. */}
+        {dansLApp() && (
+          <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '12px', border: `1px solid ${cardBorder}` }}>
+            <p style={{ color, fontWeight: '800', fontSize: '14px', marginBottom: '6px' }}>
+              🔔 {tx('Notifications', 'Notifications')}
+            </p>
+
+            <p style={{ color: subText, fontSize: '11px', lineHeight: 1.5, marginBottom: '10px' }}>
+              {tx('Permission', 'Autorisation')} :{' '}
+              <strong style={{ color: notifPerm === 'granted' ? '#2ECC71' : '#FF9A3D' }}>
+                {notifPerm === 'granted' ? tx('granted', 'accordée')
+                  : notifPerm === 'denied' ? tx('denied', 'refusée')
+                  : notifPerm === null ? '...'
+                  : tx('not answered yet', 'pas encore tranchée')}
+              </strong>
+            </p>
+
+            {notifEtape && ETAPES[notifEtape.etape] && (
+              <p style={{ color: ETAPES[notifEtape.etape][0], fontSize: '12px', lineHeight: 1.5, marginBottom: '6px' }}>
+                {ETAPES[notifEtape.etape][1]}
+              </p>
+            )}
+
+            {/* Le détail technique, en tout petit : inutile au quotidien, mais
+                c'est la seule ligne qui permet de dépanner à distance. */}
+            {notifEtape?.detail ? (
+              <p style={{ color: subText, fontSize: '10px', lineHeight: 1.4, marginBottom: '10px', opacity: 0.8 }}>
+                {notifEtape.etape} · {notifEtape.detail}
+              </p>
+            ) : (
+              <p style={{ color: subText, fontSize: '10px', marginBottom: '10px', opacity: 0.8 }}>
+                {notifEtape ? notifEtape.etape : tx('never attempted', 'jamais tentée')}
+              </p>
+            )}
+
+            <button onClick={reessayer} disabled={notifBusy} style={{ ...rowButton, opacity: notifBusy ? 0.6 : 1 }}>
+              <span>{notifBusy ? tx('Checking...', 'Vérification...') : tx('Retry registration', 'Réessayer l’enregistrement')}</span>
+              <span style={{ color: subText, fontWeight: '600' }}>↻</span>
+            </button>
+          </div>
+        )}
 
         {/* ──────────── Mot de passe ──────────── */}
         <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '12px', border: `1px solid ${cardBorder}` }}>
