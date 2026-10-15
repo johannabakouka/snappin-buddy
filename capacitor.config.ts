@@ -41,10 +41,22 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      // L'écran de démarrage reste tant que l'app n'a pas dit « je suis prête ».
-      // Sans ça, on voit le logo disparaître puis une page vide pendant que
-      // l'interface se monte.
-      launchAutoHide: false,
+      // L'écran de démarrage part dès que l'interface est montée : c'est
+      // app/splash.js qui le dit, depuis app/page.tsx.
+      //
+      // Il était réglé sur launchAutoHide: false, c'est-à-dire « ne disparaît
+      // jamais tout seul, attends qu'on te le demande ». Personne ne le
+      // demandait : l'app restait bloquée sur le logo, définitivement, sur
+      // tous les téléphones.
+      //
+      // La leçon n'est pas de remettre le réglage dans l'autre sens, c'est de
+      // ne jamais confier à du JavaScript le seul moyen de sortir d'un écran.
+      // iOS retire donc le logo de lui-même au bout de trois secondes, même si
+      // l'interface n'arrive jamais à se monter : on verra alors l'écran de
+      // chargement de l'app, ou son message d'erreur, mais jamais un logo figé.
+      launchAutoHide: true,
+      launchShowDuration: 3000,
+      launchFadeOutDuration: 200,
       backgroundColor: '#0A0A0A',
       showSpinner: false,
     },
