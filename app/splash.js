@@ -6,8 +6,8 @@
 //
 // Le greffon s'importe. Lu sur `window.Capacitor.Plugins`, il était toujours
 // absent : cet objet n'est rempli que par l'import du paquet. L'appel ci-dessous
-// ne partait donc jamais, et le logo restait les trois secondes entières du
-// filet de sécurité, à chaque lancement.
+// ne partait donc jamais, et le logo restait affiché tout le temps du filet de
+// sécurité, à chaque lancement.
 
 import { SplashScreen } from '@capacitor/splash-screen';
 
@@ -16,7 +16,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
  *
  * Sans cet appel, l'app restait bloquée sur l'écran de démarrage : le réglage
  * launchAutoHide de capacitor.config.ts a été remis à `true` pour que iOS le
- * retire de lui-même au bout de trois secondes quoi qu'il arrive, mais trois
+ * retire de lui-même au bout de deux secondes quoi qu'il arrive. Mais deux
  * secondes de logo alors que l'interface est déjà montée, ça se voit. Cet
  * appel-ci le retire dès que c'est vrai, en général en moins d'une seconde.
  */
@@ -26,7 +26,7 @@ export function masquerSplash() {
     SplashScreen.hide();
   } catch {
     // Sur le site il n'y a pas d'écran de démarrage, et dans l'app un échec
-    // ici n'a pas de conséquence : iOS le retire seul au bout de trois
+    // ici n'a pas de conséquence : iOS le retire seul au bout de deux
     // secondes. Dans les deux cas il n'y a rien à rattraper.
   }
 }

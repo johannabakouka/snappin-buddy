@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -26,7 +27,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        // La pastille rouge disparaît dès qu'on ouvre l'app.
+        //
+        // La personne est en train de regarder : le compteur n'a plus de raison
+        // d'être. Sans ça il reste affiché des jours, et on finit par ne plus
+        // le croire, ce qui est exactement ce qu'on veut éviter.
+        if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(0)
+        } else {
+            application.applicationIconBadgeNumber = 0
+        }
+    }
+
+    // Les deux passages obligés des notifications.
+    //
+    // iOS remet le jeton de l'appareil à l'AppDelegate, et à lui seul. Le
+    // greffon Capacitor l'attend sur ces deux annonces : sans elles il ne
+    // reçoit jamais rien, `register()` reste sans réponse, et aucune
+    // notification ne peut arriver. C'est l'étape qu'on oublie toujours, et
+    // elle ne se voit nulle part ailleurs que dans ce fichier.
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications,
+                                        object: deviceToken)
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications,
+                                        object: error)
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

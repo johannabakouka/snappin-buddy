@@ -1,4 +1,5 @@
 import { getProfile, getUserEmail, nearbyArrivalMail, sendMail, supabaseAdmin } from './server';
+import { pousser } from './push';
 import { distanceKm, NEARBY_KM } from '../constants';
 
 // « Préviens-moi quand quelqu'un arrive. »
@@ -64,6 +65,14 @@ export async function notifyArrivals(): Promise<ArrivalsResult> {
         await sendMail(nearbyArrivalMail(to, arrived, dest?.username));
         emailsSent++;
       }
+      // La notification part même sans adresse valable : c'est le seul des
+      // quatre évènements qui fait découvrir quelqu'un qu'on ne cherchait pas,
+      // et c'est celui qui ramène les gens sur la carte.
+      await pousser(w.user_id, {
+        titre: arrived > 1 ? `${arrived} créatifs près de toi` : 'Un créatif près de toi',
+        corps: arrived > 1 ? 'Ils viennent d\'arriver sur la carte' : 'Il vient d\'arriver sur la carte',
+        lien: '/?screen=map',
+      });
       notified.push(w.id);
     } catch (e) {
       console.error('notifyArrivals email', e);

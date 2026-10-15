@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Le droit de recevoir des notifications.
+
+	     « production » et non « development » : c'est la valeur que réclame
+	     une app signée pour l'App Store et pour TestFlight. Avec
+	     « development », les notifications ne partent que depuis un Mac branché
+	     en USB, et pas une seule n'arrive sur un téléphone qui a installé
+	     l'app depuis TestFlight. -->
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>

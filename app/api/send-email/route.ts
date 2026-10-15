@@ -4,6 +4,7 @@ import {
   ADMIN_EMAIL, applicationAcceptedMail, getProfile, getUserEmail, newApplicationMail, newProposalMail,
   newMessageMail, offerTitleFromMessage, reportMail, requireUser, sendMail, supabaseAdmin,
 } from '../../lib/server';
+import { pousser } from '../../lib/push';
 
 // L'app envoie seulement le type d'email et l'identifiant concerné.
 // Le serveur vérifie l'utilisateur, retrouve le bon destinataire et construit le contenu :
@@ -31,6 +32,19 @@ export async function POST(request: Request) {
         .eq('user_id', toUserId).eq('buddy_id', user.id)
         .maybeSingle();
       if (pref?.muted) return Response.json({ ok: true, skipped: 'sourdine' });
+
+      // La notification part AVANT la limitation qui suit, et à chaque message.
+      //
+      // Le mail, lui, n'est envoyé qu'une fois tant que la personne n'a pas lu :
+      // dix mails pour dix messages, c'est du harcèlement. Une notification,
+      // non : c'est ce qu'on attend de toutes les messageries, et elle
+      // disparaît d'elle-même quand on ouvre l'app.
+      const expediteur = await getProfile(user.id);
+      await pousser(toUserId, {
+        titre: expediteur?.username || 'Un créatif',
+        corps: 'vous a envoyé un message',
+        lien: '/?screen=messages',
+      });
 
       const { count } = await db.from('messages')
         .select('id', { count: 'exact', head: true })
@@ -78,6 +92,11 @@ export async function POST(request: Request) {
         await sendMail(type === 'new_application'
           ? newApplicationMail(to, me?.username || 'Un créatif', me?.role || '', offerTitle, dest?.username)
           : newProposalMail(to, me?.username || 'Un créatif', me?.role || '', collab.message || '', dest?.username));
+        await pousser(collab.receiver_id, {
+          titre: `${me?.username || 'Un créatif'} se propose`,
+          corps: offerTitle,
+          lien: '/?screen=match',
+        });
       } else {
         // Seul le porteur du projet peut accepter, et l'email part au candidat.
         if (collab.receiver_id !== user.id || collab.status !== 'accepted') {
@@ -88,6 +107,11 @@ export async function POST(request: Request) {
         const me = await getProfile(user.id);
         const dest = await getProfile(collab.sender_id);
         await sendMail(applicationAcceptedMail(to, me?.username || 'Un créatif', offerTitle, dest?.username));
+        await pousser(collab.sender_id, {
+          titre: 'Candidature acceptée 🎉',
+          corps: `${me?.username || 'Un créatif'} t'a retenu·e pour « ${offerTitle} »`,
+          lien: '/?screen=match',
+        });
       }
       return Response.json({ ok: true });
     }

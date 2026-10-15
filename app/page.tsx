@@ -17,6 +17,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import BuddyProfileScreen from './components/BuddyProfileScreen';
 import ScanResultScreen from './components/ScanResultScreen';
 import { masquerSplash } from './splash';
+import { activerNotifications, effacerPastille } from './notifications';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
@@ -83,7 +84,15 @@ const SCREENS = ['map', 'explore', 'match', 'messages', 'profile'];
 export default function Home() {
   const [screen, setScreen] = useState(() => {
     if (typeof window === 'undefined') return 'map';
-    return new URLSearchParams(window.location.search).get('offer') ? 'match' : 'map';
+    const params = new URLSearchParams(window.location.search);
+    // Ouvert depuis une notification : elle dit sur quel écran arriver.
+    // La liste est fermée exprès : une adresse venue de l'extérieur ne doit
+    // pas pouvoir demander n'importe quoi.
+    const demande = params.get('screen');
+    if (demande && ['map', 'explore', 'match', 'messages', 'profile'].includes(demande)) {
+      return demande;
+    }
+    return params.get('offer') ? 'match' : 'map';
   });
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -146,7 +155,22 @@ export default function Home() {
   // répondre. Sur le site, cet appel ne fait rien.
   useEffect(() => {
     masquerSplash();
+    // L'app est ouverte, la personne regarde : la pastille rouge n'a plus lieu
+    // d'être.
+    effacerPastille();
   }, []);
+
+  // Les notifications ne sont demandées qu'une fois le profil créé.
+  //
+  // iOS ne pose la question qu'UNE SEULE FOIS dans la vie de l'app. Posée au
+  // premier écran, avant même d'avoir compris à quoi sert Snappin'Buddy, elle
+  // se solde par un refus définitif que seul un détour par les réglages du
+  // téléphone peut annuler. On attend donc que la personne ait un profil :
+  // à ce moment-là elle sait ce qu'elle va recevoir.
+  useEffect(() => {
+    if (!user || !profile) return;
+    activerNotifications();
+  }, [user, profile]);
 
   // Le pseudo est unique : il suffit à retrouver la personne.
   useEffect(() => {
