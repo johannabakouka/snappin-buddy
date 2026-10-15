@@ -16,6 +16,7 @@ import NewPasswordScreen from './components/NewPasswordScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 import BuddyProfileScreen from './components/BuddyProfileScreen';
 import ScanResultScreen from './components/ScanResultScreen';
+import { masquerSplash } from './splash';
 
 function LoadingScreen() {
   const [dots, setDots] = useState('');
@@ -136,6 +137,16 @@ export default function Home() {
   // Même mécanique pour « Mes candidatures », qui ouvre l'onglet Match
   const [myApplicationsSignal, setMyApplicationsSignal] = useState(0);
   const userIdRef = useRef<string | null>(null);
+
+  // L'interface est montée : l'app peut retirer son écran de démarrage.
+  //
+  // C'est volontairement le tout premier effet, et il ne dépend de rien : il
+  // ne doit attendre ni la session, ni le profil, ni le réseau. Attendre une
+  // donnée, c'est rendre le logo tributaire d'un appel qui peut ne jamais
+  // répondre. Sur le site, cet appel ne fait rien.
+  useEffect(() => {
+    masquerSplash();
+  }, []);
 
   // Le pseudo est unique : il suffit à retrouver la personne.
   useEffect(() => {
