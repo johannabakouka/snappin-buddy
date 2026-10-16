@@ -25,7 +25,7 @@ import { nearestCity, normalizeCity } from '../cities';
 // forcément présents à côté du code une fois déployé.
 
 type Row = { user_id: string; lat: number; lng: number; city: string | null; country: string | null };
-type OfferRow = { id: string | number; zone: string | null };
+type OfferRow = { id: string | number; zone: string | null; country: string | null; lat: number | null; lng: number | null };
 type City = { name: string; country: string; lat: number; lng: number };
 
 export type BackfillResult = {
@@ -54,16 +54,19 @@ async function chargerVilles() {
   const raw = (await res.json()) as [string, string, number, number, string?][];
 
   const cities: City[] = [];
-  const paysParNom = new Map<string, string>();
+  // L'index rend la ville entiere, et non plus son seul pays : un projet a
+  // besoin de ses coordonnees pour etre classe par proximite, et elles se
+  // trouvent exactement au meme endroit que le pays.
+  const villeParNom = new Map<string, City>();
   for (const [name, country, lat, lng, aliases] of raw) {
-    cities.push({ name, country, lat, lng });
-    if (!country) continue;
+    const ville: City = { name, country, lat, lng };
+    cities.push(ville);
     for (const nom of [name, ...(aliases ? aliases.split('|') : [])]) {
       const cle = normalizeCity(nom);
-      if (cle && !paysParNom.has(cle)) paysParNom.set(cle, country);
+      if (cle && !villeParNom.has(cle)) villeParNom.set(cle, ville);
     }
   }
-  return { cities, paysParNom };
+  return { cities, villeParNom };
 }
 
 export async function backfillCities(): Promise<BackfillResult> {
@@ -82,12 +85,16 @@ export async function backfillCities(): Promise<BackfillResult> {
   if (error) throw error;
   const rows = (data || []) as Row[];
 
-  // Les projets qui ont une ville mais pas de pays. Un projet sans ville n'a
-  // rien à déduire : on n'invente pas un lieu.
+  // Les projets qui ont une ville mais pas de pays, OU pas de coordonnées.
+  //
+  // Les coordonnées sont arrivées après le pays : le jour où les colonnes sont
+  // créées, elles sont vides pour TOUS les projets déjà publiés, et « les
+  // projets les plus proches » ne verrait donc que ceux publiés après la mise à
+  // jour. C'est ce passage qui rattrape les autres.
   const { data: offerData, error: offerError } = await db
     .from('offers')
-    .select('id, zone')
-    .is('country', null)
+    .select('id, zone, country, lat, lng')
+    .or('country.is.null,lat.is.null')
     .not('zone', 'is', null)
     .neq('zone', '')
     .limit(MAX_PAR_PASSAGE);
@@ -98,7 +105,7 @@ export async function backfillCities(): Promise<BackfillResult> {
     return { candidats: 0, remplis: 0, projetsCandidats: 0, projetsRemplis: 0 };
   }
 
-  const { cities, paysParNom } = await chargerVilles();
+  const { cities, villeParNom } = await chargerVilles();
 
   let remplis = 0;
   for (const row of rows) {
@@ -129,17 +136,24 @@ export async function backfillCities(): Promise<BackfillResult> {
     // Le champ peut contenir plusieurs lieux séparés par une virgule : le
     // premier décide, c'est celui que le formulaire propose.
     const premier = String(offre.zone || '').split(',')[0];
-    const pays = paysParNom.get(normalizeCity(premier));
+    const ville = villeParNom.get(normalizeCity(premier));
     // Ville inconnue de la liste, écrite à la main ou mal orthographiée : on
     // préfère pas de pays à un pays faux, qui ferait apparaître le projet dans
-    // la mauvaise recherche.
-    if (!pays) continue;
+    // la mauvaise recherche, et pas de coordonnées à des coordonnées fausses,
+    // qui le placeraient à l'autre bout du monde avec l'air d'être sûres.
+    if (!ville) continue;
+
+    // On n'écrit que ce qui manque, pour ne pas écraser un lieu choisi à la
+    // main entre la lecture et ici.
+    const champs: { country?: string; lat?: number; lng?: number } = {};
+    if (!offre.country && ville.country) champs.country = ville.country;
+    if (offre.lat == null || offre.lng == null) { champs.lat = ville.lat; champs.lng = ville.lng; }
+    if (Object.keys(champs).length === 0) continue;
 
     const { error: upError } = await db
       .from('offers')
-      .update({ country: pays })
-      .eq('id', offre.id)
-      .is('country', null);
+      .update(champs)
+      .eq('id', offre.id);
     if (upError) {
       console.error('backfillCities [offre]', offre.id, upError);
       continue;

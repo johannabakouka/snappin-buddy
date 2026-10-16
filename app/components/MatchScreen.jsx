@@ -26,7 +26,7 @@ import { tap, tapChoix, tapFort } from '../haptics';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import { withAt } from '../handles';
 import { isPast, needsFollowUp, loadSkipped, skipFollowUp } from '../offers-life';
-import { hasRole, roleLabels, splitRoles, APPLY_NOTE_MAX } from '../constants';
+import { hasRole, roleLabels, splitRoles, APPLY_NOTE_MAX, distanceKm } from '../constants';
 import { api, COMPILE_POUR_LAPP } from '../api-url';
 
 // Le serveur retrouve lui-même le destinataire à partir de la candidature (collabId)
@@ -902,7 +902,46 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       });
     }
   }
-  if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => {
+  /**
+   * La distance entre un projet et moi, ou null.
+   *
+   * Null quand l'un des deux manque de coordonnees : un projet dont on ignore
+   * le lieu ne doit pas se glisser en tete du classement avec une distance de
+   * zero, ce que donnerait un calcul sur des champs vides.
+   */
+  function distanceOffre(o) {
+    if (!myProfile?.lat || !myProfile?.lng || o.lat == null || o.lng == null) return null;
+    return distanceKm(myProfile.lat, myProfile.lng, o.lat, o.lng);
+  }
+
+  /** La distance ecrite comme on la dit, sans fausse precision. */
+  function distanceLabel(km) {
+    if (km === null) return '';
+    if (km < 1) return tx('under 1 km', 'moins d’1 km');
+    if (km < 100) return `${Math.round(km)} km`;
+    return `${Math.round(km / 10) * 10} km`;
+  }
+
+  if (sortBy === 'proche') displayedOffers = [...displayedOffers].sort((a, b) => {
+    if (sharedOffer) {
+      if (a.id === sharedOffer.id) return -1;
+      if (b.id === sharedOffer.id) return 1;
+    }
+    // Les projets mis en avant restent devant, comme dans « Pour toi » : c'est
+    // ce qui a ete paye, et le tri choisi ne doit pas l'annuler.
+    const boostedA = a.boosted_until && new Date(a.boosted_until) > new Date() ? 1 : 0;
+    const boostedB = b.boosted_until && new Date(b.boosted_until) > new Date() ? 1 : 0;
+    if (boostedB !== boostedA) return boostedB - boostedA;
+    const da = distanceOffre(a);
+    const db = distanceOffre(b);
+    // Lieu inconnu : en fin de liste, mais toujours visible. On ne cache pas
+    // un projet parce qu'on ne sait pas ou il est.
+    if (da === null && db === null) return 0;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return da - db;
+  });
+  else if (sortBy === 'match') displayedOffers = displayedOffers.sort((a, b) => {
     if (sharedOffer) {
       if (a.id === sharedOffer.id) return -1;
       if (b.id === sharedOffer.id) return 1;
@@ -1199,6 +1238,9 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                 <button onClick={() => { tapChoix(); setSortBy('match'); }} style={pillStyle(sortBy === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
                 <button onClick={() => { tapChoix(); setSortBy('recent'); }} style={pillStyle(sortBy === 'recent')}>🕐 {tx('Recent', 'Récent')}</button>
+                {/* « Près de chez moi » : la question qu'on se pose avant même
+                    de lire le projet, puisqu'il faudra s'y rendre. */}
+                <button onClick={() => { tapChoix(); setSortBy('proche'); }} style={pillStyle(sortBy === 'proche')}>📍 {tx('Nearby', 'Proches')}</button>
                 <button onClick={() => setFilterSaved(v => !v)} style={pillStyle(filterSaved)}>
                   🔖 {tx('Saved', 'Enregistrés')}{savedIds.size > 0 ? ` ${savedIds.size}` : ''}
                 </button>
@@ -1332,6 +1374,11 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                           {o.country && o.country !== myProfile?.country && countryName(o.country, getLang())
                             ? ` · ${countryName(o.country, getLang())}`
                             : ''}
+                          {/* La distance répond à la question qui suit
+                              immédiatement le nom d'une ville : est-ce que je
+                              peux y aller ? Elle n'apparaît que si les deux
+                              positions sont connues. */}
+                          {distanceOffre(o) !== null ? ` · ${distanceLabel(distanceOffre(o))}` : ''}
                         </span>}
                         {/* Sans date, on le dit. Rester muet laissait croire que
                             l'information manquait par accident, et beaucoup

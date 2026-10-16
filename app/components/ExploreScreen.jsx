@@ -5,7 +5,7 @@ import { utilisateur } from '../session';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import PhotoViewer from './PhotoViewer';
 import Header from './Header';
-import { hasRole, roleIcons, roleLabels } from '../constants';
+import { hasRole, roleIcons, roleLabels, distanceKm, UNIVERS_FR, UNIVERS_EN } from '../constants';
 import { useT, useRoles, useUnivers, getLang } from '../i18n';
 import { tx, isNotFrench } from '../tx';
 // Recherche : on ignore les accents, les majuscules et le @ du handle, pour que
@@ -43,7 +43,10 @@ function getMatchScore(myStyles, theirStyles) {
 // téléchargeait la position, les dates, les champs de modération et les
 // réglages de tous les profils pour afficher un nom et une photo. C'est le même
 // gaspillage que celui qui avait fait exploser le quota sur la carte.
-const EXPLORE_COLUMNS = 'id, user_id, username, handle, avatar_url, role, role_other, styles, zone, city, country, status, hidden, portfolio_urls';
+// lat et lng s'ajoutent pour le tri par proximite. Deux nombres par profil,
+// c'est negligeable a cote des books, et ce sont les memes colonnes que la
+// carte lit deja.
+const EXPLORE_COLUMNS = 'id, user_id, username, handle, avatar_url, role, role_other, styles, zone, city, country, status, hidden, portfolio_urls, lat, lng';
 
 export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) {
   const t = useT();
@@ -155,6 +158,32 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
   }
 
   /**
+   * La distance entre ce profil et moi, en kilometres, ou null.
+   *
+   * Null quand l'un des deux n'a pas pose sa position : un profil sans lieu
+   * ne doit pas se retrouver en tete du classement par proximite avec une
+   * distance de zero, ce que donnerait un calcul sur des coordonnees vides.
+   */
+  function distanceDe(p) {
+    if (!myProfile?.lat || !myProfile?.lng || !p.lat || !p.lng) return null;
+    return distanceKm(myProfile.lat, myProfile.lng, p.lat, p.lng);
+  }
+
+  /**
+   * La distance ecrite comme on la dit.
+   *
+   * En dessous du kilometre on annonce « a moins d'1 km » plutot qu'un chiffre
+   * a la virgule : la position est volontairement approximative dans l'app,
+   * afficher « 0,3 km » laisserait croire a une precision qui n'existe pas.
+   */
+  function distanceLabel(km) {
+    if (km === null) return '';
+    if (km < 1) return tx('under 1 km', 'moins d’1 km');
+    if (km < 100) return `${Math.round(km)} km`;
+    return `${Math.round(km / 10) * 10} km`;
+  }
+
+  /**
    * Le lieu d'un profil, en une ligne.
    *
    * La ville et la zone portent souvent le même nom, et « Paris · Paris »
@@ -215,12 +244,50 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
 
   let displayed = profiles.filter(p => myProfile ? p.user_id !== myProfile.user_id : true);
 
+  // Les filtres s'appliquent maintenant AUSSI pendant une recherche.
+  //
+  // Avant, taper une ville faisait disparaitre toute la rangee de filtres et
+  // les ignorait. On ne pouvait donc pas demander « les photographes de
+  // Lisbonne » : il fallait choisir entre la ville et le metier. C'etait
+  // pourtant la combinaison la plus utile de tout l'ecran.
+  if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
+  if (roleFilter) displayed = displayed.filter(p => hasRole(p.role, roleFilter));
+  if (universFilter) {
+    const filterFR = isEn
+      ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })()
+      : universFilter;
+    displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
+  }
+
+  // Les profils qui ont quelque chose a montrer passent devant, mais seulement
+  // a egalite : c'est une incitation a completer son profil, pas une raison
+  // d'enterrer quelqu'un qui correspond vraiment.
+  //
+  // Photo + portfolio, puis photo seule, puis portfolio sans photo, puis le
+  // reste : quelqu'un sans photo mais qui montre son travail vaut mieux qu'un
+  // profil vide.
+  const aMontrer = (p) => (p.avatar_url ? 2 : 0) + ((p.portfolio_urls || []).length ? 1 : 0);
+  const photoFirst = (a, b) => aMontrer(b) - aMontrer(a);
+
+  // Du plus proche au plus loin. Ceux dont on ignore la position ferment la
+  // marche : sans coordonnees, les mettre en tete reviendrait a leur preter
+  // une distance de zero.
+  const parDistance = (a, b) => {
+    const da = distanceDe(a);
+    const db = distanceDe(b);
+    if (da === null && db === null) return photoFirst(a, b);
+    if (da === null) return 1;
+    if (db === null) return -1;
+    if (da !== db) return da - db;
+    return photoFirst(a, b);
+  };
+
   if (search.trim()) {
     const q = normalizeSearch(search);
     // Les pseudos qui commencent par la recherche passent devant ceux qui la contiennent,
-    // et le rôle ne sert que de repêchage.
+    // et le role ne sert que de repechage.
     displayed = displayed
-      // La ville compte autant que le rôle en repêchage : quelqu'un qui part à
+      // La ville compte autant que le role en repechage : quelqu'un qui part a
       // Mexico cherche « mexico », et jusqu'ici la recherche ne regardait que
       // le pseudo et le nom, donc elle ne trouvait personne.
       .map(p => ({
@@ -229,50 +296,35 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
           || ((normalizeSearch(p.role).includes(q)
             || normalizeSearch(p.city).includes(q)
             || normalizeSearch(p.zone).includes(q)
-            // Le pays n'est pas écrit sur le profil, il est déduit de la ville,
-            // et son nom dépend de la langue du téléphone : il se compare donc
-            // à part. Sans ça, « Brésil » ne trouvait personne alors que dix
-            // créatifs étaient à Rio.
+            // Le pays n'est pas ecrit sur le profil, il est deduit de la ville,
+            // et son nom depend de la langue du telephone : il se compare donc
+            // a part. Sans ca, « Bresil » ne trouvait personne alors que dix
+            // creatifs etaient a Rio.
             || countryMatches(p.country, search, getLang())) ? 0.5 : 0),
       }))
       .filter(x => x.rank > 0)
       .sort((a, b) => b.rank - a.rank)
       .map(x => x.p);
+    // Dans une recherche, c'est la pertinence qui classe. Sauf si on a
+    // explicitement demande les plus proches : la ville tapee devient alors un
+    // filtre, et la distance decide de l'ordre a l'interieur.
+    if (filter === 'proche') displayed = [...displayed].sort(parDistance);
+  } else if (filter === 'proche') {
+    displayed = [...displayed].sort(parDistance);
+  } else if (filter === 'match') {
+    displayed = [...displayed].sort((a, b) => {
+      const scoreB = getMatchScore(myProfile?.styles, b.styles);
+      const scoreA = getMatchScore(myProfile?.styles, a.styles);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      const photo = photoFirst(a, b);
+      if (photo !== 0) return photo;
+      if (a.status === 'dispo' && b.status !== 'dispo') return -1;
+      if (b.status === 'dispo' && a.status !== 'dispo') return 1;
+      return 0;
+    });
   } else {
-    if (filter === 'dispo') displayed = displayed.filter(p => p.status === 'dispo');
-    if (roleFilter) displayed = displayed.filter(p => hasRole(p.role, roleFilter));
-    if (universFilter) {
-      const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
-      const filterFR = isEn ? (() => { const i = UNIVERS_EN.indexOf(universFilter); return i >= 0 ? UNIVERS_FR[i] : universFilter; })() : universFilter;
-      displayed = displayed.filter(p => (p.styles || '').toLowerCase().includes(filterFR.toLowerCase()));
-    }
-    // Les profils qui ont quelque chose à montrer passent devant, mais
-    // seulement à égalité d'affinité : c'est une incitation à compléter son
-    // profil, pas une raison d'enterrer quelqu'un qui correspond vraiment.
-    // Rien de visible, rien de vexant — on voit juste que les profils complets
-    // sont en haut.
-    //
-    // Photo + portfolio, puis photo seule, puis portfolio sans photo, puis le
-    // reste : quelqu'un sans photo mais qui montre son travail vaut mieux
-    // qu'un profil vide.
-    const aMontrer = (p) => (p.avatar_url ? 2 : 0) + ((p.portfolio_urls || []).length ? 1 : 0);
-    const photoFirst = (a, b) => aMontrer(b) - aMontrer(a);
-
-    if (filter === 'match') {
-      displayed = [...displayed].sort((a, b) => {
-        const scoreB = getMatchScore(myProfile?.styles, b.styles);
-        const scoreA = getMatchScore(myProfile?.styles, a.styles);
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        const photo = photoFirst(a, b);
-        if (photo !== 0) return photo;
-        if (a.status === 'dispo' && b.status !== 'dispo') return -1;
-        if (b.status === 'dispo' && a.status !== 'dispo') return 1;
-        return 0;
-      });
-    } else {
-      // Les autres onglets n'avaient aucun tri : l'ordre venait de la base.
-      displayed = [...displayed].sort(photoFirst);
-    }
+    // Les autres onglets n'avaient aucun tri : l'ordre venait de la base.
+    displayed = [...displayed].sort(photoFirst);
   }
 
   const pillStyle = (active) => ({
@@ -365,13 +417,18 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
           )}
         </div>
 
-        {!search.trim() && (
-          <>
+        {/* La rangée de filtres ne disparaît plus pendant une recherche.
+            Elle était masquée ET ignorée : chercher « Lisbonne » rendait donc
+            impossible de ne garder que les photographes de Lisbonne. */}
+        <>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
               {/* « Match » était le même mot que l'onglet des collabs acceptées, alors
                   qu'ici il s'agit seulement d'un classement par univers communs.
                   Un match, c'est quand quelqu'un a dit oui. */}
               <button onClick={() => setFilter('match')} style={pillStyle(filter === 'match')}>⚡ {tx('For you', 'Pour toi')}</button>
+              {/* Le tri le plus demandé, et le plus simple à comprendre :
+                  qui peut me rejoindre aujourd'hui sans prendre un avion. */}
+              <button onClick={() => setFilter('proche')} style={pillStyle(filter === 'proche')}>📍 {tx('Nearby', 'Proches')}</button>
               <button onClick={() => setFilter('dispo')} style={pillStyle(filter === 'dispo')}>🟢 {tx('Available', 'Dispo')}</button>
               <button onClick={() => setFilter('all')} style={pillStyle(filter === 'all')}>{tx('All', 'Tous')}</button>
             </div>
@@ -389,8 +446,7 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                 </button>
               ))}
             </div>
-          </>
-        )}
+        </>
 
         {/* Parcourir les books à la suite, sans ouvrir chaque profil l'un après
             l'autre. C'est la façon dont on regarde du travail quand on cherche
@@ -414,8 +470,9 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
         <p style={{ color: subText, fontSize: '11px', marginBottom: '16px', letterSpacing: '1px' }}>
           {displayed.length} {tx('CREATIVE', 'CRÉATIF')}{displayed.length > 1 ? 'S' : ''}
           {!search.trim() && filter === 'match' && myProfile?.styles ? t.sortedByMatch : ''}
-          {!search.trim() && roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
-          {!search.trim() && universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
+          {filter === 'proche' ? ` · ${tx('NEAREST FIRST', 'LES PLUS PROCHES')}` : ''}
+          {roleFilter ? ` · ${roleFilter.toUpperCase()}` : ''}
+          {universFilter ? ` · ${universFilter.toUpperCase()}` : ''}
         </p>
 
         {followError && (
@@ -465,6 +522,13 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                             que « Rio de Janeiro · Brésil » est précisément ce
                             qu'on veut savoir. */}
                         📍 {lieuLabel(p)}
+                        {/* La distance ne s'ajoute que si les deux positions
+                            sont connues. Affichée au bout du lieu, elle répond
+                            à la question qu'on se pose en lisant une ville
+                            qu'on ne situe pas. */}
+                        {distanceDe(p) !== null && (
+                          <span style={{ opacity: 0.75 }}> · {distanceLabel(distanceDe(p))}</span>
+                        )}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
@@ -474,7 +538,9 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
                         const isMatch = matchStyles.includes(sClean);
                         let displayTag = sClean;
                         if (isEn) {
-                          const { UNIVERS_FR, UNIVERS_EN } = require('../constants');
+                          // Les deux listes sont désormais importées en haut du
+                          // fichier : ce `require` au milieu du rendu était
+                          // réexécuté pour chaque étiquette de chaque profil.
                           const idx = UNIVERS_FR.indexOf(sClean);
                           if (idx >= 0) displayTag = UNIVERS_EN[idx];
                         }

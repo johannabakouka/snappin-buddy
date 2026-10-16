@@ -45,6 +45,17 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   );
   const [offerZone, setOfferZone] = useState(editingOffer?.zone || '');
   const [offerCountry, setOfferCountry] = useState(editingOffer?.country || '');
+  // Les coordonnees de la ville choisie, retenues au moment du choix.
+  //
+  // Les retrouver plus tard a partir du seul nom serait fragile : il existe un
+  // Springfield dans une dizaine d'Etats et trois Valence en Europe. La ville
+  // designee est celle sur laquelle on a appuye, pas la premiere qui porte ce
+  // nom dans la liste.
+  const [offerLatLng, setOfferLatLng] = useState(
+    editingOffer?.lat != null && editingOffer?.lng != null
+      ? { lat: editingOffer.lat, lng: editingOffer.lng }
+      : null,
+  );
   const [offerDate, setOfferDate] = useState(editingOffer?.date || '');
   // Une date, ou le fait assumé qu'il n'y en a pas encore.
   //
@@ -81,9 +92,12 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
 
   function handleCityChange(val) {
     setOfferZone(val);
-    // La ville tapée ne correspond plus à celle choisie : le pays retenu ne
-    // vaut plus rien, on le recalculera à l'enregistrement.
+    // La ville tapée ne correspond plus à celle choisie : le pays et les
+    // coordonnées retenus ne valent plus rien, on les recalculera à
+    // l'enregistrement. Garder les anciennes coordonnées placerait le projet
+    // dans la ville précédente, sous un autre nom.
     setOfferCountry('');
+    setOfferLatLng(null);
     if (val.length < 2) { setShowCitySuggestions(false); return; }
     if (!citiesAsked) setCitiesAsked(true);
     if (!cities) { setShowCitySuggestions(false); return; }
@@ -98,6 +112,7 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
   function selectCity(city) {
     setOfferZone(city.name);
     setOfferCountry(city.country || '');
+    setOfferLatLng({ lat: city.lat, lng: city.lng });
     setShowCitySuggestions(false);
   }
 
@@ -111,10 +126,33 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
    */
   function countryToSave() {
     if (offerCountry) return offerCountry;
+    return villeTrouvee()?.country || null;
+  }
+
+  /** Les coordonnees a enregistrer : celles du choix, sinon celles du nom. */
+  function coordsToSave() {
+    if (offerLatLng) return offerLatLng;
+    const v = villeTrouvee();
+    return v ? { lat: v.lat, lng: v.lng } : null;
+  }
+
+  /**
+   * La ville du projet, retrouvee dans la liste mondiale.
+   *
+   * Elle sert a deux choses : le pays, et surtout les coordonnees. Sans
+   * coordonnees, un projet ne peut pas etre classe par proximite, et « les
+   * projets pres de chez moi » resterait impossible a offrir.
+   *
+   * Si la ville a ete choisie dans la liste on la retrouve par son nom ; si
+   * elle a ete tapee a la main on la cherche quand meme ; et si on ne la
+   * trouve pas, on n'enregistre rien. Des coordonnees fausses seraient pires
+   * que pas de coordonnees du tout : elles placeraient le projet quelque part
+   * dans le monde, avec l'air d'etre sures.
+   */
+  function villeTrouvee() {
     if (!cities || !offerZone.trim()) return null;
     const cible = normalizeCity(offerZone);
-    const trouvee = cities.find(c => c.keys.includes(cible));
-    return trouvee?.country || null;
+    return cities.find(c => c.keys.includes(cible)) || null;
   }
 
   const stepBtn = {
@@ -161,6 +199,9 @@ export default function OfferForm({ theme, isEdit, editingOffer, onClose, onSave
       styles_needed: stylesToSave.join(', '),
       zone: offerZone,
       country: countryToSave(),
+      // Les coordonnees de la ville, pour le classement par proximite.
+      lat: coordsToSave()?.lat ?? null,
+      lng: coordsToSave()?.lng ?? null,
       date: dateFlexible ? '' : offerDate,
       paid: offerPaid,
     });
