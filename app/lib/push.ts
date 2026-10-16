@@ -81,11 +81,23 @@ function envoyerA(appareil: string, auth: string, envoi: Envoi): Promise<number>
       resolve(0);
       return;
     }
-    const fini = (code: number) => {
+    // Tout ce qui sort d'ici part dans les journaux de Vercel.
+    //
+    // Sans ça, un envoi refusé est indiscernable d'un envoi réussi : Apple
+    // répond par un code et une raison en un mot, et ces deux informations
+    // étaient jetées. « BadDeviceToken », « TopicDisallowed » et
+    // « ExpiredProviderToken » demandent trois corrections complètement
+    // différentes, et on ne pouvait pas savoir laquelle.
+    const fini = (code: number, raison?: string) => {
       try { session.close(); } catch { /* déjà fermée */ }
+      if (code !== 200) {
+        console.error('push: refus APNs', { code, raison: raison || '(aucune)', appareil: appareil.slice(0, 8) + '…' });
+      } else {
+        console.log('push: accepté par Apple', appareil.slice(0, 8) + '…');
+      }
       resolve(code);
     };
-    session.on('error', () => fini(0));
+    session.on('error', e => fini(0, `connexion: ${(e as Error).message}`));
 
     const corps = JSON.stringify({
       aps: {
@@ -105,12 +117,19 @@ function envoyerA(appareil: string, auth: string, envoi: Envoi): Promise<number>
       'apns-priority': '10',
       'content-type': 'application/json',
     });
-    requete.setTimeout(8000, () => fini(0));
+    requete.setTimeout(8000, () => fini(0, 'délai dépassé'));
     let code = 0;
+    let reponse = '';
     requete.on('response', entetes => { code = Number(entetes[':status']) || 0; });
-    requete.on('error', () => fini(0));
-    requete.on('end', () => fini(code));
-    requete.on('data', () => { /* le corps ne nous sert pas */ });
+    requete.on('error', e => fini(0, `requête: ${(e as Error).message}`));
+    // Le corps sert, en fait : quand Apple refuse, il y met la raison, et
+    // c'est la seule façon de savoir quoi corriger.
+    requete.on('data', (m: Buffer) => { reponse += m.toString(); });
+    requete.on('end', () => {
+      let raison: string | undefined;
+      try { raison = JSON.parse(reponse || '{}').reason; } catch { raison = reponse.slice(0, 120); }
+      fini(code, raison);
+    });
     requete.end(corps);
   });
 }
@@ -169,7 +188,17 @@ async function pastille(userId: string): Promise<number | undefined> {
 export async function pousser(userId: string, envoi: Omit<Envoi, 'badge'>): Promise<void> {
   try {
     const auth = jeton();
-    if (!auth) return;   // clés absentes : l'app marche, sans notifications
+    if (!auth) {
+      // L'app continue de marcher sans notifications, mais en silence c'est
+      // indiscernable d'un envoi qui part et n'arrive pas. On dit lesquelles
+      // des trois variables manquent, sans jamais écrire la clé elle-même.
+      console.error('push: pas de jeton, variables Vercel', {
+        APNS_PRIVATE_KEY: process.env.APNS_PRIVATE_KEY ? 'présente' : 'ABSENTE',
+        APNS_KEY_ID: process.env.APNS_KEY_ID ? 'présente' : 'ABSENTE',
+        APNS_TEAM_ID: process.env.APNS_TEAM_ID ? 'présente' : 'ABSENTE',
+      });
+      return;
+    }
 
     const db = supabaseAdmin();
     const { data } = await db
@@ -177,7 +206,13 @@ export async function pousser(userId: string, envoi: Omit<Envoi, 'badge'>): Prom
       .select('token')
       .eq('user_id', userId);
     const appareils = (data || []).map(r => r.token as string).filter(Boolean);
-    if (appareils.length === 0) return;
+    if (appareils.length === 0) {
+      // Cas très courant et trompeur : l'envoi « marche », mais il n'y a
+      // personne à prévenir. Souvent parce que la notification part vers le
+      // mauvais compte, pas parce que la mécanique est cassée.
+      console.error('push: aucun appareil enregistré pour', userId);
+      return;
+    }
 
     const badge = await pastille(userId);
     const resultats = await Promise.all(
