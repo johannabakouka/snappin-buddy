@@ -18,6 +18,35 @@ import { supabaseAdmin } from './server';
 const HOTE = 'https://api.push.apple.com';
 const SUJET = process.env.APNS_BUNDLE_ID || 'com.snappinbuddy.app';
 
+/**
+ * Remet d'aplomb la clé privée, quelle que soit la façon dont elle a voyagé.
+ *
+ * Une clé .p8 est un texte dont la mise en forme compte autant que le contenu :
+ * un en-tête, un pied, et le corps coupé en lignes. Entre le fichier d'Apple,
+ * le presse-papier, un champ de formulaire et une variable d'environnement, ces
+ * retours à la ligne se perdent presque toujours. Ils deviennent la suite
+ * « \n » en deux caractères, ou des espaces, ou rien du tout, et la clé arrive
+ * sur une seule ligne. OpenSSL refuse alors de la lire, avec pour seul message
+ * « DECODER routines::unsupported », qui ne dit rien de la cause.
+ *
+ * Plutôt que de parier sur une forme, on reconstruit : on jette tout ce qui
+ * n'est pas du contenu, on recoupe en lignes de 64 caractères, on remet
+ * l'en-tête et le pied. Le résultat est identique quelle que soit la façon
+ * dont la clé a été collée, et une clé déjà correcte en ressort inchangée.
+ */
+function pemPropre(brut: string): string {
+  const texte = brut.replace(/\\n/g, '\n').trim().replace(/^["']|["']$/g, '');
+  const corps = texte
+    .replace(/-----BEGIN [A-Z ]*KEY-----/g, '')
+    .replace(/-----END [A-Z ]*KEY-----/g, '')
+    // Tout ce qui n'appartient pas à l'alphabet base64 : espaces, retours à la
+    // ligne, tabulations, retours chariot de Windows.
+    .replace(/[^A-Za-z0-9+/=]/g, '');
+  if (corps.length < 64) return texte;   // méconnaissable : on laisse tel quel
+  const lignes = corps.match(/.{1,64}/g) || [];
+  return `-----BEGIN PRIVATE KEY-----\n${lignes.join('\n')}\n-----END PRIVATE KEY-----\n`;
+}
+
 /** Le jeton d'authentification, et l'instant où il a été fabriqué. */
 let jetonCache: { valeur: string; ne: number } | null = null;
 
@@ -37,10 +66,7 @@ function jeton(): string | null {
   const maintenant = Math.floor(Date.now() / 1000);
   if (jetonCache && maintenant - jetonCache.ne < 50 * 60) return jetonCache.valeur;
 
-  // La clé est recopiée depuis un fichier .p8 dans une variable d'environnement.
-  // Les retours à la ligne y deviennent souvent la suite « \n » en deux
-  // caractères : sans cette remise en forme, la signature échoue sans rien dire.
-  const pem = cle.includes('\\n') ? cle.replace(/\\n/g, '\n') : cle;
+  const pem = pemPropre(cle);
 
   const b64 = (o: unknown) =>
     Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -57,7 +83,15 @@ function jeton(): string | null {
     jetonCache = { valeur, ne: maintenant };
     return valeur;
   } catch (e) {
-    console.error('push: clé APNs illisible', e);
+    // Décrire la forme de la clé, jamais son contenu : de quoi comprendre ce
+    // qui cloche sans qu'un secret se retrouve dans un journal.
+    console.error('push: clé APNs illisible', {
+      message: (e as Error).message,
+      longueurBrute: cle.length,
+      enTetePresent: cle.includes('BEGIN'),
+      longueurApresRemiseEnForme: pem.length,
+      lignes: pem.split('\n').length,
+    });
     return null;
   }
 }
