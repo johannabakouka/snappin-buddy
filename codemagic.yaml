@@ -129,13 +129,19 @@ workflows:
           done
 
       - name: Numéroter le build
-        # Apple refuse deux envois portant le même numéro. BUILD_NUMBER est
-        # fourni par Codemagic et augmente de 1 à chaque compilation, ce qui
-        # suffit tant qu'on n'envoie que depuis ici.
-        # Le numéro de version affiché (1.0) ne bouge pas : il se change à la
-        # main dans Xcode, ou ici, quand on publie une vraie nouvelle version.
+        # Deux numéros, et Apple les traite différemment.
+        #
+        # Le numéro de BUILD vient de Codemagic et augmente seul. Il distingue
+        # deux envois d'une même version.
+        #
+        # Le numéro de VERSION est celui qu'on lit sur l'App Store, et il doit
+        # augmenter à chaque publication. Une fois la 1.0 approuvée, Apple
+        # ferme son train et refuse tout nouvel envoi sous ce numéro, avec les
+        # erreurs 90062 et 90186. Il se change donc ici, à la main, à CHAQUE
+        # mise à jour : 1.0.1, puis 1.0.2, puis 1.1, et ainsi de suite.
         script: |
           cd $CM_BUILD_DIR/ios/App
+          agvtool new-marketing-version 1.0.1
           agvtool new-version -all $(($BUILD_NUMBER))
 
       - name: Fabriquer l'app
