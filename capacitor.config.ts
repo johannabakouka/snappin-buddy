@@ -37,7 +37,7 @@ const config: CapacitorConfig = {
     // active et captait les gestes en même temps que la liste : c'est ce qui
     // rendait le défilement d'une conversation mou et accrocheur, avec un
     // rebond élastique qu'aucune app native n'a.
-    scrollEnabled: false,
+    scrollEnabled: true,
     contentInset: 'never',
   },
 
