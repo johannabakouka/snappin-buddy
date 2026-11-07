@@ -52,6 +52,19 @@ workflows:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
 
+        # ───────────────────────────────────────────────────────────────
+        #  LE NUMÉRO DE VERSION. À CHANGER À CHAQUE PUBLICATION.
+        #
+        #  C'est celui qu'on lit sur la fiche App Store. Une fois une
+        #  version approuvée, Apple ferme son train et refuse tout nouvel
+        #  envoi sous ce numéro (erreurs 90062 et 90186). Il était écrit
+        #  en dur au milieu du fichier, là où personne ne le voit : il est
+        #  remonté ici pour qu'on ne puisse plus l'oublier.
+        #
+        #  1.0.1, puis 1.0.2, puis 1.1, et ainsi de suite.
+        # ───────────────────────────────────────────────────────────────
+        APP_VERSION: "1.0.1"
+
     scripts:
       # Un oubli de variable ne casse pas la compilation : elle réussit, et
       # l'app arrive sur le téléphone incapable de se connecter à Supabase.
@@ -134,14 +147,11 @@ workflows:
         # Le numéro de BUILD vient de Codemagic et augmente seul. Il distingue
         # deux envois d'une même version.
         #
-        # Le numéro de VERSION est celui qu'on lit sur l'App Store, et il doit
-        # augmenter à chaque publication. Une fois la 1.0 approuvée, Apple
-        # ferme son train et refuse tout nouvel envoi sous ce numéro, avec les
-        # erreurs 90062 et 90186. Il se change donc ici, à la main, à CHAQUE
-        # mise à jour : 1.0.1, puis 1.0.2, puis 1.1, et ainsi de suite.
+        # Le numéro de VERSION vient de APP_VERSION, déclaré tout en haut
+        # de ce fichier. Il ne se change plus ici.
         script: |
           cd $CM_BUILD_DIR/ios/App
-          agvtool new-marketing-version 1.0.1
+          agvtool new-marketing-version "$APP_VERSION"
           agvtool new-version -all $(($BUILD_NUMBER))
 
       - name: Fabriquer l'app
