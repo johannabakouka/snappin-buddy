@@ -1,0 +1,439 @@
+// Outils réservés aux routes serveur (app/api/*). Ne jamais importer depuis un composant client :
+// ce fichier utilise des clés secrètes (service role Supabase, Resend, Stripe).
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import Stripe from 'stripe';
+import { NEARBY_KM } from '../constants';
+
+const SUPABASE_URL = 'https://jfzdrccnzzwhvzbxgtjo.supabase.co';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snappinbuddy.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || "Snappin'Buddy <contact@snappinbuddy.com>";
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'ateliers777.contact@gmail.com';
+
+// Les clients sont créés à la demande : le build ne plante pas si une clé manque,
+// et l'erreur apparaît clairement au moment de l'appel.
+let admin: SupabaseClient | null = null;
+export function supabaseAdmin(): SupabaseClient {
+  if (!admin) {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY manquante dans Vercel');
+    admin = createClient(SUPABASE_URL, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  }
+  return admin;
+}
+
+let stripeClient: Stripe | null = null;
+export function stripe(): Stripe {
+  if (!stripeClient) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error('STRIPE_SECRET_KEY manquante dans Vercel');
+    stripeClient = new Stripe(key);
+  }
+  return stripeClient;
+}
+
+let resendClient: Resend | null = null;
+function resend(): Resend {
+  if (!resendClient) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error('RESEND_API_KEY manquante dans Vercel');
+    resendClient = new Resend(key);
+  }
+  return resendClient;
+}
+
+/** Vérifie le jeton envoyé par l'app (Authorization: Bearer ...) et renvoie l'utilisateur. */
+export async function requireUser(request: Request) {
+  const auth = request.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin().auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user;
+}
+
+export async function getUserEmail(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin().auth.admin.getUserById(userId);
+  if (error) return null;
+  return data.user?.email ?? null;
+}
+
+export async function getProfile(userId: string) {
+  const { data } = await supabaseAdmin()
+    .from('profiles')
+    .select('username, handle, role')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data as { username?: string; handle?: string; role?: string } | null;
+}
+
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Affiche un pseudo avec un seul @, échappé pour le HTML.
+ *
+ * Les pseudos sont enregistrés avec leur @ (voir cleanHandle). Les mails
+ * écrivaient « @ » devant, ce qui donnait « @@agsphotography ».
+ */
+export function atHandle(handle: unknown): string {
+  const body = String(handle ?? '').replace(/^@+/, '');
+  return body ? `@${escapeHtml(body)}` : '';
+}
+
+/** Extrait le titre du projet d'un message de candidature « Je me propose pour : Titre ». */
+export function offerTitleFromMessage(message?: string | null): string {
+  if (!message) return '';
+  const i = message.indexOf(': ');
+  return (i >= 0 ? message.slice(i + 2) : message).trim();
+}
+
+// forUser : le pseudo du destinataire, ajouté au lien pour que l'app prévienne
+// si on ouvre le mail alors qu'on est connecté sur un autre compte.
+type Mail = { to: string; subject: string; titleFr: string; bodyFr: string; titleEn: string; bodyEn: string; cta?: string; forUser?: string };
+
+function layout(m: Mail): string {
+  const link = m.forUser ? `${APP_URL}/?for=${encodeURIComponent(m.forUser)}` : APP_URL;
+  const button = m.cta === undefined ? '' : `
+    <a href="${link}" style="display:inline-block;margin-top:24px;padding:12px 22px;border-radius:24px;background:#F2E050;color:#0A0A0A;font-weight:800;text-decoration:none">${m.cta || "Ouvrir Snappin'Buddy · Open"}</a>`;
+  return `<!doctype html><html><body bgcolor="#0A0A0A" style="margin:0;background:#0A0A0A;font-family:Helvetica,Arial,sans-serif;color:#fff">
+  <div style="max-width:520px;margin:0 auto;padding:32px 24px">
+    <a href="${link}" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none">
+      <img src="${APP_URL}/logo-email.png" width="120" height="120" alt="Snappin'Buddy" style="display:inline-block;width:120px;height:120px;border:0">
+    </a>
+    <h1 style="font-size:20px;margin:0 0 12px">${m.titleFr}</h1>
+    <p style="font-size:15px;line-height:1.6;color:rgba(255,255,255,.8);margin:0">${m.bodyFr}</p>
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:24px 0">
+    <h2 style="font-size:16px;margin:0 0 8px;color:rgba(255,255,255,.85)">${m.titleEn}</h2>
+    <p style="font-size:14px;line-height:1.6;color:rgba(255,255,255,.6);margin:0">${m.bodyEn}</p>${button}
+    <p style="margin-top:32px;font-size:12px;color:#F2E050;letter-spacing:.2em">MATCH AND CREATE.</p>
+  </div></body></html>`;
+}
+
+export async function sendMail(m: Mail) {
+  const { error } = await resend().emails.send({ from: EMAIL_FROM, to: m.to, subject: m.subject, html: layout(m) });
+  if (error) throw new Error(`Resend: ${error.message}`);
+}
+
+// ---------- Modèles d'emails (FR puis EN) ----------
+
+export function newApplicationMail(to: string, applicant: string, role: string, offerTitle: string, forUser?: string): Mail {
+  const a = escapeHtml(applicant), r = escapeHtml(role), o = escapeHtml(offerTitle);
+  return {
+    to,
+    subject: `⚡ Nouvelle candidature · ${offerTitle}`.slice(0, 120),
+    titleFr: 'Quelqu’un veut créer avec toi ⚡',
+    bodyFr: `<b>${a}</b>${r ? ` (${r})` : ''} se propose pour ton projet <b>« ${o} »</b>. Ouvre l’app pour voir son profil et lui répondre.`,
+    titleEn: 'Someone wants to create with you ⚡',
+    bodyEn: `<b>${a}</b>${r ? ` (${r})` : ''} applied to your project <b>“${o}”</b>. Open the app to see their profile and reply.`,
+    cta: '',
+    forUser,
+  };
+}
+
+export function newProposalMail(to: string, sender: string, role: string, message: string, forUser?: string): Mail {
+  const s = escapeHtml(sender), r = escapeHtml(role);
+  const m = escapeHtml(message.slice(0, 300));
+  const quote = m ? `<br><br><i>« ${m} »</i>` : '';
+  const quoteEn = m ? `<br><br><i>“${m}”</i>` : '';
+  return {
+    to,
+    subject: `⚡ ${sender} te propose une collab`.slice(0, 120),
+    titleFr: 'Nouvelle proposition de collab ⚡',
+    bodyFr: `<b>${s}</b>${r ? ` (${r})` : ''} te propose de créer ensemble.${quote}<br><br>Ouvre l’app pour voir son profil et accepter ou refuser.`,
+    titleEn: 'New collab proposal ⚡',
+    bodyEn: `<b>${s}</b>${r ? ` (${r})` : ''} wants to create with you.${quoteEn}<br><br>Open the app to see their profile and accept or decline.`,
+    cta: '',
+    forUser,
+  };
+}
+
+export function newMessageMail(to: string, sender: string, forUser?: string): Mail {
+  const s = escapeHtml(sender);
+  return {
+    to,
+    subject: `💬 ${sender} t'a écrit sur Snappin'Buddy`.slice(0, 120),
+    titleFr: 'Tu as un nouveau message 💬',
+    bodyFr: `<b>${s}</b> t’a écrit. Ouvre l’app pour lire et répondre.`,
+    titleEn: 'You have a new message 💬',
+    bodyEn: `<b>${s}</b> sent you a message. Open the app to read and reply.`,
+    cta: '',
+    forUser,
+  };
+}
+
+export function applicationAcceptedMail(to: string, poster: string, offerTitle: string, forUser?: string): Mail {
+  const p = escapeHtml(poster), o = escapeHtml(offerTitle);
+  return {
+    to,
+    subject: `🎉 Candidature acceptée · ${offerTitle}`.slice(0, 120),
+    titleFr: 'Ta candidature est acceptée 🎉',
+    bodyFr: `<b>${p}</b> a accepté ta proposition pour <b>« ${o} »</b>. Un message t’attend dans l’app pour organiser la suite.`,
+    titleEn: 'Your application was accepted 🎉',
+    bodyEn: `<b>${p}</b> accepted your application for <b>“${o}”</b>. A message is waiting for you in the app.`,
+    cta: '',
+    forUser,
+  };
+}
+
+// reason : 'date' quand la date du projet est passée, 'age' quand un projet
+// sans date a vécu ses 30 jours. Le message n'est pas le même : dans le premier
+// cas, le projet a peut-être été réalisé, et c'est le moment de le valider.
+export function offerExpiringMail(to: string, offerTitle: string, expiryDate: string, expired: boolean, forUser?: string, reason: 'date' | 'age' = 'age'): Mail {
+  const o = escapeHtml(offerTitle), d = escapeHtml(expiryDate);
+  return expired
+    ? {
+        to,
+        subject: reason === 'date'
+          ? `Ton projet est passé · ${offerTitle}`.slice(0, 120)
+          : `Ton projet est clôturé · ${offerTitle}`.slice(0, 120),
+        titleFr: reason === 'date' ? 'Ton projet est passé' : 'Ton projet est arrivé à échéance',
+        bodyFr: reason === 'date'
+          ? `La date de ton projet <b>« ${o} »</b> est passée, il n’est donc plus dans le feed.<br><br>S’il a été réalisé, ouvre l’app et confirme-le avec ton buddy : le projet comptera dans vos deux profils. Sinon, donne-lui une nouvelle date et il repart.`
+          : `Ton projet <b>« ${o} »</b> a été clôturé après 30 jours. Tu peux en lancer un nouveau à tout moment.`,
+        titleEn: reason === 'date' ? 'Your project is past' : 'Your project has ended',
+        bodyEn: reason === 'date'
+          ? `Your project <b>“${o}”</b> is past its date, so it left the feed.<br><br>If it happened, open the app and confirm it with your buddy: it will count on both your profiles. Otherwise, give it a new date and it is back.`
+          : `Your project <b>“${o}”</b> was closed after 30 days. You can launch a new one anytime.`,
+        cta: '',
+        forUser,
+      }
+    : {
+        to,
+        subject: `⏳ Ton projet expire bientôt · ${offerTitle}`.slice(0, 120),
+        titleFr: 'Ton projet expire dans 7 jours ⏳',
+        bodyFr: `Ton projet <b>« ${o} »</b> sera clôturé le <b>${d}</b>. Pense à répondre aux candidatures d’ici là.`,
+        titleEn: 'Your project expires in 7 days ⏳',
+        bodyEn: `Your project <b>“${o}”</b> will close on <b>${d}</b>. Remember to reply to applications before then.`,
+        cta: '',
+        forUser,
+      };
+}
+
+// Le rayon affiché dans le mail vient de la même constante que la carte, pour
+// qu'ils ne puissent pas se contredire.
+const RADIUS_FR = ` (moins de ${NEARBY_KM} km)`;
+const RADIUS_EN = ` (within ${NEARBY_KM} km)`;
+
+/**
+ * « Quelqu'un est arrivé près de toi. »
+ *
+ * Envoyé une seule fois, à ceux qui se sont inscrits sur la carte alors que
+ * leur ville était vide. C'est le seul mail que l'app envoie sans qu'un autre
+ * membre ait agi directement envers la personne, donc il dit clairement qu'il
+ * ne reviendra pas.
+ */
+export function nearbyArrivalMail(to: string, arrived: number, forUser?: string): Mail {
+  const n = Math.max(1, Math.floor(arrived));
+  const manyFr = n > 1 ? `<b>${n} nouveaux créatifs</b> se sont placés` : '<b>Un créatif</b> s’est placé';
+  const manyEn = n > 1 ? `<b>${n} new creatives</b> have put themselves` : '<b>A creative</b> has put themselves';
+  return {
+    to,
+    subject: n > 1 ? `✨ ${n} créatifs viennent d’arriver près de toi` : '✨ Un créatif vient d’arriver près de toi',
+    titleFr: 'Ta ville se remplit ✨',
+    bodyFr: `${manyFr} sur la carte autour de toi depuis que tu as demandé à être prévenu${RADIUS_FR}. ` +
+      'Ouvre la carte pour voir qui c’est.<br><br>' +
+      '<span style="font-size:12px;color:rgba(255,255,255,.45)">Ce mail n’est envoyé qu’une fois. ' +
+      'Tu peux redemander à être prévenu depuis la carte.</span>',
+    titleEn: 'Your city is filling up ✨',
+    bodyEn: `${manyEn} on the map around you since you asked to be notified${RADIUS_EN}. ` +
+      'Open the map to see who.<br><br>' +
+      '<span style="font-size:12px;color:rgba(255,255,255,.45)">This email is sent only once. ' +
+      'You can ask to be notified again from the map.</span>',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
+ * « Ton compte est suspendu », avec le motif et la façon de contester.
+ *
+ * Les CGU promettent que toute personne sanctionnée en est informée par email,
+ * avec le motif, et peut contester en répondant. Aucun modèle n'existait, donc
+ * la promesse ne pouvait pas être tenue.
+ */
+export function sanctionMail(to: string, kind: 'suspend' | 'unsuspend', reason: string, forUser?: string): Mail {
+  const r = escapeHtml(reason);
+  if (kind === 'unsuspend') {
+    return {
+      to,
+      subject: 'Ton compte Snappin’Buddy est de nouveau actif',
+      titleFr: 'Ton compte est réactivé',
+      bodyFr: 'La suspension de ton compte est levée. Tu peux te reconnecter normalement.',
+      titleEn: 'Your account is active again',
+      bodyEn: 'The suspension on your account has been lifted. You can sign in again.',
+      cta: '',
+      forUser,
+    };
+  }
+  return {
+    to,
+    subject: 'Ton compte Snappin’Buddy est suspendu',
+    titleFr: 'Ton compte est suspendu',
+    bodyFr: `À la suite d’un signalement, ton compte est suspendu.${r ? `<br><br>Motif : <b>${r}</b>` : ''}` +
+      '<br><br>Si tu penses que c’est une erreur, réponds à cet email : la décision sera réexaminée.',
+    titleEn: 'Your account is suspended',
+    bodyEn: `Following a report, your account has been suspended.${r ? `<br><br>Reason: <b>${r}</b>` : ''}` +
+      '<br><br>If you believe this is a mistake, reply to this email and the decision will be reviewed.',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
+ * « Ce projet a trouvé son équipe. »
+ *
+ * Envoyé une seule fois, aux candidats encore en attente le jour où le projet
+ * se remplit. Il ne parle pas d'eux et ne dit pas « refusé » : le projet est
+ * complet, c'est tout, et il y en a d'autres.
+ *
+ * Avant, ces gens n'étaient jamais prévenus de rien. Leur candidature restait
+ * en attente pour toujours, et ils attendaient une réponse qui ne venait pas.
+ */
+export function projectFilledMail(to: string, offerTitle: string, forUser?: string): Mail {
+  const o = escapeHtml(offerTitle);
+  const quoted = o ? ` <b>« ${o} »</b>` : '';
+  const quotedEn = o ? ` <b>“${o}”</b>` : '';
+  return {
+    to,
+    subject: o ? `Le projet « ${offerTitle} » a trouvé son équipe`.slice(0, 120) : 'Ce projet a trouvé son équipe',
+    titleFr: 'Ce projet a trouvé son équipe',
+    bodyFr: `Le projet${quoted} est complet, ta candidature n’est donc plus en attente.<br><br>` +
+      'Merci de t’être proposé. D’autres projets sont ouverts autour de toi en ce moment.',
+    titleEn: 'This project found its team',
+    bodyEn: `The project${quotedEn} is now full, so your application is no longer pending.<br><br>` +
+      'Thanks for putting yourself forward. Other projects are open near you right now.',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
+ * « Une place s'est libérée sur ton projet. »
+ * Pour le porteur, quand quelqu'un d'accepté se désiste.
+ */
+export function slotFreedMail(to: string, offerTitle: string, roleLabel: string, forUser?: string): Mail {
+  const o = escapeHtml(offerTitle);
+  const r = escapeHtml(roleLabel);
+  return {
+    to,
+    subject: o ? `Une place s’est libérée · ${offerTitle}`.slice(0, 120) : 'Une place s’est libérée',
+    titleFr: 'Une place s’est libérée',
+    bodyFr: `Quelqu’un s’est désisté sur ton projet${o ? ` <b>« ${o} »</b>` : ''}` +
+      `${r ? `, la place de <b>${r}</b> est de nouveau ouverte` : ''}.<br><br>` +
+      'Ton projet est revenu dans le fil, et les personnes qui avaient candidaté sont toujours dans ta liste.',
+    titleEn: 'A spot has opened up',
+    bodyEn: `Someone withdrew from your project${o ? ` <b>“${o}”</b>` : ''}` +
+      `${r ? `, so the <b>${r}</b> spot is open again` : ''}.<br><br>` +
+      'Your project is back in the feed, and everyone who applied is still on your list.',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
+ * « Quelqu'un insiste. »
+ *
+ * Le contrôle automatique refuse les photos sur l'appareil, donc rien n'arrive
+ * dans le stockage et il n'y a rien à retirer. Reste à être prévenu quand la
+ * même personne réessaie plusieurs fois : c'est ce signal-là qui mérite un
+ * regard humain.
+ */
+export function uploadBlockedMail(
+  to: string,
+  who: { id: string; username?: string; handle?: string; count: number; contexte: string },
+): Mail {
+  const nom = escapeHtml(who.username || who.id);
+  return {
+    to,
+    subject: `🚫 Photos refusées · ${who.username || who.id}`.slice(0, 120),
+    titleFr: 'Plusieurs photos refusées par le contrôle automatique',
+    bodyFr: `<b>${nom}</b> (${atHandle(who.handle)}, id ${escapeHtml(who.id)}) a vu ` +
+      `<b>${who.count}</b> photos refusées en 24 heures, la dernière sur « ${escapeHtml(who.contexte)} ».<br><br>` +
+      'Aucune de ces photos n’est arrivée dans le stockage. Le détail est dans l’écran de modération.',
+    titleEn: 'Several photos blocked by the automatic check',
+    bodyEn: 'See details above.',
+  };
+}
+
+export function reportMail(to: string, reporterId: string, reported: { id: string; username?: string; handle?: string }, reason: string): Mail {
+  return {
+    to,
+    subject: `🚩 Signalement · ${reported.username || reported.id}`.slice(0, 120),
+    titleFr: 'Nouveau signalement',
+    bodyFr: `Profil signalé : <b>${escapeHtml(reported.username)}</b> (${atHandle(reported.handle)}, id ${escapeHtml(reported.id)})<br>` +
+      `Signalé par : ${escapeHtml(reporterId)}<br><br>Motif :<br>${escapeHtml(reason).replace(/\n/g, '<br>')}`,
+    titleEn: 'New report',
+    bodyEn: 'See details above.',
+  };
+}
+
+/**
+ * « Bienvenue sur Snappin'Buddy », envoyé une seule fois, à la création du
+ * profil.
+ *
+ * Pas à l'inscription : à ce moment-là le handle n'existe pas encore, il est
+ * choisi à la première étape de l'inscription. Or c'est le handle qui fait
+ * tout l'intérêt de ce mail, puisque c'est l'adresse de la personne sur l'app.
+ *
+ * Le déclenchement se fait côté serveur, par un webhook Supabase sur
+ * l'insertion dans profiles (voir app/api/bienvenue). Conséquence : aucune
+ * mise à jour de l'app n'est nécessaire, et les personnes arrivées par
+ * l'App Store le reçoivent exactement comme celles arrivées par le site.
+ *
+ * Le mail ne promet rien qui n'existe pas. « Demande à être prévenu depuis la
+ * carte » renvoie à la fonction qui envoie nearbyArrivalMail, et Android est
+ * annoncé « en préparation » et non « bientôt », puisque rien n'est déposé.
+ */
+export function bienvenueMail(to: string, username?: string | null, handle?: string | null, forUser?: string): Mail {
+  const pseudo = escapeHtml(username);
+  const h = atHandle(handle);
+  const nu = String(handle ?? '').replace(/^@+/, '');
+  const APP_STORE = 'https://apps.apple.com/app/id6822036127';
+  const petit = 'font-size:12px;color:rgba(255,255,255,.45)';
+
+  return {
+    to,
+    subject: nu ? `Bienvenue sur Snappin'Buddy, @${nu}` : "Bienvenue sur Snappin'Buddy",
+
+    titleFr: 'Te voilà sur la carte 📍',
+    bodyFr:
+      (pseudo ? `Bienvenue ${pseudo} !<br><br>` : '') +
+      `Ton identifiant est <b>${h}</b>. C’est comme ça que les autres créatifs te trouvent, ` +
+      'et c’est ce que tu partages quand tu veux qu’on te retrouve.<br><br>' +
+      'Snappin’Buddy sert à une chose : trouver des créatifs autour de toi et créer ensemble. ' +
+      'Ouvre la carte, regarde qui shoote près de chez toi, et envoie une proposition.<br><br>' +
+      '<b>Personne autour de toi pour l’instant ?</b> C’est normal au début, la carte se remplit ' +
+      'tous les jours. Depuis la carte, tu peux demander à être prévenu dès qu’un créatif ' +
+      's’installe près de chez toi.<br><br>' +
+      '<b>Active les notifications</b> pour ne pas rater une proposition : Profil, puis ' +
+      'Compte &amp; sécurité.<br><br>' +
+      `<span style="${petit}">L’app est disponible sur ` +
+      `<a href="${APP_STORE}" style="color:#F2E050">l’App Store</a>. ` +
+      'La version Android est en préparation.</span>',
+
+    titleEn: 'You’re on the map 📍',
+    bodyEn:
+      (pseudo ? `Welcome ${pseudo}!<br><br>` : '') +
+      `Your handle is <b>${h}</b>. That’s how other creatives find you, ` +
+      'and what you share when you want to be found.<br><br>' +
+      'Snappin’Buddy does one thing: find creatives around you and create together. ' +
+      'Open the map, see who’s shooting near you, and send a proposal.<br><br>' +
+      '<b>Nobody around you yet?</b> That’s normal at the start, the map fills up every day. ' +
+      'From the map, you can ask to be notified as soon as a creative settles near you.<br><br>' +
+      '<b>Turn on notifications</b> so you don’t miss a proposal: Profile, then ' +
+      'Account &amp; security.<br><br>' +
+      `<span style="${petit}">The app is available on the ` +
+      `<a href="${APP_STORE}" style="color:#F2E050">App Store</a>. ` +
+      'The Android version is in preparation.</span>',
+
+    cta: '',
+    forUser,
+  };
+}
