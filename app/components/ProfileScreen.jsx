@@ -16,7 +16,7 @@ import { tx, isNotFrench } from '../tx';
 import Thumb from './Thumb';
 import { lookingChips } from '../looking-for';
 import { UNIVERS_FR, UNIVERS_EN, roleLabels } from '../constants';
-import { uploadProfileImage, removeByPublicUrl, AVATAR_BUCKET } from '../image-upload';
+import { uploadProfileImage, removeByPublicUrl, ensureThumbs, AVATAR_BUCKET } from '../image-upload';
 import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { usePullToRefresh } from '../pull-refresh';
 import PullIndicator from './PullIndicator';
@@ -194,6 +194,27 @@ export default function ProfileScreen({ profile, onProfileUpdate, theme, darkMod
       setValidatedList([]);
     }
   }
+
+  /**
+   * Rattrape les vignettes manquantes de ses propres photos, une seule fois.
+   *
+   * Les photos envoyées avant que les vignettes existent n'en ont pas, et
+   * celles envoyées depuis non plus : le dépôt était refusé en silence (voir
+   * uploadThumb). Résultat, la carte servait des photos de 300 ko dans des
+   * ronds de 44 pixels, pour tout le monde, à chaque ouverture.
+   *
+   * ensureThumbs était écrit pour ça mais n'était appelé nulle part. On
+   * l'appelle ici : chacun répare les siennes en ouvrant son profil, sans
+   * migration, sans script, et sans pouvoir toucher aux photos des autres.
+   * Tout est au mieux, un échec ne change rien à l'écran.
+   */
+  const vignettesFaites = useRef(false);
+  useEffect(() => {
+    if (!profile?.user_id || vignettesFaites.current) return;
+    vignettesFaites.current = true;
+    const photos = [profile.avatar_url, ...(profile.portfolio_urls || [])].filter(Boolean);
+    if (photos.length) ensureThumbs(photos).catch(() => {});
+  }, [profile?.user_id, profile?.avatar_url, profile?.portfolio_urls]);
 
   // Nombre de projets en cours, affiché sur le bouton « Mes projets »
   useEffect(() => {
