@@ -54,13 +54,31 @@ function thumbPath(path) {
  * Dépose la vignette à côté de la photo. Au mieux : une vignette manquante fait
  * simplement retomber l'affichage sur la photo d'origine, alors qu'une erreur
  * ici empêcherait d'envoyer la photo tout court.
+ *
+ * Ce dépôt a été refusé en silence pendant des semaines, et aucune vignette
+ * n'a jamais été créée. La cause, lisible dans les journaux du stockage :
+ *
+ *     x-upsert: true
+ *     queryName: "UpsertObjectProbe"
+ *     new row violates row-level security policy for table "objects"
+ *
+ * `upsert: true` ne demande pas un dépôt mais un REMPLACEMENT, et le
+ * remplacement exige des droits que les règles du stockage n'accordent pas.
+ * Or le nom du fichier contient déjà un horodatage et six caractères
+ * aléatoires : deux vignettes ne peuvent pas porter le même nom, donc ce
+ * remplacement ne servait à rien. On dépose simplement.
+ *
+ * L'erreur n'est plus avalée non plus. Elle n'interrompt toujours pas l'envoi
+ * de la photo, mais elle apparaît dans la console avec son message, ce qui
+ * aurait suffi à voir le problème le premier jour.
  */
 async function uploadThumb(file, bucket, path) {
   try {
     const thumb = await resizeImage(file, THUMB_SIDE, THUMB_QUALITY);
-    await supabase.storage
+    const { error } = await supabase.storage
       .from(bucket)
-      .upload(thumbPath(path), thumb, { contentType: 'image/jpeg', upsert: true });
+      .upload(thumbPath(path), thumb, { contentType: 'image/jpeg' });
+    if (error) console.error('uploadThumb refusé par le stockage :', error.message, thumbPath(path));
   } catch (e) {
     console.error('uploadThumb', e);
   }
@@ -251,9 +269,13 @@ export async function ensureThumbs(urls) {
       const seau = m[1];
       const chemin = decodeURIComponent(m[2].split('?')[0]);
 
-      await supabase.storage
+      // Pas d'upsert : la vignette n'existe pas, on vient de le vérifier par
+      // une requête de tête. Demander un remplacement ferait refuser le dépôt
+      // par les règles du stockage, exactement comme dans uploadThumb.
+      const { error } = await supabase.storage
         .from(seau)
-        .upload(thumbPath(chemin), petite, { contentType: 'image/jpeg', upsert: true });
+        .upload(thumbPath(chemin), petite, { contentType: 'image/jpeg' });
+      if (error) { console.error('ensureThumbs refusé :', error.message, chemin); continue; }
       faites++;
     } catch (e) {
       console.error('ensureThumbs', e);
