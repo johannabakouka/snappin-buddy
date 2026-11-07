@@ -13,6 +13,9 @@ import { messageEnvoi, prechauffeControle } from '../lib/image-check';
 import { hasBlockedMe } from '../blocks';
 import { api } from '../api-url';
 
+// Nombre de messages chargés à l'ouverture d'une conversation (voir loadMessages).
+const DERNIERS_MESSAGES = 200;
+
 // Au-delà, le champ cesse de grandir et défile : cinq lignes environ, pour que
 // la conversation reste visible au-dessus.
 const COMPOSER_MAX_PX = 120;
@@ -150,12 +153,28 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
     setBuddyReceipts(data?.read_receipts !== false);
   }
 
+  /**
+   * Les derniers messages de la conversation, pas toute son histoire.
+   *
+   * La requête ne demandait aucune limite. Tant qu'une conversation tient en
+   * quelques dizaines de messages ça ne se voit pas, mais l'API plafonne ses
+   * réponses à 1000 lignes : passé ce seuil, on recevait les 1000 messages
+   * LES PLUS ANCIENS et plus aucun des récents, sans la moindre erreur. Une
+   * conversation active aurait fini par se figer dans le passé.
+   *
+   * On demande donc explicitement les 200 derniers, du plus récent au plus
+   * ancien, puis on remet dans l'ordre pour l'affichage. 200 couvre très
+   * largement ce qu'on fait défiler à la main, et la prochaine étape sera un
+   * « charger les messages plus anciens » quand une conversation dépassera ça.
+   */
   async function loadMessages(myId, buddyId) {
-    const { data } = await supabase
+    const { data: recents } = await supabase
       .from('messages')
       .select('*')
       .or(`and(sender_id.eq.${myId},receiver_id.eq.${buddyId}),and(sender_id.eq.${buddyId},receiver_id.eq.${myId})`)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .limit(DERNIERS_MESSAGES);
+    const data = recents ? [...recents].reverse() : recents;
     setFirstLoad(false);
     if (data) {
       setMessages(data);
