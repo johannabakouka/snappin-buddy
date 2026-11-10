@@ -471,6 +471,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ buscan tu rol y compartís universos creativos · ★★ buscan tu rol · ★ compartís universos creativos",
     "View photo": "Ver la foto",
     "Checking...": "Comprobando...",
+    "That profile could not be found. It may have been deleted.": "No se ha encontrado ese perfil. Puede que se haya eliminado.",
+    "That project could not be found. It may have been deleted.": "No se ha encontrado ese proyecto. Puede que se haya eliminado.",
 },
 
   pt: {
@@ -942,6 +944,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ procuram o teu papel e partilham universos criativos · ★★ procuram o teu papel · ★ partilham universos criativos",
     "View photo": "Ver a foto",
     "Checking...": "A verificar...",
+    "That profile could not be found. It may have been deleted.": "Não foi possível encontrar esse perfil. Pode ter sido apagado.",
+    "That project could not be found. It may have been deleted.": "Não foi possível encontrar esse projeto. Pode ter sido apagado.",
 },
 
   de: {
@@ -1413,6 +1417,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ deine Rolle wird gesucht und ihr teilt kreative Welten · ★★ deine Rolle wird gesucht · ★ ihr teilt kreative Welten",
     "View photo": "Foto ansehen",
     "Checking...": "Wird geprüft...",
+    "That profile could not be found. It may have been deleted.": "Dieses Profil wurde nicht gefunden. Vielleicht wurde es gelöscht.",
+    "That project could not be found. It may have been deleted.": "Dieses Projekt wurde nicht gefunden. Vielleicht wurde es gelöscht.",
 },
 
   it: {
@@ -1884,6 +1890,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ cercano il tuo ruolo e condividete universi creativi · ★★ cercano il tuo ruolo · ★ condividete universi creativi",
     "View photo": "Vedi la foto",
     "Checking...": "Verifica in corso...",
+    "That profile could not be found. It may have been deleted.": "Profilo non trovato. Potrebbe essere stato eliminato.",
+    "That project could not be found. It may have been deleted.": "Progetto non trovato. Potrebbe essere stato eliminato.",
 },
   vi: {
     "🔖 Following ✓": "🔖 Đang theo dõi ✓",
@@ -2354,6 +2362,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ vai trò của bạn đang được tìm và hai bên cùng thế giới sáng tạo · ★★ vai trò của bạn đang được tìm · ★ hai bên cùng thế giới sáng tạo",
     "View photo": "Xem ảnh",
     "Checking...": "Đang kiểm tra...",
+    "That profile could not be found. It may have been deleted.": "Không tìm thấy trang này. Có thể nó đã bị xoá.",
+    "That project could not be found. It may have been deleted.": "Không tìm thấy dự án này. Có thể nó đã bị xoá.",
 },
   hu: {
     "🔖 Following ✓": "🔖 Követed ✓",
@@ -2824,6 +2834,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ a te szerepedet keresik és közös kreatív világotok van · ★★ a te szerepedet keresik · ★ közös kreatív világotok van",
     "View photo": "Kép megtekintése",
     "Checking...": "Ellenőrzés...",
+    "That profile could not be found. It may have been deleted.": "Ez a profil nem található. Lehet, hogy törölték.",
+    "That project could not be found. It may have been deleted.": "Ez a projekt nem található. Lehet, hogy törölték.",
 },
   ro: {
     "🔖 Following ✓": "🔖 Urmărești ✓",
@@ -3294,6 +3306,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ se caută rolul tău și împărtășiți aceleași universuri creative · ★★ se caută rolul tău · ★ împărtășiți aceleași universuri creative",
     "View photo": "Vezi poza",
     "Checking...": "Se verifică...",
+    "That profile could not be found. It may have been deleted.": "Profilul nu a fost găsit. Poate a fost șters.",
+    "That project could not be found. It may have been deleted.": "Proiectul nu a fost găsit. Poate a fost șters.",
 },
   cs: {
     "🔖 Following ✓": "🔖 Sledujete ✓",
@@ -3764,6 +3778,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ hledají tvoji roli a sdílíte stejné tvůrčí světy · ★★ hledají tvoji roli · ★ sdílíte stejné tvůrčí světy",
     "View photo": "Zobrazit fotku",
     "Checking...": "Kontroluje se...",
+    "That profile could not be found. It may have been deleted.": "Tento profil se nepodařilo najít. Možná byl smazán.",
+    "That project could not be found. It may have been deleted.": "Tento projekt se nepodařilo najít. Možná byl smazán.",
 },
   fi: {
     "🔖 Following ✓": "🔖 Seurataan ✓",
@@ -4234,6 +4250,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ roolistasi ollaan kiinnostuneita ja jaatte samat luovat maailmat · ★★ roolistasi ollaan kiinnostuneita · ★ jaatte samat luovat maailmat",
     "View photo": "Katso kuva",
     "Checking...": "Tarkistetaan...",
+    "That profile could not be found. It may have been deleted.": "Profiilia ei löytynyt. Se on ehkä poistettu.",
+    "That project could not be found. It may have been deleted.": "Projektia ei löytynyt. Se on ehkä poistettu.",
 },
   nb: {
     "🔖 Following ✓": "🔖 Følger ✓",
@@ -4704,6 +4722,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ rollen din etterspørres og dere deler kreative univers · ★★ rollen din etterspørres · ★ dere deler kreative univers",
     "View photo": "Se bildet",
     "Checking...": "Sjekker...",
+    "That profile could not be found. It may have been deleted.": "Fant ikke denne profilen. Den kan ha blitt slettet.",
+    "That project could not be found. It may have been deleted.": "Fant ikke dette prosjektet. Det kan ha blitt slettet.",
 },
   da: {
     "🔖 Following ✓": "🔖 Følger ✓",
@@ -5174,6 +5194,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ din rolle bliver søgt, og I deler kreative universer · ★★ din rolle bliver søgt · ★ I deler kreative universer",
     "View photo": "Se billedet",
     "Checking...": "Tjekker...",
+    "That profile could not be found. It may have been deleted.": "Profilen blev ikke fundet. Den er måske slettet.",
+    "That project could not be found. It may have been deleted.": "Projektet blev ikke fundet. Det er måske slettet.",
 },
   sv: {
     "🔖 Following ✓": "🔖 Följer ✓",
@@ -5644,6 +5666,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ din roll efterfrågas och ni delar kreativa världar · ★★ din roll efterfrågas · ★ ni delar kreativa världar",
     "View photo": "Se bilden",
     "Checking...": "Kontrollerar...",
+    "That profile could not be found. It may have been deleted.": "Profilen hittades inte. Den kan ha tagits bort.",
+    "That project could not be found. It may have been deleted.": "Projektet hittades inte. Det kan ha tagits bort.",
 },
   id: {
     "🔖 Following ✓": "🔖 Mengikuti ✓",
@@ -6114,6 +6138,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ peranmu dicari dan kalian berbagi dunia kreatif · ★★ peranmu dicari · ★ kalian berbagi dunia kreatif",
     "View photo": "Lihat foto",
     "Checking...": "Memeriksa...",
+    "That profile could not be found. It may have been deleted.": "Profil itu tidak ditemukan. Mungkin sudah dihapus.",
+    "That project could not be found. It may have been deleted.": "Proyek itu tidak ditemukan. Mungkin sudah dihapus.",
 },
   tr: {
     "🔖 Following ✓": "🔖 Takip ediliyor ✓",
@@ -6584,6 +6610,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ senin rolün aranıyor ve aynı yaratıcı dünyaları paylaşıyorsunuz · ★★ senin rolün aranıyor · ★ aynı yaratıcı dünyaları paylaşıyorsunuz",
     "View photo": "Fotoğrafı gör",
     "Checking...": "Kontrol ediliyor...",
+    "That profile could not be found. It may have been deleted.": "Bu profil bulunamadı. Silinmiş olabilir.",
+    "That project could not be found. It may have been deleted.": "Bu proje bulunamadı. Silinmiş olabilir.",
 },
   pl: {
     "🔖 Following ✓": "🔖 Obserwujesz ✓",
@@ -7054,6 +7082,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ szukają twojej roli i dzielicie te same światy twórcze · ★★ szukają twojej roli · ★ dzielicie te same światy twórcze",
     "View photo": "Zobacz zdjęcie",
     "Checking...": "Sprawdzanie...",
+    "That profile could not be found. It may have been deleted.": "Nie znaleziono tego profilu. Mógł zostać usunięty.",
+    "That project could not be found. It may have been deleted.": "Nie znaleziono tego projektu. Mógł zostać usunięty.",
 },
   nl: {
     "🔖 Following ✓": "🔖 Gevolgd ✓",
@@ -7524,6 +7554,8 @@ const TX = {
     "★★★ your role is wanted and you share creative worlds · ★★ your role is wanted · ★ you share creative worlds": "★★★ jouw rol wordt gezocht én jullie delen creatieve werelden · ★★ jouw rol wordt gezocht · ★ jullie delen creatieve werelden",
     "View photo": "Foto bekijken",
     "Checking...": "Bezig met controleren...",
+    "That profile could not be found. It may have been deleted.": "Dat profiel is niet gevonden. Misschien is het verwijderd.",
+    "That project could not be found. It may have been deleted.": "Dat project is niet gevonden. Misschien is het verwijderd.",
 },
 };
 

@@ -119,6 +119,8 @@ export default function Home() {
     return new URLSearchParams(window.location.search).get('buddy');
   });
   const [sharedBuddy, setSharedBuddy] = useState<Record<string, unknown> | null>(null);
+  // Un lien partagé qui ne mène à rien : profil supprimé, projet effacé.
+  const [lienMort, setLienMort] = useState<{ quoi: 'profil' | 'projet'; valeur: string } | null>(null);
 
   const [linkFor, setLinkFor] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -177,14 +179,29 @@ export default function Home() {
   useEffect(() => {
     if (!sharedBuddyHandle) return;
     let alive = true;
+    const pseudo = sharedBuddyHandle.replace(/^@+/, '');
     supabase
       .from('profiles')
       .select('*')
-      .ilike('handle', `@${sharedBuddyHandle}`)
-      .maybeSingle()
-      .then(({ data }) => {
+      // Deux écritures coexistent en base : la plupart des pseudos portent
+      // l'arobase, trois ne l'ont pas. La page publique /u/<pseudo> acceptait
+      // déjà les deux, l'app ne cherchait que la forme avec arobase. Pour ces
+      // profils-là, « Créer avec » ne trouvait personne et laissait la carte
+      // s'afficher sans un mot d'explication.
+      .or(`handle.ilike.@${pseudo},handle.ilike.${pseudo}`)
+      .limit(5)
+      .then(({ data }: { data: Record<string, unknown>[] | null }) => {
         if (!alive) return;
-        if (data) setSharedBuddy(data);
+        // Le tiret bas est un joker dans une recherche ilike : @jo_stuff
+        // ramènerait aussi @joxstuff. On ne garde que l'égalité exacte,
+        // sinon on ouvrirait le profil de quelqu'un d'autre.
+        const exact = (data || []).find(
+          (candidat) =>
+            String(candidat.handle || '').replace(/^@+/, '').toLowerCase()
+            === pseudo.toLowerCase()
+        );
+        if (exact) setSharedBuddy(exact);
+        else setLienMort({ quoi: 'profil', valeur: pseudo });
         setSharedBuddyHandle(null);
         const url = new URL(window.location.href);
         url.searchParams.delete('buddy');
@@ -428,6 +445,7 @@ export default function Home() {
           myApplicationsSignal={myApplicationsSignal}
           homeSignal={homeSignal}
           sharedOfferId={sharedOfferId || ''}
+          onSharedOfferMissing={() => setLienMort({ quoi: 'projet', valeur: '' })}
           onSharedOfferSeen={() => {
             setSharedOfferId(null);
             const url = new URL(window.location.href);
@@ -480,6 +498,38 @@ export default function Home() {
       {sharedBuddy && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9500, background: theme.bg }}>
           <BuddyProfileScreen buddy={sharedBuddy} theme={theme} onBack={() => setSharedBuddy(null)} />
+        </div>
+      )}
+
+      {/* Un lien de profil qui ne mène à personne le dit, au lieu de laisser
+          la carte s'afficher comme si de rien n'était. */}
+      {lienMort && (
+        <div style={{
+          position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+          bottom: 'calc(96px + env(safe-area-inset-bottom))', zIndex: 9000,
+          width: 'calc(100% - 32px)', maxWidth: '358px',
+          background: darkMode ? '#1A1A1A' : '#FFFFFF',
+          border: '1px solid rgba(242,224,80,0.5)', borderRadius: '18px',
+          padding: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        }}>
+          {lienMort.valeur && (
+            <p style={{ fontSize: '13px', fontWeight: '800', color: theme.color, marginBottom: '4px' }}>
+              @{lienMort.valeur}
+            </p>
+          )}
+          <p style={{ fontSize: '12px', lineHeight: 1.5, color: darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)' }}>
+            {lienMort.quoi === 'profil'
+              ? tx('That profile could not be found. It may have been deleted.',
+                   'Ce profil est introuvable. Il a peut-être été supprimé.')
+              : tx('That project could not be found. It may have been deleted.',
+                   'Ce projet est introuvable. Il a peut-être été supprimé.')}
+          </p>
+          <button
+            onClick={() => setLienMort(null)}
+            style={{ width: '100%', marginTop: '12px', padding: '10px', borderRadius: '20px', border: 'none', background: '#F2E050', color: '#0A0A0A', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+          >
+            {tx('Close', 'Fermer')}
+          </button>
         </div>
       )}
 
