@@ -41,6 +41,8 @@ type Stats = {
   projets: number; projetsOuverts: number; projetsRecents: number;
   candidatures: number; candidaturesEnAttente: number; candidaturesAcceptees: number;
   collabsValidees: number; photosRefusees: number; signalementsOuverts: number;
+  messages: number; messagesRecents: number; villesEnAttente: number; suivis: number;
+  pays: number; villes: number;
 };
 type Block = {
   id: number;
@@ -316,11 +318,18 @@ export default function ModerationPage() {
             <Chiffre valeur={stats.projetsOuverts} libelle="projets ouverts" variation={stats.projetsRecents} total={stats.projets} />
             <Chiffre valeur={stats.candidatures} libelle="candidatures" detail={`${stats.candidaturesEnAttente} en attente · ${stats.candidaturesAcceptees} acceptées`} />
             <Chiffre valeur={stats.collabsValidees} libelle="collabs validées" />
+            <Chiffre valeur={stats.messages} libelle="messages" variation={stats.messagesRecents} />
+            <Chiffre valeur={stats.villes} libelle="villes" detail={`dans ${stats.pays} pays`} />
+            {/* Ceux-là ont laissé leur adresse pour être prévenus quand
+                quelqu'un arrive près d'eux. C'est le meilleur signal pour
+                savoir quelle ville travailler ensuite. */}
+            <Chiffre valeur={stats.villesEnAttente} libelle="en attente d’un créatif" />
           </div>
           <p style={{ ...dim, fontSize: 11, lineHeight: 1.6, marginTop: 10 }}>
             {stats.signalementsOuverts} signalement{stats.signalementsOuverts > 1 ? 's' : ''} en attente ·{' '}
             {stats.photosRefusees} photo{stats.photosRefusees > 1 ? 's' : ''} refusée{stats.photosRefusees > 1 ? 's' : ''} à l’envoi ·{' '}
-            {stats.profilsMasques} profil{stats.profilsMasques > 1 ? 's' : ''} masqué{stats.profilsMasques > 1 ? 's' : ''}
+            {stats.profilsMasques} profil{stats.profilsMasques > 1 ? 's' : ''} masqué{stats.profilsMasques > 1 ? 's' : ''} ·{' '}
+            {stats.suivis} profil{stats.suivis > 1 ? 's' : ''} suivi{stats.suivis > 1 ? 's' : ''}
           </p>
         </div>
       )}
