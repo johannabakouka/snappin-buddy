@@ -144,7 +144,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
       const { data } = await supabase.from('offers').select('*').eq('id', sharedOfferId).maybeSingle();
       if (!alive || !data) return;
       const { data: author } = await supabase.from('profiles')
-        .select('user_id, username, handle, avatar_url, role, role_other').eq('user_id', data.user_id).maybeSingle();
+        .select('user_id, username, handle, avatar_url, role, role_other, validated_projects').eq('user_id', data.user_id).maybeSingle();
       setSharedOffer({ ...data, authorProfile: author || null });
       setTab('offres');
       scrollBoxRef.current?.scrollTo({ top: 0 });
@@ -226,12 +226,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: snt } = await supabase.from('collabs').select('*').eq('sender_id', userId).order('created_at', { ascending: false });
     if (recv && recv.length > 0) {
       const senderIds = recv.map(c => c.sender_id);
-      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
+      const { data: senderProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter, validated_projects').in('user_id', senderIds);
       setReceived(recv.map(c => ({ ...c, senderProfile: senderProfiles?.find(p => p.user_id === c.sender_id) })));
     } else setReceived([]);
     if (snt && snt.length > 0) {
       const receiverIds = snt.map(c => c.receiver_id);
-      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', receiverIds);
+      const { data: receiverProfiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter, validated_projects').in('user_id', receiverIds);
       setSent(snt.map(c => ({ ...c, receiverProfile: receiverProfiles?.find(p => p.user_id === c.receiver_id) })));
     } else setSent([]);
   }
@@ -370,7 +370,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const { data: mine } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (all) {
       const userIds = all.map(o => o.user_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other').in('user_id', userIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other, validated_projects').in('user_id', userIds);
       setOffers(all.map(o => ({ ...o, authorProfile: profiles?.find(p => p.user_id === o.user_id) })));
     }
     if (mine) setMyOffers(mine);
@@ -390,7 +390,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const collabs = found || [];
     if (collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter, validated_projects').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
     } else setOfferCandidates([]);
     setLoadingCandidates(false);
@@ -626,7 +626,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     const collabs = found || [];
     if (collabs.length > 0) {
       const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter').in('user_id', senderIds);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter, validated_projects').in('user_id', senderIds);
       setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
     } else setOfferCandidates([]);
     setLoadingCandidates(false);

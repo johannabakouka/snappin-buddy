@@ -22,6 +22,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const [sessionId, setSessionId] = useState(null);
   const [qrError, setQrError] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [imageKo, setImageKo] = useState(false);
 
   useEffect(() => {
     createSession();
@@ -41,7 +42,7 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
     // valider leur rencontre. Le pire endroit pour une attente sans fin.
     if (error || !data) {
       console.error('createSession', error);
-      setQrError('Le QR code n’a pas pu être créé.');
+      setQrError(tx('The QR code could not be created.', 'Le QR code n’a pas pu être créé.'));
       return;
     }
     setSessionId(data.id);
@@ -64,7 +65,9 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const myHandle = cleanHandle(myProfile) || user?.email?.split('@')[0] || 'moi';
   // Image générée, affichée pour l'enregistrer (appui long) quand le partage direct n'est pas possible
   const [cardImage, setCardImage] = useState(null);
-  const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  // La carte souvenir porte la date dans la langue de la personne : « 10 novembre
+  // 2026 » pour une Française, « 10 Kasım 2026 » pour un Turc.
+  const today = new Date().toLocaleDateString(tx('en-GB', 'fr-FR'), { day: 'numeric', month: 'long', year: 'numeric' });
 
   async function downloadShareCard() {
     const canvas = document.createElement('canvas');
@@ -191,11 +194,11 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
           <button onClick={onBack} aria-label={tx('Back', 'Retour')} style={{ background: 'none', border: 'none', color, fontSize: '20px', cursor: 'pointer' }}>←</button>
-          <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>QR de session</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: '800', color }}>{tx('Meetup QR', 'QR de session')}</h2>
         </div>
 
         <div style={{ background: card, borderRadius: '16px', padding: '16px', marginBottom: '24px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}` }}>
-          <p style={{ color: subText, fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>SESSION AVEC</p>
+          <p style={{ color: subText, fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>{tx('MEETUP WITH', 'SESSION AVEC')}</p>
           <p style={{ color, fontWeight: '800', fontSize: '18px' }}>{buddyName}</p>
         </div>
 
@@ -206,30 +209,41 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
             boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
           }}>
-            {qrUrl ? (
-              <img src={qrUrl} alt="QR Code" style={{ width: '220px', height: '220px', borderRadius: '8px' }} />
+            {qrUrl && !imageKo ? (
+              // L'image vient d'un service extérieur. S'il ne répond pas, on ne
+              // laisse pas un carré vide au moment où les deux personnes sont
+              // face à face : on le dit, et on pousse le lien à copier.
+              <img
+                src={qrUrl}
+                alt="QR Code"
+                onError={() => setImageKo(true)}
+                style={{ width: '220px', height: '220px', borderRadius: '8px' }}
+              />
             ) : (
-              <div style={{ width: '220px', height: '220px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', justifyContent: 'center', color: qrError ? '#FF4D4D' : subText, textAlign: 'center', padding: '0 12px' }}>
-                {qrError ? (
+              <div style={{ width: '220px', height: '220px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', justifyContent: 'center', color: (qrError || imageKo) ? '#FF4D4D' : subText, textAlign: 'center', padding: '0 12px' }}>
+                {(qrError || imageKo) ? (
                   <>
-                    <span style={{ fontSize: '13px', fontWeight: '700', lineHeight: 1.5 }}>{qrError}</span>
-                    <button onClick={createSession} style={{
+                    <span style={{ fontSize: '13px', fontWeight: '700', lineHeight: 1.5 }}>
+                      {qrError || tx('The QR code could not be displayed. Use the link below.', 'Le QR code n’a pas pu s’afficher. Utilise le lien ci-dessous.')}
+                    </span>
+                    <button onClick={() => { setImageKo(false); createSession(); }} style={{
                       border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
                       background: 'transparent', color: darkMode ? 'white' : '#111',
                       borderRadius: '20px', padding: '8px 16px', fontSize: '13px',
                       fontWeight: '700', cursor: 'pointer',
                     }}>
-                      Réessayer
+                      {tx('Try again', 'Réessayer')}
                     </button>
                   </>
-                ) : 'Génération...'}
+                ) : tx('Generating…', 'Génération...')}
               </div>
             )}
           </div>
           <p style={{ color: subText, fontSize: '12px', marginTop: '16px', textAlign: 'center', lineHeight: 1.5 }}>
-            Montre ce QR à {buddyName}.<br />
-            Il le scanne avec l&apos;appareil photo de son téléphone, et votre
-            rencontre est validée tous les deux.
+            {tx(
+              'Show this QR to {name}. They scan it with their phone camera, and your meetup is validated for both of you.',
+              'Montre ce QR à {name}. Il le scanne avec l’appareil photo de son téléphone, et votre rencontre est validée tous les deux.'
+            ).replace('{name}', buddyName)}
           </p>
 
           {/* Le même lien, copiable : pour valider quand on n'est pas au même
@@ -249,31 +263,36 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
                 fontSize: '12px', fontWeight: '600', cursor: 'pointer',
               }}
             >
-              {linkCopied ? 'Lien copié ✓' : '🔗 Copier le lien à la place'}
+              {linkCopied
+                ? tx('Link copied ✓', 'Lien copié ✓')
+                : `🔗 ${tx('Copy the link instead', 'Copier le lien à la place')}`}
             </button>
           )}
         </div>
 
         <div style={{ background: 'rgba(255,154,61,0.08)', border: '1px solid rgba(255,154,61,0.2)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-          <p style={{ color: 'rgba(255,154,61,0.9)', fontWeight: '700', fontSize: '13px', marginBottom: '12px' }}>⚠️ Consignes de sécurité</p>
+          <p style={{ color: 'rgba(255,154,61,0.9)', fontWeight: '700', fontSize: '13px', marginBottom: '12px' }}>⚠️ {tx('Safety guidelines', 'Consignes de sécurité')}</p>
           {[
-            '📍 Retrouvez-vous dans un lieu public',
-            '📱 Partagez votre itinéraire à un proche',
-            '🚗 Évitez les parkings isolés',
-            "✅ Scannez-vous mutuellement avant de commencer",
+            `📍 ${tx('Meet in a public place', 'Retrouvez-vous dans un lieu public')}`,
+            `📱 ${tx('Tell someone you trust where you are going', 'Partagez votre itinéraire à un proche')}`,
+            `🚗 ${tx('Avoid isolated car parks', 'Évitez les parkings isolés')}`,
+            `✅ ${tx('Scan each other before you start', 'Scannez-vous mutuellement avant de commencer')}`,
           ].map((rule, i) => (
             <p key={i} style={{ color: subText, fontSize: '12px', marginBottom: i < 3 ? '8px' : '0', lineHeight: 1.4 }}>{rule}</p>
           ))}
         </div>
 
         <p style={{ color: subText, fontSize: '11px', textAlign: 'center', marginBottom: '24px' }}>
-          Ce QR expire dans 30 minutes
+          {tx('This QR expires in 30 minutes', 'Ce QR expire dans 30 minutes')}
         </p>
 
         <div style={{ background: card, borderRadius: '16px', padding: '20px', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}` }}>
-          <p style={{ color, fontWeight: '800', fontSize: '15px', marginBottom: '4px' }}>📸 Partagez votre collab !</p>
+          <p style={{ color, fontWeight: '800', fontSize: '15px', marginBottom: '4px' }}>📸 {tx('Share your collab!', 'Partagez votre collab !')}</p>
           <p style={{ color: subText, fontSize: '12px', marginBottom: '16px', lineHeight: 1.5 }}>
-            Télécharge ta carte et poste-la en story avec <strong style={{ color }}>@snappinbuddy</strong> — les plus belles collabs seront repostées sur notre page ! 🗺 📸
+            {tx(
+              'Save your card and post it in your story with @snappinbuddy — the best collabs get reposted on our page! 🗺 📸',
+              'Télécharge ta carte et poste-la en story avec @snappinbuddy — les plus belles collabs seront repostées sur notre page ! 🗺 📸'
+            )}
           </p>
 
           <div style={{

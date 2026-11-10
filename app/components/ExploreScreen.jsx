@@ -46,7 +46,7 @@ function getMatchScore(myStyles, theirStyles) {
 // lat et lng s'ajoutent pour le tri par proximite. Deux nombres par profil,
 // c'est negligeable a cote des books, et ce sont les memes colonnes que la
 // carte lit deja.
-const EXPLORE_COLUMNS = 'id, user_id, username, handle, avatar_url, role, role_other, styles, zone, city, country, status, hidden, portfolio_urls, lat, lng';
+const EXPLORE_COLUMNS = 'id, user_id, username, handle, avatar_url, role, role_other, styles, zone, city, country, status, hidden, portfolio_urls, lat, lng, validated_projects';
 
 export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) {
   const t = useT();

@@ -96,7 +96,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
     const blocked = await loadIBlockedIds(userId);
     const buddyIds = [...new Set(msgs.map(m => m.sender_id === userId ? m.receiver_id : m.sender_id))]
       .filter(id => !blocked.has(id));
-    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url').in('user_id', buddyIds);
+    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, validated_projects').in('user_id', buddyIds);
     const convs = buddyIds.map(buddyId => {
       const profile = profiles?.find(p => p.user_id === buddyId);
       const lastMsg = msgs.find(m => (m.sender_id === userId && m.receiver_id === buddyId) || (m.sender_id === buddyId && m.receiver_id === userId));
@@ -183,7 +183,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
     const blocked = await loadIBlockedIds(userId);
     const buddyIds = [...new Set(collabs.map(c => c.sender_id === userId ? c.receiver_id : c.sender_id))]
       .filter(id => !blocked.has(id));
-    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles').in('user_id', buddyIds);
+    const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles, validated_projects').in('user_id', buddyIds);
     setBuddies(profiles || []);
   }
 
@@ -195,7 +195,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
     const ids = (data || []).map(f => f.following_id);
     if (ids.length === 0) { setFollowing([]); return; }
     const { data: profiles, error: profilesError } = await supabase
-      .from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles').in('user_id', ids);
+      .from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles, validated_projects').in('user_id', ids);
     if (profilesError) { console.error('loadFollowing profiles', profilesError); return; }
     setFollowing(profiles || []);
   }
@@ -231,7 +231,7 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
       return;
     }
     const { data: profile, error: profileError } = await supabase
-      .from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles').eq('user_id', targetUserId).maybeSingle();
+      .from('profiles').select('user_id, username, handle, avatar_url, role, role_other, styles, validated_projects').eq('user_id', targetUserId).maybeSingle();
     if (profileError) { console.error('follow profile', profileError); return; }
     if (profile) setFollowing(prev => [...prev, profile]);
   }
