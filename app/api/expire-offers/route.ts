@@ -57,14 +57,15 @@ export async function GET(request: Request) {
       if (closeError) throw closeError;
 
       // Un projet qui expire laissait ses candidats en attente pour toujours.
-      // Ils sont prévenus comme pour une équipe au complet : le projet est
-      // clos, ce n'est pas un refus qui leur est adressé.
+      // Ils reçoivent maintenant le message qui correspond vraiment : la date
+      // est passée. Leur dire « le projet a trouvé son équipe », comme avant,
+      // laissait croire qu'on leur avait préféré quelqu'un.
       for (const o of expired) {
         try {
           await closePendingAndNotify({
             id: String(o.id), user_id: o.user_id, title: o.title,
             role_needed: null, slots: null, slots_filled: null, status: 'closed',
-          });
+          }, 'expire');
         } catch (e) {
           console.error('closePendingAndNotify', o.id, e);
         }
