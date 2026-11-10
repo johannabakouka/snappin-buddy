@@ -32,7 +32,8 @@ export async function POST(request: Request) {
     const { error } = await db.from('offers').update({ status: 'closed' }).eq('id', offerId);
     if (error) throw error;
 
-    const closed = await closePendingAndNotify(offer);
+    // L'auteur ferme son projet lui-même : il est annulé, pas pourvu.
+    const closed = await closePendingAndNotify(offer, 'annule');
     return Response.json({ ok: true, closed });
   } catch (err) {
     console.error('close-offer', err);
