@@ -151,6 +151,7 @@ export async function POST(request: Request) {
         projets, projetsOuverts, projetsRecents,
         candidatures, candidaturesEnAttente, candidaturesAcceptees,
         collabsValidees, photosRefusees, signalementsOuverts,
+        messages, messagesRecents, villesEnAttente, suivis,
       ] = await Promise.all([
         nb(db.from('profiles').select('*', tous)),
         nb(db.from('profiles').select('*', tous).gte('created_at', ilYASeptJours)),
@@ -164,7 +165,30 @@ export async function POST(request: Request) {
         nb(db.from('collabs').select('*', tous).not('validated_at', 'is', null)),
         nb(db.from('upload_blocks').select('*', tous)),
         nb(db.from('reports').select('*', tous).eq('status', 'open')),
+        nb(db.from('messages').select('*', tous)),
+        nb(db.from('messages').select('*', tous).gte('created_at', ilYASeptJours)),
+        // Les gens qui ont demandé à être prévenus quand un créatif arrive
+        // dans leur ville. C'est la mesure la plus parlante pour savoir où
+        // ouvrir le prochain marché : ils attendent, ils ont laissé leur mail.
+        nb(db.from('city_watch').select('*', tous)),
+        nb(db.from('follows').select('*', tous)),
       ]);
+
+      // Combien de pays, combien de villes. PostgREST ne sait pas compter des
+      // valeurs distinctes : on rapatrie les deux colonnes et on compte ici.
+      // La limite est volontairement haute ; au-delà il faudra une vue SQL,
+      // sinon le compte s'arrêterait en silence à 1000 lignes.
+      const { data: lieux } = await db
+        .from('profiles')
+        .select('country, city')
+        .not('city', 'is', null)
+        .limit(5000);
+      const pays = new Set<string>();
+      const villes = new Set<string>();
+      for (const l of (lieux || []) as { country: string | null; city: string | null }[]) {
+        if (l.country) pays.add(l.country);
+        if (l.city) villes.add(`${l.country || ''}|${l.city}`);
+      }
 
       return Response.json({
         ok: true,
@@ -173,6 +197,8 @@ export async function POST(request: Request) {
           projets, projetsOuverts, projetsRecents,
           candidatures, candidaturesEnAttente, candidaturesAcceptees,
           collabsValidees, photosRefusees, signalementsOuverts,
+          messages, messagesRecents, villesEnAttente, suivis,
+          pays: pays.size, villes: villes.size,
         },
       });
     }
