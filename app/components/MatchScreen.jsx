@@ -57,7 +57,7 @@ function offerDateLabel(value) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0, myApplicationsSignal = 0, homeSignal = 0, sharedOfferId = '', onSharedOfferSeen }) {
+export default function MatchScreen({ theme, setScreen, active = true, myProjectsSignal = 0, myApplicationsSignal = 0, homeSignal = 0, sharedOfferId = '', onSharedOfferMissing, onSharedOfferSeen }) {
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -142,7 +142,15 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     let alive = true;
     (async () => {
       const { data } = await supabase.from('offers').select('*').eq('id', sharedOfferId).maybeSingle();
-      if (!alive || !data) return;
+      if (!alive) return;
+      // Projet supprimé ou identifiant abîmé : avant, on ne disait rien et le
+      // paramètre restait collé à l'adresse, donc le lien repartait en boucle
+      // au moindre rechargement.
+      if (!data) {
+        onSharedOfferMissing?.();
+        onSharedOfferSeen?.();
+        return;
+      }
       const { data: author } = await supabase.from('profiles')
         .select('user_id, username, handle, avatar_url, role, role_other, validated_projects').eq('user_id', data.user_id).maybeSingle();
       setSharedOffer({ ...data, authorProfile: author || null });
