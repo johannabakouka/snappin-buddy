@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { tx } from '../tx';
+import { qrcode } from 'qrcode-generator';
 
 function loadImage(src) {
   return new Promise(resolve => {
@@ -22,7 +23,6 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   const [sessionId, setSessionId] = useState(null);
   const [qrError, setQrError] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
-  const [imageKo, setImageKo] = useState(false);
 
   useEffect(() => {
     createSession();
@@ -53,9 +53,50 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
   // identifiant technique. C'est ce qui rend le scan possible sans installer
   // de scanner dans l'app — impossible sur iPhone de toute façon.
   const scanLink = sessionId ? `https://snappinbuddy.com/?scan=${sessionId}` : null;
-  const qrUrl = scanLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(scanLink)}&bgcolor=${darkMode ? '1A1A1A' : 'FFFFFF'}&color=${darkMode ? 'FFFFFF' : '0A0A0A'}`
-    : null;
+
+  /*
+   * Le QR est dessiné ici, dans le téléphone.
+   *
+   * Il venait d'api.qrserver.com, un service extérieur interrogé au moment
+   * précis où deux personnes sont face à face pour valider leur rencontre.
+   * Service lent ou en panne, réseau faible : carré vide. Maintenant il ne
+   * dépend plus de personne, et il s'affiche même sans connexion.
+   *
+   * Toujours noir sur blanc, quel que soit le thème. L'ancienne version
+   * inversait les couleurs en mode sombre, blanc sur noir : c'est joli, mais
+   * la norme attend des modules sombres sur fond clair et beaucoup de
+   * scanners refusent l'inverse. Le cadre blanc fait aussi office de zone
+   * silencieuse, la marge que le lecteur a besoin de voir autour du motif.
+   */
+  const qrUrl = useMemo(() => {
+    if (!scanLink) return null;
+    try {
+      const qr = qrcode(0, 'M');     // 0 = taille choisie seule, M = correction moyenne
+      qr.addData(scanLink);
+      qr.make();
+      const modules = qr.getModuleCount();
+      const marge = 2;
+      const cote = modules + marge * 2;
+      let chemin = '';
+      for (let l = 0; l < modules; l++) {
+        for (let c = 0; c < modules; c++) {
+          if (qr.isDark(l, c)) chemin += `M${c + marge} ${l + marge}h1v1h-1z`;
+        }
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cote} ${cote}" shape-rendering="crispEdges">`
+        + `<rect width="${cote}" height="${cote}" fill="#FFFFFF"/>`
+        + `<path d="${chemin}" fill="#000000"/></svg>`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    } catch (e) {
+      console.error('QR illisible', e);
+      return null;
+    }
+  }, [scanLink]);
+
+  // Le lien de session existe mais aucun motif n'a pu en sortir : cas
+  // théorique, gardé pour ne jamais laisser « Génération... » tourner
+  // indéfiniment devant quelqu'un qui attend.
+  const qrIllisible = !!scanLink && !qrUrl;
 
   // L'autre personne de la collab : l'expéditeur si j'ai reçu la proposition, sinon le destinataire
   const buddyProfile = collab.sender_id === user?.id ? collab.receiverProfile : collab.senderProfile;
@@ -209,24 +250,20 @@ export default function QRScreen({ collab, user, myProfile, theme, onBack }) {
             border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
             boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
           }}>
-            {qrUrl && !imageKo ? (
-              // L'image vient d'un service extérieur. S'il ne répond pas, on ne
-              // laisse pas un carré vide au moment où les deux personnes sont
-              // face à face : on le dit, et on pousse le lien à copier.
+            {qrUrl ? (
               <img
                 src={qrUrl}
                 alt="QR Code"
-                onError={() => setImageKo(true)}
                 style={{ width: '220px', height: '220px', borderRadius: '8px' }}
               />
             ) : (
-              <div style={{ width: '220px', height: '220px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', justifyContent: 'center', color: (qrError || imageKo) ? '#FF4D4D' : subText, textAlign: 'center', padding: '0 12px' }}>
-                {(qrError || imageKo) ? (
+              <div style={{ width: '220px', height: '220px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', justifyContent: 'center', color: (qrError || qrIllisible) ? '#FF4D4D' : subText, textAlign: 'center', padding: '0 12px' }}>
+                {(qrError || qrIllisible) ? (
                   <>
                     <span style={{ fontSize: '13px', fontWeight: '700', lineHeight: 1.5 }}>
                       {qrError || tx('The QR code could not be displayed. Use the link below.', 'Le QR code n’a pas pu s’afficher. Utilise le lien ci-dessous.')}
                     </span>
-                    <button onClick={() => { setImageKo(false); createSession(); }} style={{
+                    <button onClick={createSession} style={{
                       border: `1px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
                       background: 'transparent', color: darkMode ? 'white' : '#111',
                       borderRadius: '20px', padding: '8px 16px', fontSize: '13px',
