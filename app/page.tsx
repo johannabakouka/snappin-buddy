@@ -16,6 +16,7 @@ import NewPasswordScreen from './components/NewPasswordScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 import BuddyProfileScreen from './components/BuddyProfileScreen';
 import ScanResultScreen from './components/ScanResultScreen';
+import { ensureThumbs } from './image-upload';
 import { masquerSplash } from './splash';
 import { activerNotifications, effacerPastille } from './notifications';
 
@@ -200,6 +201,27 @@ export default function Home() {
   async function refreshProfile() {
     if (userIdRef.current) await fetchProfile(userIdRef.current);
   }
+
+  /*
+   * Les vignettes de ses propres photos, fabriquées dès l'ouverture de l'app.
+   *
+   * Elles vivaient dans l'écran Profil : il fallait donc aller voir son propre
+   * profil pour que ses photos s'allègent, et la plupart des gens n'y vont
+   * jamais. Résultat, la carte chargeait encore les photos d'origine pour la
+   * grande majorité des profils.
+   *
+   * Chacun ne peut réparer que les siennes : les règles du stockage interdisent
+   * d'écrire dans le dossier d'un autre, et c'est volontaire. Donc la carte
+   * s'allège à mesure que les gens reviennent, sans migration ni script.
+   * Tout est au mieux : un échec ne change rien à l'écran.
+   */
+  const vignettesFaites = useRef(false);
+  useEffect(() => {
+    if (!profile?.user_id || vignettesFaites.current) return;
+    vignettesFaites.current = true;
+    const photos = [profile.avatar_url, ...(profile.portfolio_urls || [])].filter(Boolean);
+    if (photos.length) ensureThumbs(photos).catch(() => {});
+  }, [profile?.user_id, profile?.avatar_url, profile?.portfolio_urls]);
 
   useEffect(() => {
     localStorage.removeItem('sb_user');

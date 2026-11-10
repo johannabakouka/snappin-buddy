@@ -1,10 +1,11 @@
-import { getLang } from './i18n';
+import { getLang, LANGUES } from './i18n';
 import TX from './tx-dict';
 
 /**
  * Texte dans la langue de l'utilisateur : tx('English', 'Français').
- * Français et anglais sont écrits directement dans l'écran ; espagnol, portugais,
- * allemand et italien viennent de tx-dict.js (clé = texte anglais).
+ * Français et anglais sont écrits directement dans l'écran ; toutes les autres
+ * langues viennent de tx-dict.js (clé = texte anglais).
+ * Si une phrase manque dans une langue, elle retombe en anglais, jamais en vide.
  * La langue est lue au moment de l'affichage, comme useT().
  */
 export function tx(en, fr) {
@@ -36,6 +37,8 @@ export function txIn(lang, en, fr) {
  * Langue déduite de l'en-tête Accept-Language du navigateur, par exemple
  * « fr-FR,fr;q=0.9,en-US;q=0.8 ». On prend la première langue qu'on sait
  * parler, et l'anglais par défaut.
+ * La liste des langues vient de LANGUES (i18n.js) : ajouter une langue là-bas
+ * suffit, les pages publiques la parlent aussitôt.
  */
 export function langFromHeader(acceptLanguage) {
   const raw = String(acceptLanguage || '').toLowerCase();
@@ -50,9 +53,9 @@ export function langFromHeader(acceptLanguage) {
     .filter(x => x.tag)
     .sort((a, b) => b.q - a.q);
   for (const { tag } of wanted) {
-    for (const code of ['fr', 'pt', 'es', 'de', 'it', 'en']) {
-      if (tag.startsWith(code)) return code;
-    }
+    const code = tag.split('-')[0];
+    if (LANGUES.includes(code)) return code;
+    if (code === 'no' || code === 'nn') return 'nb';
   }
   return 'en';
 }

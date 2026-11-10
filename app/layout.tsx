@@ -28,6 +28,15 @@ export const metadata: Metadata = {
   // anglais : la description suit, sinon le lien partagé est à moitié français.
   description: "Find the creatives around you and create together. Photographers, videographers, models, stylists, makeup artists and more.",
   manifest: "/manifest.json",
+  // Bandeau « Télécharger » en haut de la page, dans Safari sur iPhone et iPad.
+  // C'est Apple qui le dessine : il va chercher l'icône et la note tout seul,
+  // et il écrit « Ouvrir » au lieu de « Obtenir » quand l'app est déjà
+  // installée. Il compte surtout sur les pages ouvertes depuis une story
+  // (/u/<handle> et /p/<id>), là où arrivent les gens qui n'ont pas l'app.
+  // Il n'apparaît ni sur Android, ni sur ordinateur, ni dans l'app elle-même.
+  itunes: {
+    appId: "6822036127",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
