@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { tx } from '../tx';
-import { qrcode } from 'qrcode-generator';
+import { qrcode } from './qrcode-local';
 
 function loadImage(src) {
   return new Promise(resolve => {
