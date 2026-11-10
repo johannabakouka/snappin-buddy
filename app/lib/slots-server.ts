@@ -1,4 +1,7 @@
-import { getProfile, getUserEmail, projectFilledMail, sendMail, supabaseAdmin } from './server';
+import {
+  getProfile, getUserEmail, projectCancelledMail, projectExpiredMail,
+  projectFilledMail, sendMail, supabaseAdmin,
+} from './server';
 import { slotsOf } from '../slots';
 
 // Ce qu'il advient d'un projet quand une place change de main.
@@ -94,7 +97,12 @@ export async function syncOffer(offer: OfferRow) {
  * équipe. Avant, ces candidatures restaient en attente pour toujours, qu'un
  * projet se remplisse, soit fermé à la main ou expire tout seul.
  */
-export async function closePendingAndNotify(offer: OfferRow): Promise<number> {
+export type RaisonCloture = 'complete' | 'annule' | 'expire';
+
+export async function closePendingAndNotify(
+  offer: OfferRow,
+  raison: RaisonCloture = 'complete',
+): Promise<number> {
   const db = supabaseAdmin();
   const { data } = await db
     .from('collabs')
@@ -112,7 +120,13 @@ export async function closePendingAndNotify(offer: OfferRow): Promise<number> {
       const to = await getUserEmail(r.sender_id);
       if (!to) continue;
       const dest = await getProfile(r.sender_id);
-      await sendMail(projectFilledMail(to, offer.title || '', dest?.username));
+      // Le même courrier partait dans les trois cas : équipe complète,
+      // projet annulé, date passée. Il annonçait « a trouvé son équipe »
+      // même quand personne n'avait été pris.
+      const gabarit = raison === 'annule' ? projectCancelledMail
+        : raison === 'expire' ? projectExpiredMail
+        : projectFilledMail;
+      await sendMail(gabarit(to, offer.title || '', dest?.username));
     } catch (e) {
       console.error('closePendingAndNotify', e);
     }

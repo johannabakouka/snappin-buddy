@@ -315,6 +315,57 @@ export function projectFilledMail(to: string, offerTitle: string, forUser?: stri
 }
 
 /**
+ * « Ce projet a été annulé. »
+ *
+ * Quand la personne qui a lancé le projet le ferme elle-même sans avoir pris
+ * personne. Avant, ces candidats recevaient « le projet a trouvé son équipe »,
+ * ce qui était faux et, pour un créatif, revient à dire « on t'a préféré
+ * quelqu'un d'autre ». Un projet annulé n'a écarté personne : il faut le dire.
+ */
+export function projectCancelledMail(to: string, offerTitle: string, forUser?: string): Mail {
+  const o = escapeHtml(offerTitle);
+  const quoted = o ? ` <b>« ${o} »</b>` : '';
+  const quotedEn = o ? ` <b>“${o}”</b>` : '';
+  return {
+    to,
+    subject: o ? `Le projet « ${offerTitle} » a été annulé`.slice(0, 120) : 'Ce projet a été annulé',
+    titleFr: 'Ce projet a été annulé',
+    bodyFr: `Le projet${quoted} a été fermé par la personne qui l’a lancé, ta candidature n’est donc plus en attente.<br><br>` +
+      'Ce n’est pas un refus : le projet n’aura simplement pas lieu. D’autres sont ouverts autour de toi en ce moment.',
+    titleEn: 'This project was cancelled',
+    bodyEn: `The project${quotedEn} was closed by the person who posted it, so your application is no longer pending.<br><br>` +
+      'This is not a rejection: the project simply will not happen. Others are open near you right now.',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
+ * « La date de ce projet est passée. »
+ *
+ * Envoyé par le ménage automatique des projets dont la date est dépassée.
+ * Même raison que ci-dessus : personne n'a été écarté, la date est simplement
+ * derrière nous.
+ */
+export function projectExpiredMail(to: string, offerTitle: string, forUser?: string): Mail {
+  const o = escapeHtml(offerTitle);
+  const quoted = o ? ` <b>« ${o} »</b>` : '';
+  const quotedEn = o ? ` <b>“${o}”</b>` : '';
+  return {
+    to,
+    subject: o ? `La date du projet « ${offerTitle} » est passée`.slice(0, 120) : 'La date de ce projet est passée',
+    titleFr: 'La date de ce projet est passée',
+    bodyFr: `La date du projet${quoted} est passée, ta candidature n’est donc plus en attente.<br><br>` +
+      'Ce n’est pas un refus. D’autres projets sont ouverts autour de toi en ce moment.',
+    titleEn: 'This project’s date has passed',
+    bodyEn: `The date of${quotedEn} has passed, so your application is no longer pending.<br><br>` +
+      'This is not a rejection. Other projects are open near you right now.',
+    cta: '',
+    forUser,
+  };
+}
+
+/**
  * « Une place s'est libérée sur ton projet. »
  * Pour le porteur, quand quelqu'un d'accepté se désiste.
  */
