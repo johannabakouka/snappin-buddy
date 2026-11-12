@@ -266,7 +266,16 @@ export function distanceKm(aLat, aLng, bLat, bLng) {
 // En dessous de ce nombre de créatifs, on n'affiche pas le total : un petit
 // chiffre affiché en grand dessert l'app plus qu'il ne la sert.
 export const COUNT_VISIBLE_FROM = 50;
-// Rayon considéré comme « autour de moi », et nombre en dessous duquel on
-// explique que la carte est jeune plutôt que de laisser croire qu'elle est morte.
+// Rayon considéré comme « autour de moi ».
 export const NEARBY_KM = 60;
-export const NEARBY_SPARSE_BELOW = 3;
+// Le bandeau porte deux choses qui ne s'arrêtent pas au même moment.
+//
+// « Tu es parmi les premiers par ici » n'est vrai qu'à zéro créatif autour :
+// avec deux personnes déjà présentes, la phrase est fausse et elle donne
+// l'impression que l'app est vide alors qu'il y a justement quelqu'un à
+// contacter.
+//
+// Le bouton « préviens-moi quand quelqu'un arrive », lui, reste utile bien
+// plus longtemps : à six créatifs dans un rayon de 60 km, on a encore envie
+// d'être prévenu du septième.
+export const NEARBY_ALERT_BELOW = 7;

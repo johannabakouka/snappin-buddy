@@ -3,6 +3,7 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    "It's still quiet around here": 'Todavía hay poca gente por aquí',
     'Waiting since today': 'Esperando desde hoy',
     'Waiting for 1 day': 'Esperando desde hace 1 día',
     'Waiting for {n} days': 'Esperando desde hace {n} días',
@@ -480,6 +481,7 @@ const TX = {
 },
 
   pt: {
+    "It's still quiet around here": 'Ainda há pouca gente por aqui',
     'Waiting since today': 'À espera desde hoje',
     'Waiting for 1 day': 'À espera há 1 dia',
     'Waiting for {n} days': 'À espera há {n} dias',
@@ -957,6 +959,7 @@ const TX = {
 },
 
   de: {
+    "It's still quiet around here": 'Hier ist noch wenig los',
     'Waiting since today': 'Wartet seit heute',
     'Waiting for 1 day': 'Wartet seit 1 Tag',
     'Waiting for {n} days': 'Wartet seit {n} Tagen',
@@ -1434,6 +1437,7 @@ const TX = {
 },
 
   it: {
+    "It's still quiet around here": 'Qui c’è ancora poca gente',
     'Waiting since today': 'In attesa da oggi',
     'Waiting for 1 day': 'In attesa da 1 giorno',
     'Waiting for {n} days': 'In attesa da {n} giorni',
@@ -1910,6 +1914,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Progetto non trovato. Potrebbe essere stato eliminato.",
 },
   vi: {
+    "It's still quiet around here": 'Quanh đây vẫn còn ít người',
     'Waiting since today': 'Đang chờ từ hôm nay',
     'Waiting for 1 day': 'Đang chờ 1 ngày',
     'Waiting for {n} days': 'Đang chờ {n} ngày',
@@ -2386,6 +2391,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Không tìm thấy dự án này. Có thể nó đã bị xoá.",
 },
   hu: {
+    "It's still quiet around here": 'Errefelé még kevesen vannak',
     'Waiting since today': 'Ma óta várakozik',
     'Waiting for 1 day': '1 napja várakozik',
     'Waiting for {n} days': '{n} napja várakozik',
@@ -2862,6 +2868,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Ez a projekt nem található. Lehet, hogy törölték.",
 },
   ro: {
+    "It's still quiet around here": 'Încă sunt puțini pe aici',
     'Waiting since today': 'În așteptare de azi',
     'Waiting for 1 day': 'În așteptare de 1 zi',
     'Waiting for {n} days': 'În așteptare de {n} zile',
@@ -3338,6 +3345,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proiectul nu a fost găsit. Poate a fost șters.",
 },
   cs: {
+    "It's still quiet around here": 'Tady je zatím málo lidí',
     'Waiting since today': 'Čeká od dneška',
     'Waiting for 1 day': 'Čeká 1 den',
     'Waiting for {n} days': 'Čeká {n} dní',
@@ -3814,6 +3822,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Tento projekt se nepodařilo najít. Možná byl smazán.",
 },
   fi: {
+    "It's still quiet around here": 'Täällä on vielä hiljaista',
     'Waiting since today': 'Odottaa tästä päivästä',
     'Waiting for 1 day': 'Odottanut 1 päivän',
     'Waiting for {n} days': 'Odottanut {n} päivää',
@@ -4290,6 +4299,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektia ei löytynyt. Se on ehkä poistettu.",
 },
   nb: {
+    "It's still quiet around here": 'Det er fortsatt stille her',
     'Waiting since today': 'Venter siden i dag',
     'Waiting for 1 day': 'Venter i 1 dag',
     'Waiting for {n} days': 'Venter i {n} dager',
@@ -4766,6 +4776,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Fant ikke dette prosjektet. Det kan ha blitt slettet.",
 },
   da: {
+    "It's still quiet around here": 'Der er stadig stille her',
     'Waiting since today': 'Venter siden i dag',
     'Waiting for 1 day': 'Venter i 1 dag',
     'Waiting for {n} days': 'Venter i {n} dage',
@@ -5242,6 +5253,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet blev ikke fundet. Det er måske slettet.",
 },
   sv: {
+    "It's still quiet around here": 'Det är fortfarande lugnt här',
     'Waiting since today': 'Väntar sedan i dag',
     'Waiting for 1 day': 'Väntar i 1 dag',
     'Waiting for {n} days': 'Väntar i {n} dagar',
@@ -5718,6 +5730,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet hittades inte. Det kan ha tagits bort.",
 },
   id: {
+    "It's still quiet around here": 'Di sekitar sini masih sepi',
     'Waiting since today': 'Menunggu sejak hari ini',
     'Waiting for 1 day': 'Menunggu 1 hari',
     'Waiting for {n} days': 'Menunggu {n} hari',
@@ -6194,6 +6207,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proyek itu tidak ditemukan. Mungkin sudah dihapus.",
 },
   tr: {
+    "It's still quiet around here": 'Buralarda henüz az kişi var',
     'Waiting since today': 'Bugünden beri bekliyor',
     'Waiting for 1 day': '1 gündür bekliyor',
     'Waiting for {n} days': '{n} gündür bekliyor',
@@ -6670,6 +6684,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Bu proje bulunamadı. Silinmiş olabilir.",
 },
   pl: {
+    "It's still quiet around here": 'W okolicy jest jeszcze pusto',
     'Waiting since today': 'Czeka od dziś',
     'Waiting for 1 day': 'Czeka 1 dzień',
     'Waiting for {n} days': 'Czeka {n} dni',
@@ -7146,6 +7161,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Nie znaleziono tego projektu. Mógł zostać usunięty.",
 },
   nl: {
+    "It's still quiet around here": 'Hier is het nog rustig',
     'Waiting since today': 'Wacht sinds vandaag',
     'Waiting for 1 day': 'Wacht al 1 dag',
     'Waiting for {n} days': 'Wacht al {n} dagen',

@@ -9,7 +9,7 @@ import { loadCities, nearestCity } from '../cities';
 import MapPreviewCard from './MapPreviewCard';
 import {
   ROLE_FILTERS, ROLES_EN, ROLES_FR, UNIVERS, hasRole, roleLabels,
-  daysSinceLaunch, distanceKm, COUNT_VISIBLE_FROM, NEARBY_KM, NEARBY_SPARSE_BELOW,
+  daysSinceLaunch, distanceKm, COUNT_VISIBLE_FROM, NEARBY_KM, NEARBY_ALERT_BELOW,
 } from '../constants';
 import { useT } from '../i18n';
 import { tx, isNotFrench } from '../tx';
@@ -477,8 +477,11 @@ export default function MapComponent({ theme, active = true }) {
   // Le total n'est montré qu'à partir du moment où il joue en notre faveur :
   // un petit nombre écrit noir sur blanc donne l'argument à ceux qui comptent.
   const showTotal = totalCreatives >= COUNT_VISIBLE_FROM;
-  const sparseNearby = nearbyCount !== null && nearbyCount < NEARBY_SPARSE_BELOW;
-  const showPioneer = !!L && !notOnMap && sparseNearby && !pioneerDismissed;
+  // Le bandeau reste tant qu'on est peu nombreux autour, mais sa phrase change.
+  const peuDeMonde = nearbyCount !== null && nearbyCount < NEARBY_ALERT_BELOW;
+  // « Parmi les premiers » : seulement quand il n'y a vraiment personne.
+  const vraimentPremier = nearbyCount === 0;
+  const showPioneer = !!L && !notOnMap && peuDeMonde && !pioneerDismissed;
   const openDays = daysSinceLaunch();
 
   // Bouton « Moi » : on revient sur sa position après avoir fait défiler la
@@ -684,7 +687,9 @@ export default function MapComponent({ theme, active = true }) {
               color: darkMode ? 'white' : '#111', fontSize: '14px',
               fontWeight: '800', marginBottom: '4px', lineHeight: 1.35,
             }}>
-              {tx("You're one of the first here", 'Tu es parmi les premiers par ici')}
+              {vraimentPremier
+                ? tx("You're one of the first here", 'Tu es parmi les premiers par ici')
+                : tx("It's still quiet around here", 'Encore peu de monde par ici')}
             </p>
             <p style={{
               color: darkMode ? 'rgba(255,255,255,0.6)' : '#666',
