@@ -54,7 +54,44 @@ function translateTag(tag, isEn) {
 // la main divergerait du vrai écran au premier changement, et finirait par
 // montrer un profil impeccable pendant que les autres en voient un cassé.
 // Le mode aperçu masque seulement ce qui n'a aucun sens sur soi-même.
-export default function BuddyProfileScreen({ buddy, onBack, theme, preview = false }) {
+export default function BuddyProfileScreen({ buddy: buddyRecu, onBack, theme, preview = false }) {
+  /*
+   * Le profil est toujours relu en entier à l'ouverture.
+   *
+   * Chaque écran qui mène ici passait l'objet qu'il avait sous la main, avec
+   * les seules colonnes dont il avait besoin pour sa propre liste. Depuis
+   * Messages, par exemple, le profil arrivait sans portfolio, sans ville,
+   * sans bio et sans disponibilité : la page s'affichait quand même, amputée,
+   * sans rien signaler. D'où des photos visibles sur le site et absentes dans
+   * l'app pour la même personne.
+   *
+   * Plutôt que de recenser les colonnes écran par écran, et d'en oublier une
+   * à chaque nouvel écran, on relit la ligne complète ici. L'objet reçu sert
+   * d'affichage immédiat, la version complète le remplace dès qu'elle arrive.
+   */
+  const [complet, setComplet] = useState(null);
+  useEffect(() => {
+    const id = buddyRecu?.user_id;
+    if (!id) return undefined;
+    let vivant = true;
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', id)
+      .maybeSingle()
+      .then(({ data }) => { if (vivant && data) setComplet(data); });
+    return () => { vivant = false; };
+  }, [buddyRecu]);
+
+  // La version complète ne s'applique qu'à la personne réellement affichée :
+  // si on change de profil avant la fin de la lecture, la réponse en retard
+  // ne vient pas se coller sur le mauvais.
+  // On fusionne pour garder ce que l'écran d'origine avait calculé en plus,
+  // comme la distance ou le score de compatibilité, absents de la table.
+  const buddy = complet && complet.user_id === buddyRecu?.user_id
+    ? { ...buddyRecu, ...complet }
+    : buddyRecu;
+
   const t = useT();
   const isEn = isNotFrench();
   const ROLES = useRoles();
@@ -439,26 +476,38 @@ export default function BuddyProfileScreen({ buddy, onBack, theme, preview = fal
 
         {/* Projets validés : le seul signal de confiance de l'app qui ne dépende
             pas du nombre d'abonnés. Il ne monte qu'après une vraie rencontre
-            confirmée par un scan de QR, donc il ne se triche pas. */}
-        {buddy?.validated_projects > 0 && (
-          <div style={{
-            background: 'rgba(46,204,113,0.08)', border: '1px solid rgba(46,204,113,0.25)',
-            borderRadius: '14px', padding: '14px 16px', marginBottom: '12px',
-            display: 'flex', alignItems: 'center', gap: '12px',
-          }}>
-            <span style={{ fontSize: '22px' }}>🤝</span>
-            <div>
-              <p style={{ color: '#2ECC71', fontSize: '15px', fontWeight: '900' }}>
-                {buddy.validated_projects} {buddy.validated_projects > 1
-                  ? tx('validated projects', 'projets validés')
-                  : tx('validated project', 'projet validé')}
-              </p>
-              <p style={{ color: subText, fontSize: '11px' }}>
-                {tx('Real meetings, confirmed on the spot', 'Rencontres réelles, confirmées sur place')}
-              </p>
+            confirmée par un scan de QR, donc il ne se triche pas.
+            Affiché même à zéro, et c'est le point important : tant qu'on le
+            cachait à zéro, il n'apparaissait sur aucun profil, puisque
+            personne n'avait encore scanné. Personne ne pouvait donc deviner à
+            quoi sert le QR, et personne ne scannait. À zéro, la carte explique
+            le geste au lieu de disparaître. */}
+        {(() => {
+          const validés = buddy?.validated_projects || 0;
+          const actif = validés > 0;
+          return (
+            <div style={{
+              background: actif ? 'rgba(46,204,113,0.08)' : card,
+              border: `1px solid ${actif ? 'rgba(46,204,113,0.25)' : tagBorder}`,
+              borderRadius: '14px', padding: '14px 16px', marginBottom: '12px',
+              display: 'flex', alignItems: 'center', gap: '12px',
+            }}>
+              <span style={{ fontSize: '22px' }}>🤝</span>
+              <div>
+                <p style={{ color: actif ? '#2ECC71' : color, fontSize: '15px', fontWeight: '900' }}>
+                  {validés} {validés > 1
+                    ? tx('validated projects', 'projets validés')
+                    : tx('validated project', 'projet validé')}
+                </p>
+                <p style={{ color: subText, fontSize: '11px', lineHeight: 1.4 }}>
+                  {actif
+                    ? tx('Real meetings, confirmed on the spot', 'Rencontres réelles, confirmées sur place')
+                    : tx('Scan your buddy’s QR when you meet to validate a project', 'Scanne le QR de ton buddy quand vous vous rencontrez pour valider un projet')}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {buddy?.bio && (
           <div style={{ background: card, borderRadius: '14px', padding: '16px', marginBottom: '12px' }}>
