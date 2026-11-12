@@ -137,6 +137,30 @@ export function newApplicationMail(to: string, applicant: string, role: string, 
   };
 }
 
+export function pendingProposalsMail(to: string, nombre: number, forUser?: string): Mail {
+  const pluriel = nombre > 1;
+  return {
+    to,
+    subject: pluriel
+      ? `⚡ ${nombre} personnes attendent ta réponse`
+      : '⚡ Quelqu’un attend ta réponse',
+    titleFr: pluriel ? 'Des créatifs attendent ta réponse' : 'Un créatif attend ta réponse',
+    bodyFr: pluriel
+      ? `<b>${nombre} propositions de collab</b> sont restées sans réponse sur ton profil. `
+        + 'Un oui, un non, les deux font avancer : la personne en face ne sait pas si tu les as vues.'
+      : 'Une <b>proposition de collab</b> est restée sans réponse sur ton profil. '
+        + 'Un oui, un non, les deux font avancer : la personne en face ne sait pas si tu l’as vue.',
+    titleEn: pluriel ? 'Creatives are waiting for your reply' : 'A creative is waiting for your reply',
+    bodyEn: pluriel
+      ? `<b>${nombre} collab proposals</b> are still unanswered on your profile. `
+        + 'A yes or a no both help: the other person has no idea whether you saw them.'
+      : 'A <b>collab proposal</b> is still unanswered on your profile. '
+        + 'A yes or a no both help: the other person has no idea whether you saw it.',
+    cta: '',
+    forUser,
+  };
+}
+
 export function newProposalMail(to: string, sender: string, role: string, message: string, forUser?: string): Mail {
   const s = escapeHtml(sender), r = escapeHtml(role);
   const m = escapeHtml(message.slice(0, 300));

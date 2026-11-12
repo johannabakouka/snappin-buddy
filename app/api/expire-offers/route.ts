@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { getProfile, getUserEmail, offerExpiringMail, sendMail, supabaseAdmin } from '../../lib/server';
 import { isPast, pastReason, NO_DATE_DAYS } from '../../offers-life';
 import { notifyArrivals } from '../../lib/arrivals';
+import { relancerPropositions } from '../../lib/relances';
 import { backfillCities } from '../../lib/backfill-cities';
 import { closePendingAndNotify } from '../../lib/slots-server';
 
@@ -102,6 +103,15 @@ export async function GET(request: Request) {
       console.error('notifyArrivals', e);
     }
 
+    // Propositions reçues et restées sans réponse. Même passage quotidien,
+    // et un échec ici ne doit pas faire passer le reste de la tâche pour raté.
+    let relances = null;
+    try {
+      relances = await relancerPropositions();
+    } catch (e) {
+      console.error('relancerPropositions', e);
+    }
+
     // Villes manquantes sur les profils. Même passage quotidien, et un échec
     // ici ne doit pas faire passer le reste de la tâche pour raté.
     let cities = null;
@@ -117,6 +127,7 @@ export async function GET(request: Request) {
       reminders: reminders.length,
       emailsSent,
       arrivals,
+      relances,
       cities,
     });
   } catch (err) {
