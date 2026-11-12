@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getVideoEmbed } from '../../video-embed';
 import Link from 'next/link';
 import BackLink from '../../components/BackLink';
 import { headers } from 'next/headers';
@@ -39,6 +40,7 @@ type PublicProfile = {
   avatar_url: string | null;
   portfolio_urls: string[] | null;
   portfolio_url: string | null;
+  video_url: string | null;
   validated_projects: number | null;
 };
 
@@ -52,7 +54,7 @@ async function getProfile(handle: string): Promise<PublicProfile | null> {
   // dont le pseudo correspond vraiment.
   const { data } = await supabaseAdmin()
     .from('profiles')
-    .select('username, handle, bio, role, role_other, styles, looking_for, zone, avatar_url, portfolio_urls, portfolio_url, validated_projects')
+    .select('username, handle, bio, role, role_other, styles, looking_for, zone, avatar_url, portfolio_urls, portfolio_url, video_url, validated_projects')
     .or(`handle.ilike.@${clean},handle.ilike.${clean}`)
     .limit(5);
 
@@ -108,6 +110,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   // cette page, qui s'ouvre souvent depuis une story à l'étranger.
   const looking = lookingChipsIn(lang, profile.looking_for);
   const portfolio = (profile.portfolio_urls || []).slice(0, 6);
+  // La vidéo compte autant qu'une photo dans ce qu'on vient voir.
+  const video = getVideoEmbed(profile.video_url);
   // Revalidé à l'affichage : cette page est publique et lue par des moteurs de
   // recherche, un lien douteux n'y est jamais rendu cliquable.
   const siteLink = cleanUrl(profile.portfolio_url) || '';
@@ -232,6 +236,33 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               <img key={i} src={url} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '10px', maxWidth: '100%' }} />
             ))}
           </div>
+        )}
+
+        {video && video.type === 'iframe' && (
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '24px', borderRadius: '12px', overflow: 'hidden' }}>
+            <iframe
+              src={video.src}
+              title=""
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+            />
+          </div>
+        )}
+
+        {video && video.type === 'link' && (
+          <a
+            href={video.src}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'block', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px',
+              background: 'linear-gradient(135deg, #833AB4, #FD1D1D, #FCB045)',
+              color: 'white', fontWeight: 700, fontSize: '13px', textAlign: 'center', textDecoration: 'none',
+            }}
+          >
+            📸 {t('View on Instagram →', 'Voir sur Instagram →')}
+          </a>
         )}
 
         <Link href={appLink} style={{
