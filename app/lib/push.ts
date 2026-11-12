@@ -241,10 +241,14 @@ export async function pousser(userId: string, envoi: Omit<Envoi, 'badge'>): Prom
       .eq('user_id', userId);
     const appareils = (data || []).map(r => r.token as string).filter(Boolean);
     if (appareils.length === 0) {
-      // Cas très courant et trompeur : l'envoi « marche », mais il n'y a
-      // personne à prévenir. Souvent parce que la notification part vers le
-      // mauvais compte, pas parce que la mécanique est cassée.
-      console.error('push: aucun appareil enregistré pour', userId);
+      // Cas très courant, et normal : la grande majorité des gens utilisent
+      // l'app depuis le site, où il n'y a pas de notification à envoyer. Seuls
+      // ceux qui ont installé l'app iPhone ont un appareil enregistré.
+      //
+      // C'était écrit en console.error, donc Vercel le comptait comme une
+      // panne : le tableau des erreurs ne montrait plus que ça, et une vraie
+      // panne serait passée inaperçue au milieu. L'email, lui, part quand même.
+      console.log('push: pas d\'appareil pour', userId, '— email seul');
       return;
     }
 

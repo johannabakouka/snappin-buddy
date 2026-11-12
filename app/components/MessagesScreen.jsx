@@ -71,6 +71,33 @@ export default function MessagesScreen({ theme, active = true, setScreen, homeSi
     if (user) { loadConversations(user.id); loadBuddies(user.id); }
   }), [user]);
 
+  // La liste écoute les nouveaux messages, comme la pastille de la barre du bas.
+  //
+  // Avant, elle ne se rechargeait qu'en revenant sur l'onglet. La pastille, elle,
+  // se recompte en direct. On pouvait donc voir « 1 » sur Messages et, juste en
+  // dessous, une liste qui ne montrait rien de nouveau : de quoi croire que le
+  // message n'était jamais arrivé, alors qu'il était bien en base.
+  useEffect(() => {
+    if (!user) return undefined;
+    const recharger = () => loadConversations(user.id);
+    const canal = supabase.channel('liste-messages-' + user.id)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'messages',
+        filter: `receiver_id=eq.${user.id}`,
+      }, recharger)
+      .subscribe();
+    // Le temps réel n'est qu'un bonus : si la connexion hoquette, le retour sur
+    // l'app recharge quand même.
+    const auReveil = () => { if (document.visibilityState === 'visible') recharger(); };
+    window.addEventListener('focus', recharger);
+    document.addEventListener('visibilitychange', auReveil);
+    return () => {
+      supabase.removeChannel(canal);
+      window.removeEventListener('focus', recharger);
+      document.removeEventListener('visibilitychange', auReveil);
+    };
+  }, [user]);
+
   // Retour sur l'onglet : mise à jour silencieuse
   const wasActive = useRef(active);
   useEffect(() => {
