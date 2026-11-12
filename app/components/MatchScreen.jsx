@@ -48,6 +48,21 @@ async function sendEmail(type, payload) {
  * La date d'un projet, écrite comme on la lit : « sam. 26 sept. ».
  * Elle est stockée en aaaa-mm-jj, qui ne se lit pas d'un coup d'œil.
  */
+/**
+ * Depuis combien de jours une proposition attend une réponse.
+ *
+ * L'expéditeur voyait « En attente » et rien d'autre, aussi bien au bout
+ * d'une heure qu'au bout de six semaines. Vingt-cinq propositions dormaient
+ * ainsi, la plus ancienne depuis le 1er octobre, sans que personne ne sache
+ * qu'elles étaient oubliées plutôt que simplement récentes.
+ */
+function joursDAttente(value) {
+  if (!value) return null;
+  const depuis = new Date(value).getTime();
+  if (Number.isNaN(depuis)) return null;
+  return Math.max(0, Math.floor((Date.now() - depuis) / 86400000));
+}
+
 function offerDateLabel(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -623,193 +638,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
     loadCollabs(user.id);
   }
 
-  async function openOfferCandidates(offer) {
-    setSelectedOffer(offer);
-    setLoadingCandidates(true);
-    const { data: found } = await supabase.from('collabs')
-      .select('*')
-      .eq('receiver_id', user.id)
-      .eq('offer_id', offer.id)
-      .order('created_at', { ascending: false });
-    const collabs = found || [];
-    if (collabs.length > 0) {
-      const senderIds = collabs.map(c => c.sender_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, username, handle, role, role_other, avatar_url, styles, zone, bio, portfolio_urls, portfolio_url, is_early_adopter, validated_projects').in('user_id', senderIds);
-      setOfferCandidates(collabs.map(c => ({ ...c, senderProfile: profiles?.find(p => p.user_id === c.sender_id) })));
-    } else setOfferCandidates([]);
-    setLoadingCandidates(false);
-  }
-
-  async function closeOffer(offerId) {
-    setActionError('');
-    const { error } = await supabase.from('offers').update({ status: 'closed' }).eq('id', offerId);
-    if (error) {
-      console.error('closeOffer', error);
-      setActionError(tx("Couldn't close the project. Try again.", "La fermeture du projet a échoué. Réessaie."));
-      return;
-    }
-    loadOffers(user.id);
-  }
-
-  async function reopenOffer(offerId) {
-    setActionError('');
-    const { error } = await supabase.from('offers').update({ status: 'open' }).eq('id', offerId);
-    if (error) {
-      console.error('reopenOffer', error);
-      setActionError(tx("Couldn't reopen the project. Try again.", "La réouverture du projet a échoué. Réessaie."));
-      return;
-    }
-    loadOffers(user.id);
-  }
-
-  // Suppression définitive (passe par le serveur, qui vérifie que le projet est bien à toi)
-  async function deleteOffer(offerId) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(api('/api/delete-offer'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({ offerId }),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
-    } catch (e) {
-      console.error('delete-offer', e);
-      alert(tx('Could not delete the project, try again.', 'Impossible de supprimer le projet, réessaie.'));
-      return;
-    }
-    setEditingOffer(null);
-    setSelectedOffer(null);
-    loadOffers(user.id);
-    loadCollabs(user.id);
-  }
-
-  // Le prix est fixé par le serveur (1 jour · 1,99 € / 7 jours · 4,99 €)
-  async function boostOffer(offer, days) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(api('/api/create-checkout-session'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({ offerId: offer.id, boostDays: days }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else throw new Error(data.error || 'checkout');
-    } catch (err) {
-      alert(tx('Payment error, try again.', 'Erreur de paiement, réessaie.'));
-    }
-  }
-
-  async function handleSaveOffer(fields) {
-    setActionError('');
-    if (editingOffer) {
-      const { error } = await supabase.from('offers').update(fields).eq('id', editingOffer.id);
-      if (error) {
-        console.error('updateOffer', error);
-        setActionError(tx("Couldn't save the project. Try again.", "L’enregistrement du projet a échoué. Réessaie."));
-        return;
-      }
-      setEditingOffer(null);
-    } else {
-      const { error } = await supabase.from('offers').insert({ user_id: user.id, ...fields, status: 'open' });
-      if (error) {
-        console.error('insertOffer', error);
-        setActionError(tx("Couldn't create the project. Try again.", "La création du projet a échoué. Réessaie."));
-        return;
-      }
-      setShowNewOffer(false);
-    }
-    loadOffers(user.id);
-  }
-
-  // Retirer sa candidature, tant qu'elle est en attente. Le serveur revérifie
-  // qui demande et dans quel état est la candidature : la vérification ne peut
-  // pas vivre seulement dans l'app.
-  async function withdrawApplication(collabId, offerId) {
-    if (!collabId || withdrawing) return;
-    setWithdrawing(collabId);
-    setActionError('');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(api('/api/withdraw-application'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({ collabId }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      if (offerId) {
-        setAppliedOffers(prev => {
-          const next = new Map(prev);
-          next.delete(String(offerId));
-          return next;
-        });
-      }
-      if (user?.id) { loadCollabs(user.id); loadApplied(user.id); }
-    } catch (e) {
-      console.error('withdrawApplication', e);
-      setActionError(tx("Couldn't withdraw. Try again.", 'Le retrait a échoué. Réessaie.'));
-    }
-    setWithdrawing(null);
-  }
-
-  async function applyToOffer(o, note = '') {
-    const { data: { user: u } } = await utilisateur();
-    if (!u) return;
-    setActionError('');
-    tap();
-    // Le message est maintenant celui de la personne. Le titre n'y est plus
-    // recopié : c'est offer_id qui relie la candidature au projet, et le mot
-    // sert à se distinguer des autres candidats.
-    const written = String(note || '').trim().slice(0, APPLY_NOTE_MAX);
-    const { data: collab, error } = await supabase.from('collabs').insert({
-      sender_id: u.id,
-      receiver_id: o.user_id,
-      offer_id: o.id,
-      message: written || tx('I would like to join this project.', 'Je me propose pour ce projet.'),
-      status: 'pending'
-    }).select('id').single();
-    // Sans cette vérification, le bouton passait à « Déjà candidaté » même
-    // quand rien n'était enregistré : la personne ne retentait jamais.
-    if (error) {
-      console.error('applyToOffer', error);
-      setActionError(tx("Couldn't send your application. Try again.", "L’envoi de ta candidature a échoué. Réessaie."));
-      return;
-    }
-    setAppliedOffers(prev => new Map(prev).set(String(o.id), { id: collab?.id, status: 'pending' }));
-
-    // Prévient le porteur du projet (et non plus le candidat lui-même)
-    if (collab?.id) sendEmail('new_application', { collabId: collab.id });
-  }
-
-  async function respondCollab(id, status, senderId) {
-    setActionError('');
-    const { error } = await supabase.from('collabs').update({ status }).eq('id', id);
-    if (error) {
-      console.error('respondCollab', error);
-      setActionError(tx("Couldn't send your reply. Try again.", "L’envoi de ta réponse a échoué. Réessaie."));
-      return;
-    }
-    if (status === 'accepted' && user && senderId) {
-      tap(28);
-      await supabase.from('messages').insert({
-        sender_id: user.id,
-        receiver_id: senderId,
-        content: tx("⚡ Let's create something beautiful together! When shall we meet?", '⚡ Créons quelque chose de beau ensemble ! On se retrouve quand ?')
-      });
-
-      // Prévient le candidat accepté (et non plus la personne qui accepte)
-      sendEmail('application_accepted', { collabId: id });
-
-      // Ouvre directement la conversation avec la personne acceptée
-      const profile = received.find(c => c.id === id)?.senderProfile
-        || offerCandidates.find(c => c.id === id)?.senderProfile
-        || { user_id: senderId };
-      setSelectedOffer(null);
-      setChatBuddy(profile);
-    }
-    loadCollabs(user.id);
-  }
-
+  // (doublon supprimé — voir notes du 12/11)
   /**
    * Ce qu'un projet a en commun avec toi, en deux morceaux séparés.
    *
@@ -1580,6 +1409,44 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                     </div>
                     <MiniProfile profile={c.receiverProfile} />
                     <p style={{ color: subText, fontSize: '12px', fontStyle: 'italic', marginBottom: c.status === 'accepted' ? '12px' : '0', borderLeft: `2px solid ${cardBorder}`, paddingLeft: '8px' }}>{c.message || (tx('No message', 'Pas de message'))}</p>
+
+                    {/* En attente : depuis quand, et de quoi s'en aller.
+                        Sans la durée, « En attente » veut dire la même chose
+                        au bout d'une heure et au bout de six semaines. */}
+                    {c.status === 'pending' && (() => {
+                      const jours = joursDAttente(c.created_at);
+                      if (jours === null) return null;
+                      const texte = jours === 0
+                        ? tx('Waiting since today', 'En attente depuis aujourd’hui')
+                        : jours === 1
+                          ? tx('Waiting for 1 day', 'En attente depuis 1 jour')
+                          : tx('Waiting for {n} days', 'En attente depuis {n} jours').replace('{n}', String(jours));
+                      // Au-delà d'une semaine, la couleur le dit avant la lecture.
+                      const oublie = jours >= 7;
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '10px' }}>
+                          <span style={{ color: oublie ? '#FFD700' : subText, fontSize: '11px', fontWeight: oublie ? '700' : '600' }}>
+                            {texte}
+                          </span>
+                          <button
+                            onClick={() => withdrawApplication(c.id, c.offer_id, 'pending')}
+                            disabled={withdrawing === c.id}
+                            style={{
+                              padding: '7px 14px', borderRadius: '18px',
+                              border: `1px solid ${cardBorder}`, background: 'transparent',
+                              color: subText, fontSize: '12px', fontWeight: '700',
+                              cursor: withdrawing === c.id ? 'default' : 'pointer',
+                              opacity: withdrawing === c.id ? 0.5 : 1, flexShrink: 0,
+                            }}
+                          >
+                            {withdrawing === c.id
+                              ? tx('Withdrawing...', 'Retrait...')
+                              : tx('Withdraw my application', 'Retirer ma candidature')}
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {c.status === 'accepted' && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <button onClick={() => setChatBuddy(c.receiverProfile || { user_id: c.receiver_id })} style={{ flex: 1, padding: '10px', borderRadius: '20px', border: 'none', background: theme?.color, color: theme?.bg, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>

@@ -3,6 +3,9 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Waiting since today': 'Esperando desde hoy',
+    'Waiting for 1 day': 'Esperando desde hace 1 día',
+    'Waiting for {n} days': 'Esperando desde hace {n} días',
     'Pick the spot you are applying for, above.': 'Elige arriba la plaza a la que te presentas.',
     "🔖 Following ✓": "🔖 Siguiendo ✓",
     "🔖 Follow": "🔖 Seguir",
@@ -477,6 +480,9 @@ const TX = {
 },
 
   pt: {
+    'Waiting since today': 'À espera desde hoje',
+    'Waiting for 1 day': 'À espera há 1 dia',
+    'Waiting for {n} days': 'À espera há {n} dias',
     'Pick the spot you are applying for, above.': 'Escolhe acima a vaga a que te candidatas.',
     "🔖 Following ✓": "🔖 Seguindo ✓",
     "🔖 Follow": "🔖 Seguir",
@@ -951,6 +957,9 @@ const TX = {
 },
 
   de: {
+    'Waiting since today': 'Wartet seit heute',
+    'Waiting for 1 day': 'Wartet seit 1 Tag',
+    'Waiting for {n} days': 'Wartet seit {n} Tagen',
     'Pick the spot you are applying for, above.': 'Wähle oben den Platz, für den du dich bewirbst.',
     "🔖 Following ✓": "🔖 Folgst du ✓",
     "🔖 Follow": "🔖 Folgen",
@@ -1425,6 +1434,9 @@ const TX = {
 },
 
   it: {
+    'Waiting since today': 'In attesa da oggi',
+    'Waiting for 1 day': 'In attesa da 1 giorno',
+    'Waiting for {n} days': 'In attesa da {n} giorni',
     'Pick the spot you are applying for, above.': 'Scegli sopra il posto per cui ti candidi.',
     "🔖 Following ✓": "🔖 Seguito ✓",
     "🔖 Follow": "🔖 Segui",
@@ -1898,6 +1910,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Progetto non trovato. Potrebbe essere stato eliminato.",
 },
   vi: {
+    'Waiting since today': 'Đang chờ từ hôm nay',
+    'Waiting for 1 day': 'Đang chờ 1 ngày',
+    'Waiting for {n} days': 'Đang chờ {n} ngày',
     'Pick the spot you are applying for, above.': 'Chọn vị trí bạn ứng tuyển ở trên.',
     "🔖 Following ✓": "🔖 Đang theo dõi ✓",
     "🔖 Follow": "🔖 Theo dõi",
@@ -2371,6 +2386,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Không tìm thấy dự án này. Có thể nó đã bị xoá.",
 },
   hu: {
+    'Waiting since today': 'Ma óta várakozik',
+    'Waiting for 1 day': '1 napja várakozik',
+    'Waiting for {n} days': '{n} napja várakozik',
     'Pick the spot you are applying for, above.': 'Válaszd ki fent a helyet, amelyre jelentkezel.',
     "🔖 Following ✓": "🔖 Követed ✓",
     "🔖 Follow": "🔖 Követés",
@@ -2844,6 +2862,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Ez a projekt nem található. Lehet, hogy törölték.",
 },
   ro: {
+    'Waiting since today': 'În așteptare de azi',
+    'Waiting for 1 day': 'În așteptare de 1 zi',
+    'Waiting for {n} days': 'În așteptare de {n} zile',
     'Pick the spot you are applying for, above.': 'Alege mai sus locul pentru care candidezi.',
     "🔖 Following ✓": "🔖 Urmărești ✓",
     "🔖 Follow": "🔖 Urmărește",
@@ -3317,6 +3338,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proiectul nu a fost găsit. Poate a fost șters.",
 },
   cs: {
+    'Waiting since today': 'Čeká od dneška',
+    'Waiting for 1 day': 'Čeká 1 den',
+    'Waiting for {n} days': 'Čeká {n} dní',
     'Pick the spot you are applying for, above.': 'Nahoře vyber místo, o které se ucházíš.',
     "🔖 Following ✓": "🔖 Sledujete ✓",
     "🔖 Follow": "🔖 Sledovat",
@@ -3790,6 +3814,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Tento projekt se nepodařilo najít. Možná byl smazán.",
 },
   fi: {
+    'Waiting since today': 'Odottaa tästä päivästä',
+    'Waiting for 1 day': 'Odottanut 1 päivän',
+    'Waiting for {n} days': 'Odottanut {n} päivää',
     'Pick the spot you are applying for, above.': 'Valitse yllä paikka, jota haet.',
     "🔖 Following ✓": "🔖 Seurataan ✓",
     "🔖 Follow": "🔖 Seuraa",
@@ -4263,6 +4290,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektia ei löytynyt. Se on ehkä poistettu.",
 },
   nb: {
+    'Waiting since today': 'Venter siden i dag',
+    'Waiting for 1 day': 'Venter i 1 dag',
+    'Waiting for {n} days': 'Venter i {n} dager',
     'Pick the spot you are applying for, above.': 'Velg plassen du søker på, ovenfor.',
     "🔖 Following ✓": "🔖 Følger ✓",
     "🔖 Follow": "🔖 Følg",
@@ -4736,6 +4766,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Fant ikke dette prosjektet. Det kan ha blitt slettet.",
 },
   da: {
+    'Waiting since today': 'Venter siden i dag',
+    'Waiting for 1 day': 'Venter i 1 dag',
+    'Waiting for {n} days': 'Venter i {n} dage',
     'Pick the spot you are applying for, above.': 'Vælg pladsen du søger, ovenfor.',
     "🔖 Following ✓": "🔖 Følger ✓",
     "🔖 Follow": "🔖 Følg",
@@ -5209,6 +5242,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet blev ikke fundet. Det er måske slettet.",
 },
   sv: {
+    'Waiting since today': 'Väntar sedan i dag',
+    'Waiting for 1 day': 'Väntar i 1 dag',
+    'Waiting for {n} days': 'Väntar i {n} dagar',
     'Pick the spot you are applying for, above.': 'Välj platsen du söker, ovan.',
     "🔖 Following ✓": "🔖 Följer ✓",
     "🔖 Follow": "🔖 Följ",
@@ -5682,6 +5718,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet hittades inte. Det kan ha tagits bort.",
 },
   id: {
+    'Waiting since today': 'Menunggu sejak hari ini',
+    'Waiting for 1 day': 'Menunggu 1 hari',
+    'Waiting for {n} days': 'Menunggu {n} hari',
     'Pick the spot you are applying for, above.': 'Pilih dulu posisi yang kamu lamar, di atas.',
     "🔖 Following ✓": "🔖 Mengikuti ✓",
     "🔖 Follow": "🔖 Ikuti",
@@ -6155,6 +6194,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proyek itu tidak ditemukan. Mungkin sudah dihapus.",
 },
   tr: {
+    'Waiting since today': 'Bugünden beri bekliyor',
+    'Waiting for 1 day': '1 gündür bekliyor',
+    'Waiting for {n} days': '{n} gündür bekliyor',
     'Pick the spot you are applying for, above.': 'Yukarıdan başvurduğun yeri seç.',
     "🔖 Following ✓": "🔖 Takip ediliyor ✓",
     "🔖 Follow": "🔖 Takip et",
@@ -6628,6 +6670,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Bu proje bulunamadı. Silinmiş olabilir.",
 },
   pl: {
+    'Waiting since today': 'Czeka od dziś',
+    'Waiting for 1 day': 'Czeka 1 dzień',
+    'Waiting for {n} days': 'Czeka {n} dni',
     'Pick the spot you are applying for, above.': 'Wybierz powyżej miejsce, na które aplikujesz.',
     "🔖 Following ✓": "🔖 Obserwujesz ✓",
     "🔖 Follow": "🔖 Obserwuj",
@@ -7101,6 +7146,9 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Nie znaleziono tego projektu. Mógł zostać usunięty.",
 },
   nl: {
+    'Waiting since today': 'Wacht sinds vandaag',
+    'Waiting for 1 day': 'Wacht al 1 dag',
+    'Waiting for {n} days': 'Wacht al {n} dagen',
     'Pick the spot you are applying for, above.': 'Kies hierboven de plek waarvoor je je aanmeldt.',
     "🔖 Following ✓": "🔖 Gevolgd ✓",
     "🔖 Follow": "🔖 Volgen",
