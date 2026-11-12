@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { lireTout } from '../lib/lire-tout';
 import { utilisateur } from '../session';
 import Header from './Header';
 import QRScreen from './QRScreen';
@@ -386,7 +387,12 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
   }
 
   async function loadOffers(userId) {
-    const { data: allRaw } = await supabase.from('offers').select('*').neq('user_id', userId).order('created_at', { ascending: false });
+    // Le second tri départage les projets créés à la même seconde : sans lui,
+    // deux tranches peuvent se recouvrir ou sauter un projet.
+    const { data: allRaw } = await lireTout(() => supabase.from('offers').select('*')
+      .neq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true }));
     // Les projets des personnes bloquées ne remontent pas dans le feed.
     const blocked = await loadBlockedIds(userId);
     const all = (allRaw || []).filter(o => !blocked.has(o.user_id));

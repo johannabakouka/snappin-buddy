@@ -1,5 +1,6 @@
 import { getProfile, getUserEmail, nearbyArrivalMail, sendMail, supabaseAdmin } from './server';
 import { pousser } from './push';
+import { lireTout } from './lire-tout';
 import { distanceKm, NEARBY_KM } from '../constants';
 
 // « Préviens-moi quand quelqu'un arrive. »
@@ -34,15 +35,16 @@ export async function notifyArrivals(): Promise<ArrivalsResult> {
   // Les profils placés sur la carte. La comparaison est une distance, donc elle
   // ne se filtre pas en SQL sans extension : on lit les colonnes utiles une
   // fois et on compare en mémoire.
-  const { data: profileRows, error: profileError } = await db
+  const { data: profileRows, error: profileError } = await lireTout<Placed>(() => db
     .from('profiles')
     .select('user_id, lat, lng')
+    .order('user_id', { ascending: true })
     .not('lat', 'is', null)
     .not('lng', 'is', null)
     // Mode invisible : quelqu'un qui s'est retiré de la carte ne déclenche pas
     // de mail. Les comptes créés avant ce réglage ont la colonne vide, donc on
     // accepte explicitement le vide : « différent de vrai » les écarterait tous.
-    .or('hidden.is.null,hidden.eq.false');
+    .or('hidden.is.null,hidden.eq.false'));
   if (profileError) throw profileError;
   const placed = (profileRows || []) as Placed[];
 

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
+import { lireTout } from '../lib/lire-tout';
 import { utilisateur } from '../session';
 import BuddyProfileScreen from './BuddyProfileScreen';
 import PhotoViewer from './PhotoViewer';
@@ -96,7 +97,8 @@ export default function ExploreScreen({ theme, active = true, homeSignal = 0 }) 
       const { data: me } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       setMyProfile(me);
     }
-    const { data } = await supabase.from('profiles').select(EXPLORE_COLUMNS);
+    const { data } = await lireTout(() =>
+      supabase.from('profiles').select(EXPLORE_COLUMNS).order('user_id', { ascending: true }));
     const blocked = await loadBlockedIds(user?.id);
     if (user?.id) setFollowingIds(await loadFollowingIds(user.id));
     // Mode invisible : hors de la carte et hors d'Explorer. Son propre profil

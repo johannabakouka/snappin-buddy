@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
+import { lireTout } from '../lib/lire-tout';
 import { utilisateur } from '../session';
 import { loadBlockedIds, onBlocksChanged } from '../blocks';
 import BuddyProfileScreen from './BuddyProfileScreen';
@@ -275,7 +276,9 @@ export default function MapComponent({ theme, active = true }) {
       setL(LeafletModule);
 
       lastLoad.current = Date.now();
-      const { data: profileData } = await supabase.from('profiles').select(MAP_COLUMNS);
+      // Tri stable obligatoire : c'est lui qui rend les tranches cohérentes.
+      const { data: profileData } = await lireTout(() =>
+        supabase.from('profiles').select(MAP_COLUMNS).order('user_id', { ascending: true }));
       const { data: { user } } = await utilisateur();
       // Les personnes bloquées, dans un sens comme dans l'autre, n'apparaissent pas.
       const blocked = await loadBlockedIds(user?.id);
