@@ -36,6 +36,13 @@ export default function ApplySheet({ offer, theme, myRoles = '', onSend, onClose
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Le bouton est bloqué tant qu'aucune place n'est choisie, quand il y en a
+  // plusieurs de libres et qu'aucune ne s'impose. C'était invisible : le
+  // bouton gardait la couleur et l'opacité d'un bouton actif. On appuyait,
+  // rien ne partait, aucun message n'apparaissait, et il n'y avait aucun
+  // moyen de deviner ce qui manquait.
+  const bloque = libres.length > 1 && !role;
+
   async function send() {
     if (busy) return;
     setBusy(true);
@@ -129,6 +136,13 @@ export default function ApplySheet({ offer, theme, myRoles = '', onSend, onClose
           {note.length}/{APPLY_NOTE_MAX} · {tx('optional', 'facultatif')}
         </p>
 
+        {bloque && (
+          <p style={{ color: subText, fontSize: '12px', textAlign: 'center', marginBottom: '10px' }}>
+            {tx('Pick the spot you are applying for, above.',
+                'Choisis d’abord la place pour laquelle tu te proposes, ci-dessus.')}
+          </p>
+        )}
+
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={onClose}
@@ -138,11 +152,12 @@ export default function ApplySheet({ offer, theme, myRoles = '', onSend, onClose
           </button>
           <button
             onClick={send}
-            disabled={busy || (libres.length > 1 && !role)}
+            disabled={busy || bloque}
             style={{
               flex: 2, padding: '12px', borderRadius: '22px', border: 'none',
               background: color, color: bg, fontSize: '13px', fontWeight: '800',
-              cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+              cursor: busy || bloque ? 'default' : 'pointer',
+              opacity: busy || bloque ? 0.45 : 1,
             }}
           >
             {busy ? tx('Sending...', 'Envoi...') : tx('Send my application', 'Envoyer ma candidature')}

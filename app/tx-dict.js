@@ -3,6 +3,7 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Pick the spot you are applying for, above.': 'Elige arriba la plaza a la que te presentas.',
     "🔖 Following ✓": "🔖 Siguiendo ✓",
     "🔖 Follow": "🔖 Seguir",
     "In your private list, under Following.": "En tu lista privada, pestaña Siguiendo.",
@@ -476,6 +477,7 @@ const TX = {
 },
 
   pt: {
+    'Pick the spot you are applying for, above.': 'Escolhe acima a vaga a que te candidatas.',
     "🔖 Following ✓": "🔖 Seguindo ✓",
     "🔖 Follow": "🔖 Seguir",
     "In your private list, under Following.": "Na sua lista privada, aba Seguindo.",
@@ -949,6 +951,7 @@ const TX = {
 },
 
   de: {
+    'Pick the spot you are applying for, above.': 'Wähle oben den Platz, für den du dich bewirbst.',
     "🔖 Following ✓": "🔖 Folgst du ✓",
     "🔖 Follow": "🔖 Folgen",
     "In your private list, under Following.": "In deiner privaten Liste, Tab Folge ich.",
@@ -1422,6 +1425,7 @@ const TX = {
 },
 
   it: {
+    'Pick the spot you are applying for, above.': 'Scegli sopra il posto per cui ti candidi.',
     "🔖 Following ✓": "🔖 Seguito ✓",
     "🔖 Follow": "🔖 Segui",
     "In your private list, under Following.": "Nella tua lista privata, scheda Seguiti.",
@@ -1894,6 +1898,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Progetto non trovato. Potrebbe essere stato eliminato.",
 },
   vi: {
+    'Pick the spot you are applying for, above.': 'Chọn vị trí bạn ứng tuyển ở trên.',
     "🔖 Following ✓": "🔖 Đang theo dõi ✓",
     "🔖 Follow": "🔖 Theo dõi",
     "In your private list, under Following.": "Trong danh sách riêng của bạn, ở tab Đang theo dõi.",
@@ -2366,6 +2371,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Không tìm thấy dự án này. Có thể nó đã bị xoá.",
 },
   hu: {
+    'Pick the spot you are applying for, above.': 'Válaszd ki fent a helyet, amelyre jelentkezel.',
     "🔖 Following ✓": "🔖 Követed ✓",
     "🔖 Follow": "🔖 Követés",
     "In your private list, under Following.": "A privát listádon, a Követettek fülön.",
@@ -2838,6 +2844,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Ez a projekt nem található. Lehet, hogy törölték.",
 },
   ro: {
+    'Pick the spot you are applying for, above.': 'Alege mai sus locul pentru care candidezi.',
     "🔖 Following ✓": "🔖 Urmărești ✓",
     "🔖 Follow": "🔖 Urmărește",
     "In your private list, under Following.": "În lista ta privată, la Urmăriți.",
@@ -3310,6 +3317,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proiectul nu a fost găsit. Poate a fost șters.",
 },
   cs: {
+    'Pick the spot you are applying for, above.': 'Nahoře vyber místo, o které se ucházíš.',
     "🔖 Following ✓": "🔖 Sledujete ✓",
     "🔖 Follow": "🔖 Sledovat",
     "In your private list, under Following.": "Ve tvém soukromém seznamu, na kartě Sledovaní.",
@@ -3782,6 +3790,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Tento projekt se nepodařilo najít. Možná byl smazán.",
 },
   fi: {
+    'Pick the spot you are applying for, above.': 'Valitse yllä paikka, jota haet.',
     "🔖 Following ✓": "🔖 Seurataan ✓",
     "🔖 Follow": "🔖 Seuraa",
     "In your private list, under Following.": "Yksityisellä listallasi, Seuratut-välilehdellä.",
@@ -4254,6 +4263,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektia ei löytynyt. Se on ehkä poistettu.",
 },
   nb: {
+    'Pick the spot you are applying for, above.': 'Velg plassen du søker på, ovenfor.',
     "🔖 Following ✓": "🔖 Følger ✓",
     "🔖 Follow": "🔖 Følg",
     "In your private list, under Following.": "På din private liste, under Følger.",
@@ -4726,6 +4736,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Fant ikke dette prosjektet. Det kan ha blitt slettet.",
 },
   da: {
+    'Pick the spot you are applying for, above.': 'Vælg pladsen du søger, ovenfor.',
     "🔖 Following ✓": "🔖 Følger ✓",
     "🔖 Follow": "🔖 Følg",
     "In your private list, under Following.": "På din private liste, under Følger.",
@@ -5198,6 +5209,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet blev ikke fundet. Det er måske slettet.",
 },
   sv: {
+    'Pick the spot you are applying for, above.': 'Välj platsen du söker, ovan.',
     "🔖 Following ✓": "🔖 Följer ✓",
     "🔖 Follow": "🔖 Följ",
     "In your private list, under Following.": "I din privata lista, under Följer.",
@@ -5670,6 +5682,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet hittades inte. Det kan ha tagits bort.",
 },
   id: {
+    'Pick the spot you are applying for, above.': 'Pilih dulu posisi yang kamu lamar, di atas.',
     "🔖 Following ✓": "🔖 Mengikuti ✓",
     "🔖 Follow": "🔖 Ikuti",
     "In your private list, under Following.": "Di daftar pribadimu, pada tab Mengikuti.",
@@ -6142,6 +6155,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proyek itu tidak ditemukan. Mungkin sudah dihapus.",
 },
   tr: {
+    'Pick the spot you are applying for, above.': 'Yukarıdan başvurduğun yeri seç.',
     "🔖 Following ✓": "🔖 Takip ediliyor ✓",
     "🔖 Follow": "🔖 Takip et",
     "In your private list, under Following.": "Özel listende, Takip edilenler sekmesinde.",
@@ -6614,6 +6628,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Bu proje bulunamadı. Silinmiş olabilir.",
 },
   pl: {
+    'Pick the spot you are applying for, above.': 'Wybierz powyżej miejsce, na które aplikujesz.',
     "🔖 Following ✓": "🔖 Obserwujesz ✓",
     "🔖 Follow": "🔖 Obserwuj",
     "In your private list, under Following.": "Na twojej prywatnej liście, w zakładce Obserwowani.",
@@ -7086,6 +7101,7 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Nie znaleziono tego projektu. Mógł zostać usunięty.",
 },
   nl: {
+    'Pick the spot you are applying for, above.': 'Kies hierboven de plek waarvoor je je aanmeldt.',
     "🔖 Following ✓": "🔖 Gevolgd ✓",
     "🔖 Follow": "🔖 Volgen",
     "In your private list, under Following.": "In je privélijst, onder Volgend.",

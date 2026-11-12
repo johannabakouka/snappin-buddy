@@ -70,18 +70,29 @@ export default function BuddyProfileScreen({ buddy: buddyRecu, onBack, theme, pr
    * d'affichage immédiat, la version complète le remplace dès qu'elle arrive.
    */
   const [complet, setComplet] = useState(null);
+
+  // On dépend de l'identifiant, jamais de l'objet reçu.
+  //
+  // Avec l'objet en dépendance, l'écran se figeait : l'aperçu de son propre
+  // profil passe « buddy={{ ...profile, avatar_url }} », un objet reconstruit
+  // à chaque rendu. La lecture repartait donc à chaque rendu, posait un état,
+  // ce qui provoquait un rendu, et ainsi de suite sans fin. L'app tournait en
+  // rond et plus aucun bouton ne répondait, où qu'il soit.
+  const idBuddy = buddyRecu?.user_id;
+
+  // En aperçu, on ne relit pas : la personne regarde ses modifications en
+  // cours, et la ligne enregistrée les effacerait sous ses yeux.
   useEffect(() => {
-    const id = buddyRecu?.user_id;
-    if (!id) return undefined;
+    if (!idBuddy || preview) return undefined;
     let vivant = true;
     supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', id)
+      .eq('user_id', idBuddy)
       .maybeSingle()
       .then(({ data }) => { if (vivant && data) setComplet(data); });
     return () => { vivant = false; };
-  }, [buddyRecu]);
+  }, [idBuddy, preview]);
 
   // La version complète ne s'applique qu'à la personne réellement affichée :
   // si on change de profil avant la fin de la lecture, la réponse en retard
