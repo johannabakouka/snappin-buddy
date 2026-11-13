@@ -365,22 +365,32 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
 
     return (
       <>
-        <button
-          onClick={() => markDone(collab)}
-          disabled={markingDone === collab.id || mine}
-          style={{
-            width: '100%', marginTop: '8px', padding: '9px', borderRadius: '20px',
-            border: `1px solid ${cardBorder}`, background: 'transparent',
-            color: mine ? subText : theme?.color, fontWeight: '700', fontSize: '12px',
-            cursor: mine ? 'default' : 'pointer',
-          }}
-        >
-          {markingDone === collab.id
-            ? '…'
-            : mine
-            ? tx('Waiting for your buddy', 'En attente de ton buddy')
-            : tx('✓ Mark as done', '✓ Marquer comme réalisé')}
-        </button>
+        {/* Deux chemins, et on dit lequel fait quoi.
+            Avant : « Marquer comme réalisé » et « Je ne peux plus le faire »,
+            sans jamais préciser réalisé quoi, ni ce que ça déclenche. Sur 15
+            collabs acceptées, aucune n'avait été menée au bout par l'un ou
+            l'autre chemin. */}
+        <p style={{ color: subText, fontSize: '11px', lineHeight: 1.5, marginTop: '10px' }}>
+          {tx('Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.',
+              'Scannez le QR quand vous vous voyez : ça prouve la rencontre et ajoute la collab à vos deux profils.')}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '6px' }}>
+          <button
+            onClick={() => markDone(collab)}
+            disabled={markingDone === collab.id || mine}
+            style={{
+              background: 'none', border: 'none', color: subText, fontSize: '11px',
+              padding: '2px 0', textDecoration: 'underline', textAlign: 'left',
+              cursor: mine ? 'default' : 'pointer',
+            }}
+          >
+            {markingDone === collab.id
+              ? '…'
+              : mine
+              ? tx('Waiting for your buddy to confirm', 'En attente de la confirmation de ton buddy')
+              : tx('We collaborated without scanning', 'On a collaboré sans scanner')}
+          </button>
+        </div>
         {note && <p style={{ color: subText, fontSize: '11px', marginTop: '6px', textAlign: 'center', lineHeight: 1.4 }}>{note}</p>}
       </>
     );
@@ -1270,7 +1280,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                                   {withdrawing === myApplication.id
                                     ? tx('Withdrawing...', 'Retrait...')
                                     : myApplication.status === 'accepted'
-                                      ? tx('I can no longer do it', 'Je ne peux plus le faire')
+                                      ? tx('Step back from this collab', 'Je me désiste de cette collab')
                                       : tx('Withdraw my application', 'Retirer ma candidature')}
                                 </button>
                               )}
@@ -1396,7 +1406,7 @@ export default function MatchScreen({ theme, setScreen, active = true, myProject
                         {withdrawing === c.id
                           ? tx('Withdrawing...', 'Retrait...')
                           : c.status === 'accepted'
-                            ? tx('I can no longer do it', 'Je ne peux plus le faire')
+                            ? tx('Step back from this collab', 'Je me désiste de cette collab')
                             : tx('Withdraw my application', 'Retirer ma candidature')}
                       </button>
                     )}

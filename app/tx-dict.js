@@ -3,6 +3,10 @@
 // Un texte absent ici s'affiche en anglais.
 const TX = {
   es: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Escaneadlo cuando os veáis: demuestra el encuentro y añade la colaboración a vuestros dos perfiles.',
+    'We collaborated without scanning': 'Colaboramos sin escanear',
+    'Waiting for your buddy to confirm': 'Esperando la confirmación de tu buddy',
+    'Step back from this collab': 'Me retiro de esta colaboración',
     "It's still quiet around here": 'Todavía hay poca gente por aquí',
     'Waiting since today': 'Esperando desde hoy',
     'Waiting for 1 day': 'Esperando desde hace 1 día',
@@ -481,6 +485,10 @@ const TX = {
 },
 
   pt: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Escaneiem o QR quando se encontrarem: prova o encontro e adiciona a collab aos dois perfis.',
+    'We collaborated without scanning': 'Colaboramos sem escanear',
+    'Waiting for your buddy to confirm': 'Aguardando a confirmação do seu buddy',
+    'Step back from this collab': 'Desistir desta collab',
     "It's still quiet around here": 'Ainda há pouca gente por aqui',
     'Waiting since today': 'À espera desde hoje',
     'Waiting for 1 day': 'À espera há 1 dia',
@@ -959,6 +967,10 @@ const TX = {
 },
 
   de: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Scannt den QR, wenn ihr euch trefft: das beweist das Treffen und fügt die Collab beiden Profilen hinzu.',
+    'We collaborated without scanning': 'Wir haben ohne Scan zusammengearbeitet',
+    'Waiting for your buddy to confirm': 'Warten auf die Bestätigung deines Buddys',
+    'Step back from this collab': 'Von dieser Collab zurücktreten',
     "It's still quiet around here": 'Hier ist noch wenig los',
     'Waiting since today': 'Wartet seit heute',
     'Waiting for 1 day': 'Wartet seit 1 Tag',
@@ -1437,6 +1449,10 @@ const TX = {
 },
 
   it: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Scansionate il QR quando vi vedete: prova l’incontro e aggiunge la collab a entrambi i profili.',
+    'We collaborated without scanning': 'Abbiamo collaborato senza scansionare',
+    'Waiting for your buddy to confirm': 'In attesa della conferma del tuo buddy',
+    'Step back from this collab': 'Mi ritiro da questa collab',
     "It's still quiet around here": 'Qui c’è ancora poca gente',
     'Waiting since today': 'In attesa da oggi',
     'Waiting for 1 day': 'In attesa da 1 giorno',
@@ -1914,6 +1930,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Progetto non trovato. Potrebbe essere stato eliminato.",
 },
   vi: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Quét mã QR khi hai bạn gặp nhau: nó chứng minh buổi gặp và thêm collab vào cả hai hồ sơ.',
+    'We collaborated without scanning': 'Chúng tôi đã hợp tác mà không quét',
+    'Waiting for your buddy to confirm': 'Đang chờ buddy xác nhận',
+    'Step back from this collab': 'Rút khỏi collab này',
     "It's still quiet around here": 'Quanh đây vẫn còn ít người',
     'Waiting since today': 'Đang chờ từ hôm nay',
     'Waiting for 1 day': 'Đang chờ 1 ngày',
@@ -2391,6 +2411,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Không tìm thấy dự án này. Có thể nó đã bị xoá.",
 },
   hu: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Olvassátok be a QR-kódot, amikor találkoztok: bizonyítja a találkozást, és mindkét profilhoz hozzáadja a collabot.',
+    'We collaborated without scanning': 'Beolvasás nélkül dolgoztunk együtt',
+    'Waiting for your buddy to confirm': 'Várjuk a buddyd megerősítését',
+    'Step back from this collab': 'Kilépek ebből a collabból',
     "It's still quiet around here": 'Errefelé még kevesen vannak',
     'Waiting since today': 'Ma óta várakozik',
     'Waiting for 1 day': '1 napja várakozik',
@@ -2868,6 +2892,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Ez a projekt nem található. Lehet, hogy törölték.",
 },
   ro: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Scanați codul QR când vă vedeți: dovedește întâlnirea și adaugă colaborarea în ambele profiluri.',
+    'We collaborated without scanning': 'Am colaborat fără scanare',
+    'Waiting for your buddy to confirm': 'Așteptăm confirmarea buddy-ului tău',
+    'Step back from this collab': 'Mă retrag din această colaborare',
     "It's still quiet around here": 'Încă sunt puțini pe aici',
     'Waiting since today': 'În așteptare de azi',
     'Waiting for 1 day': 'În așteptare de 1 zi',
@@ -3345,6 +3373,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proiectul nu a fost găsit. Poate a fost șters.",
 },
   cs: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Naskenujte QR kód, až se potkáte: prokáže setkání a přidá spolupráci do obou profilů.',
+    'We collaborated without scanning': 'Spolupracovali jsme bez skenování',
+    'Waiting for your buddy to confirm': 'Čekáme na potvrzení tvého buddyho',
+    'Step back from this collab': 'Odstupuji z této spolupráce',
     "It's still quiet around here": 'Tady je zatím málo lidí',
     'Waiting since today': 'Čeká od dneška',
     'Waiting for 1 day': 'Čeká 1 den',
@@ -3822,6 +3854,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Tento projekt se nepodařilo najít. Možná byl smazán.",
 },
   fi: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Skannatkaa QR-koodi kun tapaatte: se todistaa tapaamisen ja lisää yhteistyön molempiin profiileihin.',
+    'We collaborated without scanning': 'Teimme yhteistyötä ilman skannausta',
+    'Waiting for your buddy to confirm': 'Odotetaan buddysi vahvistusta',
+    'Step back from this collab': 'Vetäydyn tästä yhteistyöstä',
     "It's still quiet around here": 'Täällä on vielä hiljaista',
     'Waiting since today': 'Odottaa tästä päivästä',
     'Waiting for 1 day': 'Odottanut 1 päivän',
@@ -4299,6 +4335,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektia ei löytynyt. Se on ehkä poistettu.",
 },
   nb: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Skann QR-koden når dere møtes: den beviser møtet og legger samarbeidet til begge profilene.',
+    'We collaborated without scanning': 'Vi samarbeidet uten å skanne',
+    'Waiting for your buddy to confirm': 'Venter på at buddyen din bekrefter',
+    'Step back from this collab': 'Trekk meg fra dette samarbeidet',
     "It's still quiet around here": 'Det er fortsatt stille her',
     'Waiting since today': 'Venter siden i dag',
     'Waiting for 1 day': 'Venter i 1 dag',
@@ -4776,6 +4816,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Fant ikke dette prosjektet. Det kan ha blitt slettet.",
 },
   da: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Scan QR-koden når I mødes: den beviser mødet og tilføjer samarbejdet til begge profiler.',
+    'We collaborated without scanning': 'Vi samarbejdede uden at scanne',
+    'Waiting for your buddy to confirm': 'Venter på at din buddy bekræfter',
+    'Step back from this collab': 'Træk mig ud af dette samarbejde',
     "It's still quiet around here": 'Der er stadig stille her',
     'Waiting since today': 'Venter siden i dag',
     'Waiting for 1 day': 'Venter i 1 dag',
@@ -5253,6 +5297,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet blev ikke fundet. Det er måske slettet.",
 },
   sv: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Skanna QR-koden när ni ses: den bevisar mötet och lägger till samarbetet på båda profilerna.',
+    'We collaborated without scanning': 'Vi samarbetade utan att skanna',
+    'Waiting for your buddy to confirm': 'Väntar på att din buddy bekräftar',
+    'Step back from this collab': 'Jag hoppar av detta samarbete',
     "It's still quiet around here": 'Det är fortfarande lugnt här',
     'Waiting since today': 'Väntar sedan i dag',
     'Waiting for 1 day': 'Väntar i 1 dag',
@@ -5730,6 +5778,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Projektet hittades inte. Det kan ha tagits bort.",
 },
   id: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Pindai kode QR saat kalian bertemu: ini membuktikan pertemuan dan menambahkan collab ke kedua profil.',
+    'We collaborated without scanning': 'Kami berkolaborasi tanpa memindai',
+    'Waiting for your buddy to confirm': 'Menunggu konfirmasi buddy kamu',
+    'Step back from this collab': 'Mundur dari collab ini',
     "It's still quiet around here": 'Di sekitar sini masih sepi',
     'Waiting since today': 'Menunggu sejak hari ini',
     'Waiting for 1 day': 'Menunggu 1 hari',
@@ -6207,6 +6259,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Proyek itu tidak ditemukan. Mungkin sudah dihapus.",
 },
   tr: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Buluştuğunuzda QR kodu okutun: buluşmayı kanıtlar ve collab’ı iki profile de ekler.',
+    'We collaborated without scanning': 'Okutmadan birlikte çalıştık',
+    'Waiting for your buddy to confirm': 'Buddy’nin onayı bekleniyor',
+    'Step back from this collab': 'Bu collab’dan çekiliyorum',
     "It's still quiet around here": 'Buralarda henüz az kişi var',
     'Waiting since today': 'Bugünden beri bekliyor',
     'Waiting for 1 day': '1 gündür bekliyor',
@@ -6684,6 +6740,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Bu proje bulunamadı. Silinmiş olabilir.",
 },
   pl: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Zeskanujcie kod QR, gdy się spotkacie: potwierdza spotkanie i dodaje współpracę do obu profili.',
+    'We collaborated without scanning': 'Współpracowaliśmy bez skanowania',
+    'Waiting for your buddy to confirm': 'Czekamy na potwierdzenie twojego buddy’ego',
+    'Step back from this collab': 'Wycofuję się z tej współpracy',
     "It's still quiet around here": 'W okolicy jest jeszcze pusto',
     'Waiting since today': 'Czeka od dziś',
     'Waiting for 1 day': 'Czeka 1 dzień',
@@ -7161,6 +7221,10 @@ const TX = {
     "That project could not be found. It may have been deleted.": "Nie znaleziono tego projektu. Mógł zostać usunięty.",
 },
   nl: {
+    'Scan the QR when you meet: it proves the meeting and adds the collab to both your profiles.': 'Scan de QR als jullie elkaar zien: het bewijst de ontmoeting en voegt de collab toe aan beide profielen.',
+    'We collaborated without scanning': 'We hebben samengewerkt zonder te scannen',
+    'Waiting for your buddy to confirm': 'Wachten op bevestiging van je buddy',
+    'Step back from this collab': 'Ik trek me terug uit deze collab',
     "It's still quiet around here": 'Hier is het nog rustig',
     'Waiting since today': 'Wacht sinds vandaag',
     'Waiting for 1 day': 'Wacht al 1 dag',
