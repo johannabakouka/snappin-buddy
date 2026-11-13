@@ -35,7 +35,10 @@ export default function WithdrawSheet({ offerTitle, theme, onConfirm, onClose })
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.55)',
+        // Au-dessus de la barre du bas, qui est à 9999. En dessous, la barre
+        // recouvrait le bas de la feuille, donc les deux boutons : on lisait le
+        // message et on ne pouvait ni annuler ni confirmer.
+        position: 'fixed', inset: 0, zIndex: 10050, background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
       onClick={onClose}

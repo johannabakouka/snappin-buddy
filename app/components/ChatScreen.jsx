@@ -770,7 +770,7 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
       )}
 
       {forwarding && (
-        <div onClick={() => setForwarding(null)} style={{ position: 'fixed', inset: 0, zIndex: 2900, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div onClick={() => setForwarding(null)} style={{ position: 'fixed', inset: 0, zIndex: 10050, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{
             width: '100%', maxWidth: '390px', maxHeight: '70vh', overflowY: 'auto',
             background: darkMode ? '#1A1A1A' : '#FFFFFF',
@@ -804,7 +804,9 @@ export default function ChatScreen({ buddy, onBack, theme, onOpenProfile }) {
       {actionMsg && (
         <div
           onClick={() => setActionMsg(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 2800, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          // Même raison que la feuille de désistement : sous 9999, la barre du
+          // bas recouvre les boutons de la feuille.
+          style={{ position: 'fixed', inset: 0, zIndex: 10050, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
         >
           <div
             onClick={e => e.stopPropagation()}
