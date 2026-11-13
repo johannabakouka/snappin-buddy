@@ -137,6 +137,22 @@ export function newApplicationMail(to: string, applicant: string, role: string, 
   };
 }
 
+export function collabValidatedMail(to: string, buddyName: string, forUser?: string): Mail {
+  const qui = buddyName || 'ton buddy';
+  return {
+    to,
+    subject: '🤝 Collab validée',
+    titleFr: 'Collab validée',
+    bodyFr: `Le QR code a été scanné : ta collab avec <b>${qui}</b> est validée. `
+      + 'Elle compte maintenant dans tes projets validés, sur ton profil, visible par tout le monde.',
+    titleEn: 'Collab validated',
+    bodyEn: `The QR code was scanned: your collab with <b>${qui}</b> is validated. `
+      + 'It now counts in your validated projects, on your profile, visible to everyone.',
+    cta: '',
+    forUser,
+  };
+}
+
 export function pendingProposalsMail(to: string, nombre: number, forUser?: string): Mail {
   const pluriel = nombre > 1;
   return {

@@ -1,6 +1,9 @@
 export const dynamic = 'force-dynamic';
 
-import { requireUser, supabaseAdmin } from '../../lib/server';
+import {
+  collabValidatedMail, getProfile, getUserEmail, requireUser, sendMail, supabaseAdmin,
+} from '../../lib/server';
+import { pousser } from '../../lib/push';
 
 // Validation d'une rencontre par QR.
 //
@@ -92,6 +95,31 @@ export async function POST(request: Request) {
       .select('username, handle, avatar_url')
       .eq('user_id', buddyId)
       .maybeSingle();
+
+    // On prévient celui qui a montré son QR.
+    //
+    // Celui qui scanne voit le résultat à l'écran dans la seconde. L'autre,
+    // lui, ne voyait jamais rien : il tendait son téléphone et n'apprenait
+    // pas que la collab avait été validée ni que son compteur avait monté.
+    //
+    // Seulement au premier scan : un rescan ne doit pas renvoyer un mail.
+    if (!alreadyCounted) {
+      // Un échec d'envoi ne doit pas faire échouer la validation elle-même :
+      // la rencontre est déjà enregistrée, c'est ça qui compte.
+      try {
+        const moi = await getProfile(user.id);
+        const to = await getUserEmail(buddyId);
+        const nom = moi?.username || moi?.handle || '';
+        if (to) await sendMail(collabValidatedMail(to, nom, buddy?.username));
+        await pousser(buddyId, {
+          titre: '🤝 Collab validée',
+          corps: nom ? `Ta collab avec ${nom} compte maintenant` : 'Ta collab est validée',
+          lien: '/?screen=match',
+        });
+      } catch (e) {
+        console.error('validate-scan: notification non envoyée', e);
+      }
+    }
 
     return Response.json({
       ok: true,
